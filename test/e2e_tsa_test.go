@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"log/slog"
 	"net/http/httptest"
 	"os"
@@ -39,98 +40,126 @@ import (
 )
 
 func TestTSAMTLS(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-
-	imgName := path.Join(repo, "cosign-tsa-mtls-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	pemRootRef, pemLeafRef, pemKeyRef := generateSigningKeys(t, td)
-
-	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
-
-	ko := options.KeyOpts{
-		KeyRef:          pemKeyRef,
-		PassFunc:        passFunc,
-		TSAServerURL:    timestampServerURL,
-		TSAClientCACert: timestampCACert,
-		TSAClientCert:   timestampClientCert,
-		TSAClientKey:    timestampClientKey,
-		TSAServerName:   "server.example.com",
-	}
-	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: false,
-		Cert:       pemLeafRef,
-		CertChain:  pemRootRef,
-	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-
-	verifyCmd := cliverify.VerifyCommand{
-		IgnoreTlog:       true,
-		IgnoreSCT:        true,
-		CheckClaims:      true,
-		CertChain:        pemRootRef,
-		TSACertChainPath: timestampChainFile,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
+	tests := []struct {
+		withLibraryTSA bool
+	}{
+		{
+			withLibraryTSA: true,
+		},
+		{
+			withLibraryTSA: false,
 		},
 	}
-	must(verifyCmd.Exec(context.Background(), []string{imgName}), t)
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("withLibraryTSA=%t", tc.withLibraryTSA), func(t *testing.T) {
+			repo, stop := reg(t)
+			defer stop()
+			td := t.TempDir()
+
+			imgName := path.Join(repo, "cosign-tsa-mtls-e2e")
+
+			_, _, cleanup := mkimage(t, imgName)
+			defer cleanup()
+
+			pemRootRef, pemLeafRef, pemKeyRef := generateSigningKeys(t, td)
+
+			// Set up TSA server with TLS
+			timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+			timestampServerURL, timestampChainFile, tsaCleanup := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert, tc.withLibraryTSA)
+			t.Cleanup(tsaCleanup)
+
+			ko := options.KeyOpts{
+				KeyRef:          pemKeyRef,
+				PassFunc:        passFunc,
+				TSAServerURL:    timestampServerURL,
+				TSAClientCACert: timestampCACert,
+				TSAClientCert:   timestampClientCert,
+				TSAClientKey:    timestampClientKey,
+				TSAServerName:   "server.example.com",
+			}
+			so := options.SignOptions{
+				Upload:     true,
+				TlogUpload: false,
+				Cert:       pemLeafRef,
+				CertChain:  pemRootRef,
+			}
+			must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+			verifyCmd := cliverify.VerifyCommand{
+				IgnoreTlog:       true,
+				IgnoreSCT:        true,
+				CheckClaims:      true,
+				CertChain:        pemRootRef,
+				TSACertChainPath: timestampChainFile,
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentityRegexp:   ".*",
+					CertOidcIssuerRegexp: ".*",
+				},
+			}
+			must(verifyCmd.Exec(context.Background(), []string{imgName}), t)
+		})
+	}
 }
 
 func TestSignBlobTSAMTLS(t *testing.T) {
-	td := t.TempDir()
-	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
-	blobPath := mkfile(blob, td, t)
-	timestampPath := filepath.Join(td, "timestamp.txt")
-	bundlePath := filepath.Join(td, "cosign.bundle")
-
-	_, privKey, pubKey := keypair(t, td)
-
-	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
-
-	signingKO := options.KeyOpts{
-		KeyRef:               privKey,
-		PassFunc:             passFunc,
-		TSAServerURL:         timestampServerURL,
-		TSAClientCACert:      timestampCACert,
-		TSAClientCert:        timestampClientCert,
-		TSAClientKey:         timestampClientKey,
-		TSAServerName:        "server.example.com",
-		RFC3161TimestampPath: timestampPath,
-		BundlePath:           bundlePath,
-	}
-	sig, err := sign.SignBlobCmd(ro, signingKO, blobPath, true, "", "", false)
-	must(err, t)
-
-	verifyKO := options.KeyOpts{
-		KeyRef:               pubKey,
-		TSACertChainPath:     timestampChainFile,
-		RFC3161TimestampPath: timestampPath,
-		BundlePath:           bundlePath,
-	}
-
-	verifyCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: verifyKO,
-		SigRef:  string(sig),
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
+	tests := []struct {
+		withLibraryTSA bool
+	}{
+		{
+			withLibraryTSA: true,
 		},
-		IgnoreTlog: true,
+		{
+			withLibraryTSA: false,
+		},
 	}
-	must(verifyCmd.Exec(context.Background(), blobPath), t)
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("withLibraryTSA=%t", tc.withLibraryTSA), func(t *testing.T) {
+			td := t.TempDir()
+			blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
+			blobPath := mkfile(blob, td, t)
+			timestampPath := filepath.Join(td, "timestamp.txt")
+			bundlePath := filepath.Join(td, "cosign.bundle")
+
+			_, privKey, pubKey := keypair(t, td)
+
+			// Set up TSA server with TLS
+			timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+			timestampServerURL, timestampChainFile, tsaCleanup := setUpTSA(t, td, timestampCACert, timestampServerKey, timestampServerCert, tc.withLibraryTSA)
+			t.Cleanup(tsaCleanup)
+
+			signingKO := options.KeyOpts{
+				KeyRef:               privKey,
+				PassFunc:             passFunc,
+				TSAServerURL:         timestampServerURL,
+				TSAClientCACert:      timestampCACert,
+				TSAClientCert:        timestampClientCert,
+				TSAClientKey:         timestampClientKey,
+				TSAServerName:        "server.example.com",
+				RFC3161TimestampPath: timestampPath,
+				BundlePath:           bundlePath,
+			}
+			sig, err := sign.SignBlobCmd(ro, signingKO, blobPath, true, "", "", false)
+			must(err, t)
+
+			verifyKO := options.KeyOpts{
+				KeyRef:               pubKey,
+				TSACertChainPath:     timestampChainFile,
+				RFC3161TimestampPath: timestampPath,
+				BundlePath:           bundlePath,
+			}
+
+			verifyCmd := cliverify.VerifyBlobCmd{
+				KeyOpts: verifyKO,
+				SigRef:  string(sig),
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentityRegexp:   ".*",
+					CertOidcIssuerRegexp: ".*",
+				},
+				IgnoreTlog: true,
+			}
+			must(verifyCmd.Exec(context.Background(), blobPath), t)
+		})
+	}
 }
 
 func generateSigningKeys(t *testing.T, td string) (string, string, string) {
@@ -177,13 +206,13 @@ func generateMTLSKeys(t *testing.T, td string) (string, string, string, string, 
 	return pemRootRef, serverPemLeafRef, serverPemKeyRef, clientPemLeafRef, clientPemKeyRef
 }
 
-func setUpTSA(t *testing.T, td, timestampCACert, timestampServerKey, timestampServerCert string) (string, string, func()) {
+func setUpTSA(t *testing.T, td, timestampCACert, timestampServerKey, timestampServerCert string, withLibraryTSA bool) (string, string, func()) {
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
 	viper.Set("disable-ntp-monitoring", true)
 	close := func() {}
 	tsaURLPrefix := os.Getenv("TSA_URL")
-	if tsaURLPrefix == "" { // use tsa as a library instead.
+	if withLibraryTSA { // use tsa as a library instead.
 		slog.Info("Using TSA as a library")
 		viper.Set("tls-host", "0.0.0.0")
 		viper.Set("tls-port", 3000)
