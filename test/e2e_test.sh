@@ -19,6 +19,12 @@
 
 set -ex
 
+echo "checking if fulcio and rekor containers are ready"
+
+docker ps | grep -E "rekor-rekor-server.+(healthy)" &&\
+ docker ps | grep -E "fulcio-fulcio-server.+(healthy)" ||\
+ (echo "fulcio and rekor containers not ready." && exit 1)
+
 echo "running tests"
 
 go test -tags=e2e -v -race ./test/...
