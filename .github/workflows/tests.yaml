@@ -164,8 +164,14 @@ jobs:
           go install sigs.k8s.io/kind@v0.27.0
           kind create cluster
 
+      - name: setup containers
+        id: run-containers
+        uses: sigstore/scaffolding/actions/setup-sigstore-env@57c1c475f2466e8d70b240953ab2a31d47461245 # 0.7.23
+
       - name: Run end-to-end tests
         run: ./test/e2e_test.sh
+        env:
+          OIDC_URL:  ${{ steps.run-containers.outputs.oidc-url }}
 
       - name: Collect diagnostics
         if: ${{ failure() }}
