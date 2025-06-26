@@ -276,10 +276,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		// If a trusted root path is provided, we will use it to verify the bundle.
 		// Otherwise, the verifier will default to the public good instance.
 		// co.TrustedMaterial is already loaded from c.TrustedRootPath above,
-		// the check below is to serve as a reminder to developers and to future-proof.
-		if co.TrustedMaterial == nil {
-			panic("internal cosign error co.TrustedMaterial is nil with non-empty c.TrustedRootPath")
-		}
 	case c.CARoots != "":
 		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
 		// loadCertsKeylessVerification above.
