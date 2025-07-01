@@ -74,6 +74,16 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return nil, err
 	}
 
+	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
+		ui.Infof(ctx, "Non SHA256 hash function is not supported for old bundle format. Use --new-bundle-format to use the new bundle format or use different signing key/algorithm.")
+		if !ko.SkipConfirmation {
+			if err := ui.ConfirmContinue(ctx); err != nil {
+				return nil, err
+			}
+		}
+		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
+	}
+
 	if payloadPath == "-" {
 		payload = internal.NewHashReader(os.Stdin, hashFunction)
 	} else {
