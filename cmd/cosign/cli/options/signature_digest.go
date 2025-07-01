@@ -17,12 +17,11 @@ package options
 
 import (
 	"crypto"
+	_ "crypto/sha256" // for sha224 + sha256
+	_ "crypto/sha512" // for sha384 + sha512
 	"fmt"
 	"sort"
 	"strings"
-
-	_ "crypto/sha256" // for sha224 + sha256
-	_ "crypto/sha512" // for sha384 + sha512
 
 	"github.com/spf13/cobra"
 )

@@ -16,13 +16,16 @@
 package cli
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/spf13/cobra"
 )
 
 func Attest() *cobra.Command {
@@ -60,6 +63,9 @@ func Attest() *cobra.Command {
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
 
+  # write attestation to stdout
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
+
   # attach an attestation to a container image and honor the creation timestamp of the signature
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>`,
 
@@ -70,6 +76,7 @@ func Attest() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
 			ko := options.KeyOpts{
 				KeyRef:                   o.Key,
 				PassFunc:                 generate.GetPass,
@@ -92,6 +99,13 @@ func Attest() *cobra.Command {
 				TSAServerName:            o.TSAServerName,
 				TSAServerURL:             o.TSAServerURL,
 				NewBundleFormat:          o.NewBundleFormat,
+			}
+			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
+				trustedMaterial, err := cosign.TrustedRoot()
+				if err != nil {
+					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+				}
+				ko.TrustedMaterial = trustedMaterial
 			}
 			attestCommand := attest.AttestCommand{
 				KeyOpts:                 ko,

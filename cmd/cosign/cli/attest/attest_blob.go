@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,11 +32,7 @@ import (
 	"strings"
 	"time"
 
-	"errors"
-
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -52,6 +49,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // nolint

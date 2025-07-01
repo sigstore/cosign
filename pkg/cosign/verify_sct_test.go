@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build sct
-// +build sct
-
 package cosign
 
 import (
@@ -22,147 +19,51 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 
-	ct "github.com/google/certificate-transparency-go"
 	"github.com/google/certificate-transparency-go/testdata"
-	"github.com/google/certificate-transparency-go/tls"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-// TODO: Move back into verify_test.go once the test cert has been regenerated
-func TestValidateAndUnpackCertWithSCT(t *testing.T) {
-	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(testdata.TestEmbeddedCertPEM + testdata.CACertPEM))
-	if err != nil {
-		t.Fatalf("error unmarshalling certificate chain: %v", err)
-	}
-
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(chain[1])
-
-	// Grab the CTLog public keys
-	pubKeys, err := GetCTLogPubs(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
-	}
-
-	co := &CheckOpts{
-		RootCerts: rootPool,
-		// explicitly set to false
-		IgnoreSCT:    false,
-		CTLogPubKeys: pubKeys,
-	}
-
-	// write SCT verification key to disk
-	tmpPrivFile, err := os.CreateTemp(t.TempDir(), "cosign_verify_sct_*.key")
-	if err != nil {
-		t.Fatalf("failed to create temp key file: %v", err)
-	}
-	defer tmpPrivFile.Close()
-	if _, err := tmpPrivFile.Write([]byte(testdata.LogPublicKeyPEM)); err != nil {
-		t.Fatalf("failed to write key file: %v", err)
-	}
-	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
-
-	// Grab the CTLog public keys again so we get them from env.
-	co.CTLogPubKeys, err = GetCTLogPubs(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
-	}
-	_, err = ValidateAndUnpackCert(chain[0], co)
-	if err != nil {
-		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
-	}
-
-	// validate again, explicitly setting ignore SCT to false
-	co.IgnoreSCT = false
-	_, err = ValidateAndUnpackCert(chain[0], co)
-	if err != nil {
-		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
-	}
-}
-
-func TestValidateAndUnpackCertWithDetachedSCT(t *testing.T) {
-	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(testdata.TestCertPEM + testdata.CACertPEM))
-	if err != nil {
-		t.Fatalf("error unmarshalling certificate chain: %v", err)
-	}
-
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(chain[1])
-
-	co := &CheckOpts{
-		RootCerts: rootPool,
-		// explicitly set to false
-		IgnoreSCT: false,
-	}
-
-	// write SCT verification key to disk
-	tmpPrivFile, err := os.CreateTemp(t.TempDir(), "cosign_verify_sct_*.key")
-	if err != nil {
-		t.Fatalf("failed to create temp key file: %v", err)
-	}
-	defer tmpPrivFile.Close()
-	if _, err := tmpPrivFile.Write([]byte(testdata.LogPublicKeyPEM)); err != nil {
-		t.Fatalf("failed to write key file: %v", err)
-	}
-	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
-	// Grab the CTLog public keys so we get them from env.
-	co.CTLogPubKeys, err = GetCTLogPubs(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
-	}
-
-	// Fulcio quirk, since it returns a different SCT structure
-	var sct ct.SignedCertificateTimestamp
-	if _, err := tls.Unmarshal(testdata.TestCertProof, &sct); err != nil {
-		t.Fatalf("error tls-unmarshalling sct: %s", err)
-	}
-	chainResp, err := toAddChainResponse(&sct)
-	if err != nil {
-		t.Fatalf("error generating chain response: %v", err)
-	}
-	sctBytes, err := json.Marshal(chainResp)
-	if err != nil {
-		t.Fatalf("error marshalling chain: %v", err)
-	}
-	co.SCT = sctBytes
-
-	_, err = ValidateAndUnpackCert(chain[0], co)
-	if err != nil {
-		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
-	}
-
-	// validate again, explicitly setting ignore SCT to false
-	co.IgnoreSCT = false
-	_, err = ValidateAndUnpackCert(chain[0], co)
-	if err != nil {
-		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
-	}
-}
-
-// toAddChainResponse converts an SCT to a response struct, the expected structure for detached SCTs
-func toAddChainResponse(sct *ct.SignedCertificateTimestamp) (*ct.AddChainResponse, error) {
-	sig, err := tls.Marshal(sct.Signature)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal signature: %w", err)
-	}
-	addChainResp := &ct.AddChainResponse{
-		SCTVersion: sct.SCTVersion,
-		Timestamp:  sct.Timestamp,
-		Extensions: base64.StdEncoding.EncodeToString(sct.Extensions),
-		ID:         sct.LogID.KeyID[:],
-		Signature:  sig,
-	}
-
-	return addChainResp, nil
-}
+var (
+	testEmbeddedCertPEM = `-----BEGIN CERTIFICATE-----
+MIIDNDCCAtqgAwIBAgIEERggBDAKBggqhkjOPQQDAzArMREwDwYDVQQDEwhzaWdz
+dG9yZTEWMBQGA1UEChMNc2lnc3RvcmUubW9jazAeFw0yMzAyMDEwMDAwMDBaFw0y
+MzAyMDEwMDEwMDBaMAAwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAR3rsXlKKGO
+bv+Z08sAjs0tyxlzSTKkaFRiy7vjZaFMRQOZ76QKwGFefLkeGwuafSKyLbzhjIgh
+OrUzjS+WFAMHo4ICFTCCAhEwDgYDVR0PAQH/BAQDAgeAMBMGA1UdJQQMMAoGCCsG
+AQUFBwMDMIGlBgNVHREBAf8EgZowgZeGgZRodHRwczovL2dpdGh1Yi5jb20vc2ln
+c3RvcmUtY29uZm9ybWFuY2UvZXh0cmVtZWx5LWRhbmdlcm91cy1wdWJsaWMtb2lk
+Yy1iZWFjb24vLmdpdGh1Yi93b3JrZmxvd3MvZXh0cmVtZWx5LWRhbmdlcm91cy1v
+aWRjLWJlYWNvbi55bWxAcmVmcy9oZWFkcy9tYWluMB0GA1UdDgQWBBTnwHeBmPc9
+IrZmBemOaHy4lwv7KDAfBgNVHSMEGDAWgBQ/FFxk7FUxt/oE8lDZEF0s7kasuDA7
+BgorBgEEAYO/MAEIBC0MK2h0dHBzOi8vdG9rZW4uYWN0aW9ucy5naXRodWJ1c2Vy
+Y29udGVudC5jb20wOQYKKwYBBAGDvzABAQQraHR0cHM6Ly90b2tlbi5hY3Rpb25z
+LmdpdGh1YnVzZXJjb250ZW50LmNvbTCBiQYKKwYBBAHWeQIEAgR7BHkAdwB1APcm
+yqNBF7qRZUSvNzTpIM1MSS73XOYij9wE7v8vPyfdAAABhgpF7AAAAAQDAEYwRAIg
+ORF50hYRIFl2Hgc0vOJfpMjU8gY7BtGfz0oZePlxG4gCIDl6SXQe1+96ENWqM6+5
+wxbIUgHL8T3+no43cyuEAe+NMAoGCCqGSM49BAMDA0gAMEUCICqL+qLpRbTPXn6R
+i/VId0ejKBNE/B1pm91uOye/COmVAiEAnkRk1n/fPy8cGs6+i+q7bMMl+X2Cm51o
+dIrMI9PbjMw=
+-----END CERTIFICATE-----`
+	testRootCertPEM = `-----BEGIN CERTIFICATE-----
+MIIBpzCCAU6gAwIBAgIBATAKBggqhkjOPQQDAzArMREwDwYDVQQDEwhzaWdzdG9y
+ZTEWMBQGA1UEChMNc2lnc3RvcmUubW9jazAeFw0yMzAxMDEwMDAwMDBaFw0yNDAx
+MDEwMDAwMDBaMCsxETAPBgNVBAMTCHNpZ3N0b3JlMRYwFAYDVQQKEw1zaWdzdG9y
+ZS5tb2NrMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEYI4heOTrNrZO27elFE8y
+nfrdPMikttRkbe+vJKQ50G6bfwQ3WyhLpRwwwohelDAm8xRzJ56nYsIa3VHivVvp
+mKNjMGEwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwHQYDVR0OBBYE
+FD8UXGTsVTG3+gTyUNkQXSzuRqy4MB8GA1UdIwQYMBaAFD8UXGTsVTG3+gTyUNkQ
+XSzuRqy4MAoGCCqGSM49BAMDA0cAMEQCIG0znZffNiOGY6IdlriVJBP1zxx6XWVG
+E/omjuhXrRtRAiB0lR8cVoOYtOQcM7X93HWVy0Og4nCfkPK9RXNB68RyZQ==
+-----END CERTIFICATE-----`
+	testCTLogPublicKeyPEM = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEYI4heOTrNrZO27elFE8ynfrdPMik
+ttRkbe+vJKQ50G6bfwQ3WyhLpRwwwohelDAm8xRzJ56nYsIa3VHivVvpmA==
+-----END PUBLIC KEY-----`
+)
 
 func TestContainsSCT(t *testing.T) {
 	// test certificate without embedded SCT
@@ -175,83 +76,12 @@ func TestContainsSCT(t *testing.T) {
 	}
 
 	// test certificate with embedded SCT
-	contains, err = ContainsSCT([]byte(testdata.TestEmbeddedCertPEM))
+	contains, err = ContainsSCT([]byte(testEmbeddedCertPEM))
 	if err != nil {
 		t.Fatalf("unexpected error in ContainsSCT: %v", err)
 	}
 	if !contains {
 		t.Fatalf("certificate unexpectedly did not contain SCT")
-	}
-}
-
-// From https://github.com/google/certificate-transparency-go/blob/e76f3f637053b90c8168d29b01ca162cd235ace5/ctutil/ctutil_test.go
-func TestVerifySCT(t *testing.T) {
-	tests := []struct {
-		desc     string
-		certPEM  string
-		chainPEM string
-		sct      []byte
-		embedded bool
-		wantErr  bool
-		errMsg   string
-	}{
-		{
-			desc:     "cert",
-			certPEM:  testdata.TestCertPEM,
-			chainPEM: testdata.CACertPEM,
-			sct:      testdata.TestCertProof,
-		},
-		{
-			desc:     "invalid SCT",
-			certPEM:  testdata.TestPreCertPEM,
-			chainPEM: testdata.CACertPEM,
-			sct:      testdata.TestCertProof,
-			wantErr:  true,
-		},
-		{
-			desc:     "cert with embedded SCT",
-			certPEM:  testdata.TestEmbeddedCertPEM,
-			chainPEM: testdata.CACertPEM,
-			sct:      testdata.TestPreCertProof,
-			embedded: true,
-		},
-		{
-			desc:     "cert with invalid embedded SCT",
-			certPEM:  testdata.TestInvalidEmbeddedCertPEM,
-			chainPEM: testdata.CACertPEM,
-			sct:      testdata.TestInvalidProof,
-			embedded: true,
-			wantErr:  true,
-			errMsg:   "failed to verify ECDSA signature",
-		},
-	}
-
-	writePubKey(t, testdata.LogPublicKeyPEM)
-
-	for _, test := range tests {
-		t.Run(test.desc, func(t *testing.T) {
-			// convert SCT to response struct if detached
-			var sctBytes []byte
-			if !test.embedded {
-				var sct ct.SignedCertificateTimestamp
-				if _, err := tls.Unmarshal(test.sct, &sct); err != nil {
-					t.Fatalf("error tls-unmarshalling sct: %s", err)
-				}
-				chainResp, err := toAddChainResponse(&sct)
-				if err != nil {
-					t.Fatalf("error generating chain response: %v", err)
-				}
-				sctBytes, err = json.Marshal(chainResp)
-				if err != nil {
-					t.Fatalf("error marshalling chain: %v", err)
-				}
-			}
-
-			err := VerifySCT(context.Background(), []byte(test.certPEM), []byte(test.chainPEM), sctBytes, nil)
-			if gotErr := err != nil; gotErr != test.wantErr && !strings.Contains(err.Error(), test.errMsg) {
-				t.Errorf("VerifySCT(_,_,_, %t) = %v, want error? %t", test.embedded, err, test.wantErr)
-			}
-		})
 	}
 }
 
@@ -272,20 +102,20 @@ func TestVerifySCTError(t *testing.T) {
 		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
 	}
 
-	err = VerifySCT(context.Background(), []byte(testdata.TestEmbeddedCertPEM), []byte(testdata.CACertPEM), []byte{}, pubKeys)
+	err = VerifySCT(context.Background(), []byte(testEmbeddedCertPEM), []byte(testRootCertPEM), []byte{}, pubKeys)
 	if err == nil || !strings.Contains(err.Error(), "ctfe public key not found") {
 		t.Fatalf("expected error verifying SCT with mismatched key: %v", err)
 	}
 
 	// verify fails without either a detached SCT or embedded SCT
-	err = VerifySCT(context.Background(), []byte(testdata.TestCertPEM), []byte(testdata.CACertPEM), []byte{}, pubKeys)
+	err = VerifySCT(context.Background(), []byte(testdata.TestCertPEM), []byte(testRootCertPEM), []byte{}, pubKeys)
 	if err == nil || !strings.Contains(err.Error(), "no SCT found") {
 		t.Fatalf("expected error verifying SCT without SCT: %v", err)
 	}
 }
 
 func TestVerifyEmbeddedSCT(t *testing.T) {
-	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(testdata.TestEmbeddedCertPEM + testdata.CACertPEM))
+	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(strings.Join([]string{testEmbeddedCertPEM, testRootCertPEM}, "\n")))
 	if err != nil {
 		t.Fatalf("error unmarshalling certificate chain: %v", err)
 	}
@@ -293,7 +123,7 @@ func TestVerifyEmbeddedSCT(t *testing.T) {
 	// Grab the keys from TUF
 	pubKeys, err := GetCTLogPubs(context.Background())
 	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+		t.Fatalf("failed to get CTLog public keys from TUF: %v", err)
 	}
 
 	// verify fails without a certificate chain
@@ -302,12 +132,12 @@ func TestVerifyEmbeddedSCT(t *testing.T) {
 		t.Fatalf("expected error verifying SCT without chain: %v", err)
 	}
 
-	writePubKey(t, testdata.LogPublicKeyPEM)
+	writePubKey(t, testCTLogPublicKeyPEM)
 	// Above writes the key to disk and sets up an env variable, so grab the
 	// public keys again to get the env path.
 	pubKeys, err = GetCTLogPubs(context.Background())
 	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+		t.Fatalf("failed to get CTLog public keys from TUF: %v", err)
 	}
 
 	err = VerifyEmbeddedSCT(context.Background(), chain, pubKeys)

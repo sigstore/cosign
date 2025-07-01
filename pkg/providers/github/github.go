@@ -58,7 +58,7 @@ func (ga *githubActions) Enabled(_ context.Context) bool {
 func (ga *githubActions) Provide(ctx context.Context, audience string) (string, error) {
 	url := env.Getenv(env.VariableGitHubRequestURL) + "&audience=" + audience
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}

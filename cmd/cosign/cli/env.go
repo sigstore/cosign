@@ -21,10 +21,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/spf13/cobra"
 )
 
 func Env() *cobra.Command {

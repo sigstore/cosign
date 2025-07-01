@@ -20,9 +20,8 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/spf13/cobra"
-
 	ctypes "github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 // AttachSignatureOptions is the top level wrapper for the attach signature command.

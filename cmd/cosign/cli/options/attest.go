@@ -27,7 +27,6 @@ type AttestOptions struct {
 	Cert                    string
 	CertChain               string
 	NoUpload                bool
-	Recursive               bool
 	Replace                 bool
 	SkipConfirmation        bool
 	TlogUpload              bool
@@ -75,11 +74,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.NoUpload, "no-upload", false,
-		"do not upload the generated attestation")
-
-	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
-		"if a multi-arch image is specified, additionally sign each discrete image")
-
+		"do not upload the generated attestation, but send the attestation output to STDOUT")
 	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
 		"")
 

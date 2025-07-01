@@ -152,7 +152,7 @@ against the transparency log.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
+				ui.Warnf(ctx, ignoreTLogMessage, "signature")
 			}
 
 			return v.Exec(ctx, args)
@@ -256,7 +256,7 @@ against the transparency log.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "attestation"))
+				ui.Warnf(ctx, ignoreTLogMessage, "attestation")
 			}
 
 			return v.Exec(ctx, args)
@@ -284,7 +284,7 @@ The blob may be specified as a path to a file or - for stdin.`,
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-# Verify a signature with certificate and CA certificate chain
+  # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
   # Verify a signature with CA roots and optional intermediate certificates
@@ -363,7 +363,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob"))
+				ui.Warnf(ctx, ignoreTLogMessage, "blob")
 			}
 
 			return verifyBlobCmd.Exec(ctx, args[0])
@@ -444,7 +444,7 @@ The blob may be specified as a path to a file.`,
 			defer cancel()
 
 			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
-				ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "blob attestation"))
+				ui.Warnf(ctx, ignoreTLogMessage, "blob attestation")
 			}
 
 			return v.Exec(ctx, path)

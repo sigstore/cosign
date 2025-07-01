@@ -25,11 +25,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/spf13/cobra"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/spf13/cobra"
 )
 
 func Clean() *cobra.Command {
@@ -52,7 +51,7 @@ func Clean() *cobra.Command {
 
 func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType options.CleanType, imageRef string, force bool) error {
 	if !force {
-		ui.Warnf(ctx, prompt(cleanType))
+		ui.Warnf(ctx, prompt(cleanType)) //nolint:govet // practically const
 		if err := ui.ConfirmContinue(ctx); err != nil {
 			return err
 		}

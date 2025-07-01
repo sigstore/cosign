@@ -17,6 +17,7 @@ package options
 
 import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -56,6 +57,9 @@ type KeyOpts struct {
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
 	// verifying the SCT.
 	InsecureSkipFulcioVerify bool
+
+	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
+	TrustedMaterial root.TrustedMaterial
 
 	// DefaultLoadOptions may be set to control the behaviour of
 	// `LoadDefaultSigner/Verifier` family of functions. Some public/private key
