@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	"github.com/spf13/cobra"
 )
 
 // FilesOptions is the wrapper for the files.

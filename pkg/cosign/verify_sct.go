@@ -19,7 +19,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
@@ -50,7 +49,7 @@ func getCTPublicKey(sct *ct.SignedCertificateTimestamp,
 	keyID := hex.EncodeToString(sct.LogID.KeyID[:])
 	pubKeyMetadata, ok := pubKeys.Keys[keyID]
 	if !ok {
-		return nil, errors.New("ctfe public key not found for payload. Check your TUF root (see cosign initialize) or set a custom key with env var SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
+		return nil, fmt.Errorf("ctfe public key not found for payload. Check your TUF root (see cosign initialize) or set a custom key with env var SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
 	}
 	return &pubKeyMetadata, nil
 }
@@ -73,7 +72,7 @@ func getCTPublicKey(sct *ct.SignedCertificateTimestamp,
 // an alternate, the file can be PEM, or DER format.
 func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *TrustedTransparencyLogPubKeys) error {
 	if pubKeys == nil || len(pubKeys.Keys) == 0 {
-		return errors.New("none of the CTFE keys have been found")
+		return fmt.Errorf("none of the CTFE keys have been found")
 	}
 
 	// parse certificate and chain
@@ -86,7 +85,7 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 		return err
 	}
 	if len(certChain) == 0 {
-		return errors.New("no certificate chain found")
+		return fmt.Errorf("no certificate chain found")
 	}
 
 	// fetch embedded SCT if present
@@ -96,7 +95,7 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 	}
 	// SCT must be either embedded or in header
 	if len(embeddedSCTs) == 0 && len(rawSCT) == 0 {
-		return errors.New("no SCT found")
+		return fmt.Errorf("no SCT found")
 	}
 
 	// check SCT embedded in certificate
@@ -143,7 +142,7 @@ func VerifySCT(_ context.Context, certPEM, chainPEM, rawSCT []byte, pubKeys *Tru
 // VerifyEmbeddedSCT verifies an embedded SCT in a certificate.
 func VerifyEmbeddedSCT(ctx context.Context, chain []*x509.Certificate, pubKeys *TrustedTransparencyLogPubKeys) error {
 	if len(chain) < 2 {
-		return errors.New("certificate chain must contain at least a certificate and its issuer")
+		return fmt.Errorf("certificate chain must contain at least a certificate and its issuer")
 	}
 	certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
 	if err != nil {

@@ -45,12 +45,16 @@ func trustedRootCreate() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			trCreateCmd := &trustedroot.CreateCmd{
 				CertChain:        o.CertChain,
+				FulcioURI:        o.FulcioURI,
 				CtfeKeyPath:      o.CtfeKeyPath,
 				CtfeStartTime:    o.CtfeStartTime,
+				CtfeURL:          o.CtfeURL,
 				Out:              o.Out,
 				RekorKeyPath:     o.RekorKeyPath,
 				RekorStartTime:   o.RekorStartTime,
+				RekorURL:         o.RekorURL,
 				TSACertChainPath: o.TSACertChainPath,
+				TSAURI:           o.TSAURI,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)

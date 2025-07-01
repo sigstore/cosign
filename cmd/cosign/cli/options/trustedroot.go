@@ -21,12 +21,16 @@ import (
 
 type TrustedRootCreateOptions struct {
 	CertChain        []string
+	FulcioURI        []string
 	CtfeKeyPath      []string
 	CtfeStartTime    []string
+	CtfeURL          []string
 	Out              string
 	RekorKeyPath     []string
 	RekorStartTime   []string
+	RekorURL         []string
 	TSACertChainPath []string
+	TSAURI           []string
 }
 
 var _ Interface = (*TrustedRootCreateOptions)(nil)
@@ -39,6 +43,9 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 			"signing certificate and end with the root certificate.")
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
+	cmd.Flags().StringArrayVar(&o.FulcioURI, "fulcio-uri", nil,
+		"URI of the Fulcio server issuing certificates.")
+
 	cmd.Flags().StringArrayVar(&o.CtfeKeyPath, "ctfe-key", nil,
 		"path to a PEM-encoded public key used by certificate authority for "+
 			"certificate transparency log.")
@@ -48,19 +55,30 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 		"RFC 3339 string describing validity start time for key use by "+
 			"certificate transparency log.")
 
+	cmd.Flags().StringArrayVar(&o.CtfeURL, "ctfe-url", nil,
+		"URL of the certificate transparency log.")
+
 	cmd.Flags().StringVar(&o.Out, "out", "", "path to output trusted root")
 	// _ = cmd.MarkFlagFilename("output") // no typical extensions
 
 	cmd.Flags().StringArrayVar(&o.RekorKeyPath, "rekor-key", nil,
-		"path to a PEM-encoded public key used by transparency log like Rekor.")
+		"path to a PEM-encoded public key used by transparency log like Rekor. "+
+			"For Rekor V2, append the Rekor server name with ',', e.g. "+
+			"'--rekor-key=/path/to/key.pub,rekor.example.test'.")
 	_ = cmd.MarkFlagFilename("rekor-key", publicKeyExts...)
 
 	cmd.Flags().StringArrayVar(&o.RekorStartTime, "rekor-start-time", nil,
 		"RFC 3339 string describing validity start time for key use by "+
 			"transparency log like Rekor.")
 
+	cmd.Flags().StringArrayVar(&o.RekorURL, "rekor-url", nil,
+		"URL of the transparency log.")
+
 	cmd.Flags().StringArrayVar(&o.TSACertChainPath, "timestamp-certificate-chain", nil,
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates")
 	_ = cmd.MarkFlagFilename("timestamp-certificate-chain", certificateExts...)
+
+	cmd.Flags().StringArrayVar(&o.TSAURI, "timestamp-uri", nil,
+		"URI of the timestamp authority server.")
 }

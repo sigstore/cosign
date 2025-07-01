@@ -33,6 +33,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -1369,6 +1370,57 @@ func TestValidateAndUnpackCertWithIntermediatesSuccess(t *testing.T) {
 	err = CheckCertificatePolicy(leafCert, co)
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
+	}
+}
+
+func TestValidateAndUnpackCertWithSCT(t *testing.T) {
+	chain, err := cryptoutils.UnmarshalCertificatesFromPEM([]byte(strings.Join([]string{testEmbeddedCertPEM, testRootCertPEM}, "\n")))
+	if err != nil {
+		t.Fatalf("error unmarshalling certificate chain: %v", err)
+	}
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(chain[1])
+
+	// Grab the CTLog public keys
+	pubKeys, err := GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+
+	co := &CheckOpts{
+		RootCerts: rootPool,
+		// explicitly set to false
+		IgnoreSCT:    false,
+		CTLogPubKeys: pubKeys,
+	}
+
+	// write SCT verification key to disk
+	tmpPrivFile, err := os.CreateTemp(t.TempDir(), "cosign_verify_sct_*.key")
+	if err != nil {
+		t.Fatalf("failed to create temp key file: %v", err)
+	}
+	defer tmpPrivFile.Close()
+	if _, err := tmpPrivFile.Write([]byte(testCTLogPublicKeyPEM)); err != nil {
+		t.Fatalf("failed to write key file: %v", err)
+	}
+	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
+
+	// Grab the CTLog public keys again so we get them from env.
+	co.CTLogPubKeys, err = GetCTLogPubs(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+	}
+	_, err = ValidateAndUnpackCert(chain[0], co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
+	}
+
+	// validate again, explicitly setting ignore SCT to false
+	co.IgnoreSCT = false
+	_, err = ValidateAndUnpackCert(chain[0], co)
+	if err != nil {
+		t.Errorf("ValidateAndUnpackCert expected no error, got err = %v", err)
 	}
 }
 

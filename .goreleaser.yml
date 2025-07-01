@@ -184,7 +184,7 @@ nfpms:
     vendor: Sigstore
     homepage: https://sigstore.dev
     maintainer: Sigstore Authors 86837369+sigstore-bot@users.noreply.github.com
-    builds:
+    ids:
       - linux
     description: Container Signing, Verification and Storage in an OCI registry.
     license: "Apache License 2.0"
@@ -198,7 +198,7 @@ nfpms:
         type: "symlink"
 
 archives:
-  - format: binary
+  - formats: [binary]
     name_template: "{{ .Binary }}"
     allow_different_binary_count: true
 
@@ -206,7 +206,7 @@ checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
 
 snapshot:
-  name_template: SNAPSHOT-{{ .ShortCommit }}
+  version_template: SNAPSHOT-{{ .ShortCommit }}
 
 release:
   prerelease: allow # remove this when we start publishing non-prerelease or set to auto
