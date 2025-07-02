@@ -37,10 +37,12 @@ type CreateCmd struct {
 	FulcioURI        []string
 	CtfeKeyPath      []string
 	CtfeStartTime    []string
+	CtfeEndTime      []string
 	CtfeURL          []string
 	Out              string
 	RekorKeyPath     []string
 	RekorStartTime   []string
+	RekorEndTime     []string
 	RekorURL         []string
 	TSACertChainPath []string
 	TSAURI           []string
@@ -71,9 +73,16 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 		}
 
 		startTime := time.Unix(0, 0)
+		endTime := time.Time{}
 
 		if i < len(c.CtfeStartTime) {
 			startTime, err = time.Parse(time.RFC3339, c.CtfeStartTime[i])
+			if err != nil {
+				return err
+			}
+		}
+		if i < len(c.CtfeEndTime) {
+			endTime, err = time.Parse(time.RFC3339, c.CtfeEndTime[i])
 			if err != nil {
 				return err
 			}
@@ -85,6 +94,10 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			ValidityPeriodStart: startTime,
 			PublicKey:           *ctLogPubKey,
 			SignatureHashFunc:   crypto.SHA256,
+		}
+
+		if !endTime.IsZero() {
+			ctLogs[id].ValidityPeriodEnd = endTime
 		}
 
 		if i < len(c.CtfeURL) {
@@ -111,9 +124,16 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 		}
 
 		startTime := time.Unix(0, 0)
+		endTime := time.Time{}
 
 		if i < len(c.RekorStartTime) {
 			startTime, err = time.Parse(time.RFC3339, c.RekorStartTime[i])
+			if err != nil {
+				return err
+			}
+		}
+		if i < len(c.RekorEndTime) {
+			endTime, err = time.Parse(time.RFC3339, c.RekorEndTime[i])
 			if err != nil {
 				return err
 			}
@@ -125,6 +145,9 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			ValidityPeriodStart: startTime,
 			PublicKey:           *tlogPubKey,
 			SignatureHashFunc:   crypto.SHA256,
+		}
+		if !endTime.IsZero() {
+			rekorTransparencyLogs[id].ValidityPeriodEnd = endTime
 		}
 
 		if i < len(c.RekorURL) {
