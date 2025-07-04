@@ -569,9 +569,9 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 	defer rekorFP.Close()
 	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
 	ctfePath := filepath.Join(downloadDirectory, "ctfe.pub")
-	home, err := os.UserHomeDir()
+	curDir, err := os.Getwd()
 	must(err, t)
-	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
+	must(copyFile(filepath.Join(curDir, "testdata", "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
 	tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
 	tsaFP, err := os.Create(tsaPath)
 	must(err, t)
@@ -589,8 +589,14 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
-	must(err, t)
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Copied from https://github.com/sigstore/fulcio/blob/273116884c6e247a98cb28a9acc3e5844c4f9b5c/config/ctfe/pubkey.pem
+	// This must be an abosulte path.
+	ctPubkey := filepath.Join(dir, "testdata", "fulcio", "config", "ctfe", "pubkey.pem")
+
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
@@ -617,7 +623,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			targets: []targetInfo{
 				{
 					name:   "ct.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctPubkey,
 				},
 			},
 			wantSignErr: true,
@@ -635,7 +641,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctPubkey,
 				},
 				{
 					name:   "tsa_leaf.crt.pem",
@@ -664,7 +670,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctPubkey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -702,7 +708,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "cert-transparency.pem",
 					usage:  "CTFE",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctPubkey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -2096,6 +2102,8 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	}
 }
 
+// TestGenerateKeyPairK8s calls the k8s API, and is intended to be run
+// after first running `kind create cluster `.
 func TestGenerateKeyPairK8s(t *testing.T) {
 	td := t.TempDir()
 	wd, err := os.Getwd()
