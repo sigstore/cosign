@@ -24,10 +24,12 @@ type TrustedRootCreateOptions struct {
 	FulcioURI        []string
 	CtfeKeyPath      []string
 	CtfeStartTime    []string
+	CtfeEndTime      []string
 	CtfeURL          []string
 	Out              string
 	RekorKeyPath     []string
 	RekorStartTime   []string
+	RekorEndTime     []string
 	RekorURL         []string
 	TSACertChainPath []string
 	TSAURI           []string
@@ -55,6 +57,10 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 		"RFC 3339 string describing validity start time for key use by "+
 			"certificate transparency log.")
 
+	cmd.Flags().StringArrayVar(&o.CtfeEndTime, "ctfe-end-time", nil,
+		"RFC 3339 string describing validity end time for key use by "+
+			"certificate transparency log.")
+
 	cmd.Flags().StringArrayVar(&o.CtfeURL, "ctfe-url", nil,
 		"URL of the certificate transparency log.")
 
@@ -69,6 +75,10 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringArrayVar(&o.RekorStartTime, "rekor-start-time", nil,
 		"RFC 3339 string describing validity start time for key use by "+
+			"transparency log like Rekor.")
+
+	cmd.Flags().StringArrayVar(&o.RekorEndTime, "rekor-end-time", nil,
+		"RFC 3339 string describing validity end time for key use by "+
 			"transparency log like Rekor.")
 
 	cmd.Flags().StringArrayVar(&o.RekorURL, "rekor-url", nil,

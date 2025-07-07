@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
@@ -82,6 +83,32 @@ func TestCreateCmd(t *testing.T) {
 
 	if len(timestampAuthorities[0].(*root.SigstoreTimestampingAuthority).Intermediates) != 2 {
 		t.Fatal("unexpected number of timestamp intermediate certificates")
+	}
+
+	tlogs := tr.RekorLogs()
+
+	if len(tlogs) != 2 {
+		t.Fatalf("unexpected number of rekor logs: %d", len(tlogs))
+	}
+
+	for _, tlog := range tlogs {
+		if !tlog.ValidityPeriodEnd.IsZero() {
+			t.Fatalf("unexpected validity period end for rekor log")
+		}
+	}
+
+	trustedrootCreate.RekorEndTime = []string{"2286-11-20T09:46:40-08:00", "2286-11-20T09:46:40-08:00"}
+	err = trustedrootCreate.Exec(ctx)
+	checkErr(t, err)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	checkErr(t, err)
+	tlogs = tr.RekorLogs()
+
+	for _, tlog := range tlogs {
+		expectedValidityEnd, _ := time.Parse(time.RFC3339, "2286-11-20T09:46:40-08:00")
+		if !tlog.ValidityPeriodEnd.Equal(expectedValidityEnd) {
+			t.Fatal("unexpected rekor log validity period end")
+		}
 	}
 }
 
