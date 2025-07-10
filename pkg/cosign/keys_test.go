@@ -339,12 +339,12 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 	}
 
 	// Load the private key with the right password
-	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("hello")); err != nil {
+	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("hello"), nil); err != nil {
 		t.Errorf("unexpected error decrypting key: %s", err)
 	}
 
 	// Try it with the wrong one
-	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("wrong")); err == nil {
+	if _, err := LoadPrivateKey(keys.PrivateBytes, []byte("wrong"), nil); err == nil {
 		t.Error("expected error decrypting key!")
 	}
 
@@ -353,7 +353,7 @@ func TestLoadECDSAPrivateKey(t *testing.T) {
 	if _, err := rand.Read(buf[:]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := LoadPrivateKey(buf[:], []byte("wrong")); err == nil {
+	if _, err := LoadPrivateKey(buf[:], []byte("wrong"), nil); err == nil {
 		t.Error("expected error decrypting key!")
 	}
 }
@@ -384,7 +384,7 @@ func TestReadingPrivatePemTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pemType, func(t *testing.T) {
-			_, err := LoadPrivateKey(tc.pemData, []byte("hello"))
+			_, err := LoadPrivateKey(tc.pemData, []byte("hello"), nil)
 			if tc.expected == nil {
 				require.NoError(t, err)
 			} else {
@@ -497,7 +497,7 @@ func TestImportPrivateKey(t *testing.T) {
 			if err == nil || tc.expected == nil {
 				require.Equal(t, tc.expected, err)
 				// Loading the private key should also work.
-				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"))
+				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"), nil)
 				require.Equal(t, tc.expected, err)
 			} else {
 				require.Equal(t, tc.expected.Error(), err.Error())
