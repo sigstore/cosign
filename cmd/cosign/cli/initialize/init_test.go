@@ -169,7 +169,7 @@ func TestDoInitialize(t *testing.T) {
 			targets:    map[string][]byte{"ctfe.pub": []byte(`-----BEGIN PUBLIC KEY-----\n-----END PUBLIC KEY-----`)},
 			root:       "1.root.json",
 			wantStdOut: "ctfe.pub",
-			wantStdErr: "WARNING: Could not fetch trusted_root.json from the TUF mirror (encountered error: getting info for target \"trusted_root.json\": target trusted_root.json not found), falling back to individual targets. It is recommended to update your TUF metadata repository to include trusted_root.json.",
+			wantStdErr: "WARNING: Could not fetch trusted_root.json from the TUF mirror (encountered error: failed to get target from TUF client getting info for target \"trusted_root.json\": target trusted_root.json not found), falling back to individual targets. It is recommended to update your TUF metadata repository to include trusted_root.json.",
 			wantErr:    false,
 			wantFiles:  []string{filepath.Join("targets", "ctfe.pub")},
 			expectV2:   false,
