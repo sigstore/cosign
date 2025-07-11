@@ -478,7 +478,7 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 		if err != nil {
 			return fmt.Errorf("decoding log ID: %w", err)
 		}
-		entry, err := tlog.NewEntry(entryBytes, *e.IntegratedTime, *e.LogIndex, logID, e.Verification.SignedEntryTimestamp, e.Verification.InclusionProof)
+		entry, err := tlog.NewEntry(entryBytes, *e.IntegratedTime, *e.LogIndex, logID, e.Verification.SignedEntryTimestamp, e.Verification.InclusionProof) //nolint rekor v1 codepath
 		if err != nil {
 			return fmt.Errorf("converting tlog entry: %w", err)
 		}

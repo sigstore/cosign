@@ -1196,7 +1196,7 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 			return false, fmt.Errorf("decoding log ID: %w", err)
 		}
 		body, _ := base64.StdEncoding.DecodeString(payload.Body.(string))
-		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, logID, bundle.SignedEntryTimestamp, nil)
+		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, logID, bundle.SignedEntryTimestamp, nil) //nolint rekor v1 codepath
 		if err != nil {
 			return false, fmt.Errorf("converting tlog entry: %w", err)
 		}
