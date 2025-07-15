@@ -343,21 +343,14 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 
 	// Now verify the cert, then the signature.
 
-	shouldVerifyEmbeddedSCT := !co.IgnoreSCT
-	contains, err := ContainsSCT(cert.Raw)
-	if err != nil {
-		return nil, err
-	}
-	shouldVerifyEmbeddedSCT = shouldVerifyEmbeddedSCT && contains
-	// If trusted root is available and the SCT is embedded, use the verifiers from sigstore-go (preferred).
+	// If trusted root is available, use the verifiers from sigstore-go (preferred).
 	var chains [][]*x509.Certificate
-	if co.TrustedMaterial != nil && shouldVerifyEmbeddedSCT {
+	if co.TrustedMaterial != nil {
 		if chains, err = verify.VerifyLeafCertificate(cert.NotBefore, cert, co.TrustedMaterial); err != nil {
 			return nil, err
 		}
 	} else {
-		// If the trusted root is not available, OR if the SCT is detached, use the verifiers from cosign (legacy).
-		// The certificate chains will be needed for the legacy SCT verifiers, which is why we can't use sigstore-go.
+		// If the trusted root is not available, use the verifiers from cosign (legacy).
 		chains, err = TrustedCert(cert, co.RootCerts, intermediateCerts)
 		if err != nil {
 			return nil, err
@@ -372,6 +365,10 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	// If IgnoreSCT is set, skip the SCT check
 	if co.IgnoreSCT {
 		return verifier, nil
+	}
+	contains, err := ContainsSCT(cert.Raw)
+	if err != nil {
+		return nil, err
 	}
 	if !contains && len(co.SCT) == 0 {
 		return nil, &VerificationFailure{
