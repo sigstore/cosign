@@ -19,7 +19,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	_ "crypto/sha256" // for `crypto.SHA256`
@@ -32,8 +31,10 @@ import (
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 const (
@@ -70,7 +71,48 @@ func (k *KeysBytes) Password() []byte {
 
 // GeneratePrivateKey generates an ECDSA private key with the P-256 curve.
 func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	priv, err := GeneratePrivateKeyWithAlgorithm(nil)
+	if err != nil {
+		return nil, err
+	}
+	return priv.(*ecdsa.PrivateKey), nil
+}
+
+// GeneratePrivateKeyWithAlgorithm generates a private key for the given algorithm
+func GeneratePrivateKeyWithAlgorithm(algo *signature.AlgorithmDetails) (crypto.PrivateKey, error) {
+	var currentAlgo signature.AlgorithmDetails
+	if algo == nil {
+		var err error
+		currentAlgo, err = signature.GetAlgorithmDetails(v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
+		if err != nil {
+			return nil, fmt.Errorf("error getting algorithm details for default algorithm: %w", err)
+		}
+	} else {
+		currentAlgo = *algo
+	}
+
+	switch currentAlgo.GetKeyType() {
+	case signature.ECDSA:
+		curve, err := currentAlgo.GetECDSACurve()
+		if err != nil {
+			return nil, fmt.Errorf("error getting ECDSA curve: %w", err)
+		}
+		return ecdsa.GenerateKey(*curve, rand.Reader)
+	case signature.RSA:
+		rsaKeySize, err := currentAlgo.GetRSAKeySize()
+		if err != nil {
+			return nil, fmt.Errorf("error getting RSA key size: %w", err)
+		}
+		return rsa.GenerateKey(rand.Reader, int(rsaKeySize))
+	case signature.ED25519:
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, fmt.Errorf("error generating ED25519 key: %w", err)
+		}
+		return priv, nil
+	default:
+		return nil, fmt.Errorf("unsupported key type: %v", currentAlgo.GetKeyType())
+	}
 }
 
 // ImportKeyPair imports a key pair from a file containing a PEM-encoded
@@ -194,6 +236,19 @@ func GenerateKeyPair(pf PassFunc) (*KeysBytes, error) {
 	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{priv, priv.Public()}, pf)
 }
 
+func GenerateKeyPairWithAlgorithm(algo *signature.AlgorithmDetails, pf PassFunc) (*KeysBytes, error) {
+	priv, err := GeneratePrivateKeyWithAlgorithm(algo)
+	if err != nil {
+		return nil, err
+	}
+	signer, ok := priv.(crypto.Signer)
+	if !ok {
+		return nil, fmt.Errorf("private key is not a signer verifier")
+	}
+	// Emit SIGSTORE keys by default
+	return marshalKeyPair(SigstorePrivateKeyPemType, Keys{signer, signer.Public()}, pf)
+}
+
 // PemToECDSAKey marshals and returns the PEM-encoded ECDSA public key.
 func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
@@ -209,7 +264,7 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
 // and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
-func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
+func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.LoadOption) (signature.SignerVerifier, error) {
 	// Decrypt first
 	p, _ := pem.Decode(key)
 	if p == nil {
@@ -227,14 +282,18 @@ func LoadPrivateKey(key []byte, pass []byte) (signature.SignerVerifier, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	switch pk := pk.(type) {
-	case *rsa.PrivateKey:
-		return signature.LoadRSAPKCS1v15SignerVerifier(pk, crypto.SHA256)
-	case *ecdsa.PrivateKey:
-		return signature.LoadECDSASignerVerifier(pk, crypto.SHA256)
-	case ed25519.PrivateKey:
-		return signature.LoadED25519SignerVerifier(pk)
-	default:
-		return nil, errors.New("unsupported key type")
+	defaultLoadOptions = GetDefaultLoadOptions(defaultLoadOptions)
+	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+}
+
+func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signature.LoadOption {
+	if defaultLoadOptions == nil {
+		// Cosign uses ED25519ph by default for ED25519 keys, because that's the
+		// only available option for hashedrekord entries. This behaviour is
+		// configurable because we want to maintain compatibility with older
+		// cosign versions that used PureEd25519 for ED25519 keys (but which did
+		// not support TLog uploads).
+		return &[]signature.LoadOption{options.WithED25519ph()}
 	}
+	return defaultLoadOptions
 }
