@@ -591,8 +591,8 @@ github.com/shibumi/go-pathspec v1.3.0 h1:QUyMZhFo0Md5B8zV8x2tesohbb5kfbpTi9rBnKh
 github.com/shibumi/go-pathspec v1.3.0/go.mod h1:Xutfslp817l2I1cZvgcfeMQJG5QnU2lh5tVaaMCl3jE=
 github.com/sigstore/fulcio v1.7.1 h1:RcoW20Nz49IGeZyu3y9QYhyyV3ZKQ85T+FXPKkvE+aQ=
 github.com/sigstore/fulcio v1.7.1/go.mod h1:7lYY+hsd8Dt+IvKQRC+KEhWpCZ/GlmNvwIa5JhypMS8=
-github.com/sigstore/protobuf-specs v0.4.3 h1:kRgJ+ciznipH9xhrkAbAEHuuxD3GhYnGC873gZpjJT4=
-github.com/sigstore/protobuf-specs v0.4.3/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
+github.com/sigstore/protobuf-specs v0.5.0 h1:F8YTI65xOHw70NrvPwJ5PhAzsvTnuJMGLkA4FIkofAY=
+github.com/sigstore/protobuf-specs v0.5.0/go.mod h1:+gXR+38nIa2oEupqDdzg4qSBT0Os+sP7oYv6alWewWc=
 github.com/sigstore/rekor v1.3.10 h1:/mSvRo4MZ/59ECIlARhyykAlQlkmeAQpvBPlmJtZOCU=
 github.com/sigstore/rekor v1.3.10/go.mod h1:JvryKJ40O0XA48MdzYUPu0y4fyvqt0C4iSY7ri9iu3A=
 github.com/sigstore/rekor-tiles v0.1.6 h1:xttRjH7VdqY755DQKjhVuqw+5/vNIIZ4yUhgikXMl/k=

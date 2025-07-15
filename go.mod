@@ -32,7 +32,7 @@ require (
 	github.com/open-policy-agent/opa v1.6.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/fulcio v1.7.1
-	github.com/sigstore/protobuf-specs v0.4.3
+	github.com/sigstore/protobuf-specs v0.5.0
 	github.com/sigstore/rekor v1.3.10
 	github.com/sigstore/rekor-tiles v0.1.6
 	github.com/sigstore/sigstore v1.9.5
