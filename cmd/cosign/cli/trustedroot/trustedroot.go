@@ -18,6 +18,10 @@ package trustedroot
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -33,6 +37,11 @@ import (
 )
 
 type CreateCmd struct {
+	FulcioSpecs []string
+	RekorSpecs  []string
+	CTFESpecs   []string
+	TSASpecs    []string
+
 	CertChain        []string
 	FulcioURI        []string
 	CtfeKeyPath      []string
@@ -53,118 +62,192 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	ctLogs := make(map[string]*root.TransparencyLog)
 	var timestampAuthorities []root.TimestampingAuthority
 	rekorTransparencyLogs := make(map[string]*root.TransparencyLog)
+	var err error
 
-	for i := 0; i < len(c.CertChain); i++ {
-		var fulcioURI string
-		if i < len(c.FulcioURI) {
-			fulcioURI = c.FulcioURI[i]
-		}
-		fulcioAuthority, err := parseCAPEMFile(c.CertChain[i], fulcioURI)
-		if err != nil {
-			return err
-		}
-		fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
+	// Decide whether to use new or old flags
+	fulcioSpecUsed := len(c.FulcioSpecs) > 0
+	deprecatedFulcioFlagsUsed := len(c.CertChain) > 0 || len(c.FulcioURI) > 0
+	if fulcioSpecUsed && deprecatedFulcioFlagsUsed {
+		return fmt.Errorf("cannot use --fulcio and old fulcio flags at the same time")
 	}
 
-	for i := 0; i < len(c.CtfeKeyPath); i++ {
-		ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath[i])
-		if err != nil {
-			return err
+	rekorSpecUsed := len(c.RekorSpecs) > 0
+	deprecatedRekorFlagsUsed := len(c.RekorKeyPath) > 0 || len(c.RekorURL) > 0 || len(c.RekorStartTime) > 0 || len(c.RekorEndTime) > 0
+	if rekorSpecUsed && deprecatedRekorFlagsUsed {
+		return fmt.Errorf("cannot use --rekor and old rekor flags at the same time")
+	}
+
+	ctfeSpecUsed := len(c.CTFESpecs) > 0
+	deprecatedCTFEFlagsUsed := len(c.CtfeKeyPath) > 0 || len(c.CtfeURL) > 0 || len(c.CtfeStartTime) > 0 || len(c.CtfeEndTime) > 0
+	if ctfeSpecUsed && deprecatedCTFEFlagsUsed {
+		return fmt.Errorf("cannot use --ctfe and old ctfe flags at the same time")
+	}
+
+	tsaSpecUsed := len(c.TSASpecs) > 0
+	deprecatedTSAFlagsUsed := len(c.TSACertChainPath) > 0 || len(c.TSAURI) > 0
+	if tsaSpecUsed && deprecatedTSAFlagsUsed {
+		return fmt.Errorf("cannot use --tsa and old tsa flags at the same time")
+	}
+
+	if fulcioSpecUsed {
+		for _, spec := range c.FulcioSpecs {
+			fulcioAuthority, err := parseFulcioSpec(spec)
+			if err != nil {
+				return fmt.Errorf("parsing fulcio spec: %w", err)
+			}
+			fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
 		}
-
-		startTime := time.Unix(0, 0)
-		endTime := time.Time{}
-
-		if i < len(c.CtfeStartTime) {
-			startTime, err = time.Parse(time.RFC3339, c.CtfeStartTime[i])
+	} else {
+		for i := 0; i < len(c.CertChain); i++ {
+			var fulcioURI string
+			if i < len(c.FulcioURI) {
+				fulcioURI = c.FulcioURI[i]
+			}
+			fulcioAuthority, err := parseCAPEMFile(c.CertChain[i], fulcioURI)
 			if err != nil {
 				return err
 			}
-		}
-		if i < len(c.CtfeEndTime) {
-			endTime, err = time.Parse(time.RFC3339, c.CtfeEndTime[i])
-			if err != nil {
-				return err
-			}
-		}
-
-		ctLogs[id] = &root.TransparencyLog{
-			HashFunc:            crypto.SHA256,
-			ID:                  idBytes,
-			ValidityPeriodStart: startTime,
-			PublicKey:           *ctLogPubKey,
-			SignatureHashFunc:   crypto.SHA256,
-		}
-
-		if !endTime.IsZero() {
-			ctLogs[id].ValidityPeriodEnd = endTime
-		}
-
-		if i < len(c.CtfeURL) {
-			ctLogs[id].BaseURL = c.CtfeURL[i]
+			fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
 		}
 	}
 
-	for i := 0; i < len(c.RekorKeyPath); i++ {
-		keyParts := strings.SplitN(c.RekorKeyPath[i], ",", 2)
-		keyPath := keyParts[0]
-		tlogPubKey, id, idBytes, err := getPubKey(keyPath)
-		if err != nil {
-			return err
+	if ctfeSpecUsed {
+		for _, spec := range c.CTFESpecs {
+			ctLog, id, err := parseTLogSpec(spec)
+			if err != nil {
+				return fmt.Errorf("parsing ctfe spec: %w", err)
+			}
+			ctLogs[id] = ctLog
 		}
-		var origin string
-		if len(keyParts) > 1 {
-			origin = keyParts[1]
-		}
-		if origin != "" {
-			id, idBytes, err = getCheckpointID(origin, *tlogPubKey)
+	} else {
+		for i := 0; i < len(c.CtfeKeyPath); i++ {
+			ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath[i]) // #nosec G601
 			if err != nil {
 				return err
 			}
-		}
 
-		startTime := time.Unix(0, 0)
-		endTime := time.Time{}
+			startTime := time.Unix(0, 0)
+			endTime := time.Time{}
 
-		if i < len(c.RekorStartTime) {
-			startTime, err = time.Parse(time.RFC3339, c.RekorStartTime[i])
-			if err != nil {
-				return err
+			if i < len(c.CtfeStartTime) { // #nosec G601
+				startTime, err = time.Parse(time.RFC3339, c.CtfeStartTime[i])
+				if err != nil {
+					return err
+				}
 			}
-		}
-		if i < len(c.RekorEndTime) {
-			endTime, err = time.Parse(time.RFC3339, c.RekorEndTime[i])
-			if err != nil {
-				return err
+			if i < len(c.CtfeEndTime) { // #nosec G601
+				endTime, err = time.Parse(time.RFC3339, c.CtfeEndTime[i])
+				if err != nil {
+					return err
+				}
 			}
-		}
 
-		rekorTransparencyLogs[id] = &root.TransparencyLog{
-			HashFunc:            crypto.SHA256,
-			ID:                  idBytes,
-			ValidityPeriodStart: startTime,
-			PublicKey:           *tlogPubKey,
-			SignatureHashFunc:   crypto.SHA256,
-		}
-		if !endTime.IsZero() {
-			rekorTransparencyLogs[id].ValidityPeriodEnd = endTime
-		}
+			ctLogs[id] = &root.TransparencyLog{
+				HashFunc:            crypto.SHA256,
+				ID:                  idBytes,
+				ValidityPeriodStart: startTime,
+				PublicKey:           ctLogPubKey,
+				SignatureHashFunc:   getSignatureHashAlgo(ctLogPubKey),
+			}
 
-		if i < len(c.RekorURL) {
-			rekorTransparencyLogs[id].BaseURL = c.RekorURL[i]
+			if !endTime.IsZero() {
+				ctLogs[id].ValidityPeriodEnd = endTime
+			}
+
+			if i < len(c.CtfeURL) { // #nosec G601
+				ctLogs[id].BaseURL = c.CtfeURL[i]
+			}
 		}
 	}
 
-	for i := 0; i < len(c.TSACertChainPath); i++ {
-		var tsaURI string
-		if i < len(c.TSAURI) {
-			tsaURI = c.TSAURI[i]
+	if rekorSpecUsed {
+		for _, spec := range c.RekorSpecs {
+			rekorLog, id, err := parseTLogSpec(spec)
+			if err != nil {
+				return fmt.Errorf("parsing rekor spec: %w", err)
+			}
+			// Rekor v2 needs origin for checkpoint ID
+			kvs, _ := parseKVs(spec)
+			if origin, ok := kvs["origin"]; ok {
+				id, rekorLog.ID, err = getCheckpointID(origin, rekorLog.PublicKey)
+				if err != nil {
+					return err
+				}
+			}
+			rekorTransparencyLogs[id] = rekorLog
 		}
-		timestampAuthority, err := parseTAPEMFile(c.TSACertChainPath[i], tsaURI)
-		if err != nil {
-			return err
+	} else {
+		for i := 0; i < len(c.RekorKeyPath); i++ {
+			keyParts := strings.SplitN(c.RekorKeyPath[i], ",", 2) // #nosec G601
+			keyPath := keyParts[0]
+			tlogPubKey, id, idBytes, err := getPubKey(keyPath)
+			if err != nil {
+				return err
+			}
+			var origin string
+			if len(keyParts) > 1 {
+				origin = keyParts[1]
+			}
+			if origin != "" {
+				id, idBytes, err = getCheckpointID(origin, tlogPubKey)
+				if err != nil {
+					return err
+				}
+			}
+
+			startTime := time.Unix(0, 0)
+			endTime := time.Time{}
+
+			if i < len(c.RekorStartTime) { // #nosec G601
+				startTime, err = time.Parse(time.RFC3339, c.RekorStartTime[i])
+				if err != nil {
+					return err
+				}
+			}
+			if i < len(c.RekorEndTime) { // #nosec G601
+				endTime, err = time.Parse(time.RFC3339, c.RekorEndTime[i])
+				if err != nil {
+					return err
+				}
+			}
+
+			rekorTransparencyLogs[id] = &root.TransparencyLog{
+				HashFunc:            crypto.SHA256,
+				ID:                  idBytes,
+				ValidityPeriodStart: startTime,
+				PublicKey:           tlogPubKey,
+				SignatureHashFunc:   getSignatureHashAlgo(tlogPubKey),
+			}
+			if !endTime.IsZero() {
+				rekorTransparencyLogs[id].ValidityPeriodEnd = endTime
+			}
+
+			if i < len(c.RekorURL) { // #nosec G601
+				rekorTransparencyLogs[id].BaseURL = c.RekorURL[i]
+			}
 		}
-		timestampAuthorities = append(timestampAuthorities, timestampAuthority)
+	}
+
+	if tsaSpecUsed {
+		for _, spec := range c.TSASpecs {
+			tsa, err := parseTSASpec(spec)
+			if err != nil {
+				return fmt.Errorf("parsing tsa spec: %w", err)
+			}
+			timestampAuthorities = append(timestampAuthorities, tsa)
+		}
+	} else {
+		for i := 0; i < len(c.TSACertChainPath); i++ {
+			var tsaURI string // #nosec G601
+			if i < len(c.TSAURI) {
+				tsaURI = c.TSAURI[i]
+			}
+			timestampAuthority, err := parseTAPEMFile(c.TSACertChainPath[i], tsaURI)
+			if err != nil {
+				return err
+			}
+			timestampAuthorities = append(timestampAuthorities, timestampAuthority)
+		}
 	}
 
 	newTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01,
@@ -217,15 +300,28 @@ func parseTAPEMFile(path, uri string) (root.TimestampingAuthority, error) {
 		return nil, err
 	}
 
-	var ta root.SigstoreTimestampingAuthority
-	ta.Root = certs[len(certs)-1]
-	ta.ValidityPeriodStart = certs[len(certs)-1].NotBefore
-	if len(certs) > 1 {
-		ta.Intermediates = certs[:len(certs)-1]
+	if certs[0].IsCA {
+		return nil, fmt.Errorf("first certificate in chain must be a leaf certificate")
 	}
-	ta.URI = uri
+	if len(certs) < 2 {
+		return nil, fmt.Errorf("certificate chain must have at least two certificates")
+	}
 
-	return &ta, nil
+	rootCert := certs[len(certs)-1]
+	var intermediates []*x509.Certificate
+	leafCert := certs[0]
+
+	if len(certs) > 1 {
+		intermediates = certs[1 : len(certs)-1]
+	}
+
+	return &root.SigstoreTimestampingAuthority{
+		Root:                rootCert,
+		Intermediates:       intermediates,
+		Leaf:                leafCert,
+		ValidityPeriodStart: rootCert.NotBefore,
+		URI:                 uri,
+	}, nil
 }
 
 func parseCerts(path string) ([]*x509.Certificate, error) {
@@ -255,7 +351,7 @@ func parseCerts(path string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func getPubKey(path string) (*crypto.PublicKey, string, []byte, error) {
+func getPubKey(path string) (crypto.PublicKey, string, []byte, error) {
 	pemBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, "", []byte{}, err
@@ -276,7 +372,7 @@ func getPubKey(path string) (*crypto.PublicKey, string, []byte, error) {
 		return nil, "", []byte{}, err
 	}
 
-	return &pubKey, keyID, idBytes, nil
+	return pubKey, keyID, idBytes, nil
 }
 
 func getCheckpointID(origin string, key crypto.PublicKey) (string, []byte, error) {
@@ -285,4 +381,187 @@ func getCheckpointID(origin string, key crypto.PublicKey) (string, []byte, error
 		return "", nil, err
 	}
 	return hex.EncodeToString(id), id, nil
+}
+
+func parseKVs(spec string) (map[string]string, error) {
+	kvs := make(map[string]string)
+	pairs := strings.Split(spec, ",")
+	for _, pair := range pairs {
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid key-value pair: %s", pair)
+		}
+		kvs[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return kvs, nil
+}
+
+func parseFulcioSpec(spec string) (root.CertificateAuthority, error) {
+	kvs, err := parseKVs(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	requiredKeys := []string{"url", "certificate-chain"}
+	for _, key := range requiredKeys {
+		if val, ok := kvs[key]; !ok || val == "" {
+			return nil, fmt.Errorf("missing or empty required key '%s' in fulcio spec", key)
+		}
+	}
+
+	certs, err := parseCerts(kvs["certificate-chain"])
+	if err != nil {
+		return nil, fmt.Errorf("parsing Fulcio certificate-chain: %w", err)
+	}
+
+	rootCert := certs[len(certs)-1]
+	var intermediates []*x509.Certificate
+	if len(certs) > 1 {
+		intermediates = certs[:len(certs)-1]
+	}
+
+	startTime := rootCert.NotBefore
+	if st, ok := kvs["start-time"]; ok && st != "" {
+		startTime, err = time.Parse(time.RFC3339, st)
+		if err != nil {
+			return nil, fmt.Errorf("parsing start-time: %w", err)
+		}
+	}
+
+	var endTime time.Time
+	if et, ok := kvs["end-time"]; ok && et != "" {
+		endTime, err = time.Parse(time.RFC3339, et)
+		if err != nil {
+			return nil, fmt.Errorf("parsing end-time: %w", err)
+		}
+	}
+
+	return &root.FulcioCertificateAuthority{
+		Root:                rootCert,
+		Intermediates:       intermediates,
+		ValidityPeriodStart: startTime,
+		ValidityPeriodEnd:   endTime,
+		URI:                 kvs["url"],
+	}, nil
+}
+
+func parseTSASpec(spec string) (root.TimestampingAuthority, error) {
+	kvs, err := parseKVs(spec)
+	if err != nil {
+		return nil, err
+	}
+
+	requiredKeys := []string{"url", "certificate-chain"}
+	for _, key := range requiredKeys {
+		if val, ok := kvs[key]; !ok || val == "" {
+			return nil, fmt.Errorf("missing or empty required key '%s' in tsa spec", key)
+		}
+	}
+
+	certs, err := parseCerts(kvs["certificate-chain"])
+	if err != nil {
+		return nil, fmt.Errorf("parsing TSA certificate-chain: %w", err)
+	}
+	if certs[0].IsCA {
+		return nil, fmt.Errorf("first certificate in chain must be a leaf certificate")
+	}
+
+	leafCert := certs[0]
+	rootCert := certs[len(certs)-1]
+	var intermediates []*x509.Certificate
+	if len(certs) > 1 {
+		intermediates = certs[1 : len(certs)-1]
+	}
+
+	startTime := leafCert.NotBefore
+	if st, ok := kvs["start-time"]; ok && st != "" {
+		startTime, err = time.Parse(time.RFC3339, st)
+		if err != nil {
+			return nil, fmt.Errorf("parsing start-time: %w", err)
+		}
+	}
+
+	var endTime time.Time
+	if et, ok := kvs["end-time"]; ok && et != "" {
+		endTime, err = time.Parse(time.RFC3339, et)
+		if err != nil {
+			return nil, fmt.Errorf("parsing end-time: %w", err)
+		}
+	}
+
+	return &root.SigstoreTimestampingAuthority{
+		Root:                rootCert,
+		Intermediates:       intermediates,
+		Leaf:                leafCert,
+		ValidityPeriodStart: startTime,
+		ValidityPeriodEnd:   endTime,
+		URI:                 kvs["url"],
+	}, nil
+}
+
+func parseTLogSpec(spec string) (*root.TransparencyLog, string, error) {
+	kvs, err := parseKVs(spec)
+	if err != nil {
+		return nil, "", err
+	}
+
+	requiredKeys := []string{"url", "public-key", "start-time"}
+	for _, key := range requiredKeys {
+		if val, ok := kvs[key]; !ok || val == "" {
+			return nil, "", fmt.Errorf("missing or empty required key '%s' in tlog spec", key)
+		}
+	}
+
+	pubKey, id, idBytes, err := getPubKey(kvs["public-key"])
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing public-key: %w", err)
+	}
+
+	startTime, err := time.Parse(time.RFC3339, kvs["start-time"])
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing start-time: %w", err)
+	}
+
+	var endTime time.Time
+	if et, ok := kvs["end-time"]; ok && et != "" {
+		endTime, err = time.Parse(time.RFC3339, et)
+		if err != nil {
+			return nil, "", fmt.Errorf("parsing end-time: %w", err)
+		}
+	}
+
+	tlog := &root.TransparencyLog{
+		BaseURL:             kvs["url"],
+		ID:                  idBytes,
+		HashFunc:            crypto.SHA256,
+		PublicKey:           pubKey,
+		SignatureHashFunc:   getSignatureHashAlgo(pubKey),
+		ValidityPeriodStart: startTime,
+		ValidityPeriodEnd:   endTime,
+	}
+	return tlog, id, nil
+}
+
+func getSignatureHashAlgo(pubKey crypto.PublicKey) crypto.Hash {
+	var h crypto.Hash
+	switch pk := pubKey.(type) {
+	case *rsa.PublicKey:
+		h = crypto.SHA256
+	case *ecdsa.PublicKey:
+		switch pk.Curve {
+		case elliptic.P256():
+			h = crypto.SHA256
+		case elliptic.P384():
+			h = crypto.SHA384
+		case elliptic.P521():
+			h = crypto.SHA512
+		default:
+			h = crypto.SHA256
+		}
+	case ed25519.PublicKey:
+		h = crypto.SHA512
+	default:
+		h = crypto.SHA256
+	}
+	return h
 }
