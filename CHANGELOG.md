@@ -1,3 +1,18 @@
+# v2.5.3
+
+## Features
+
+* Add signing-config create command (#4280)
+* Allow multiple services to be specified for trusted-root create (#4285)
+* feat: Add OCI 1.1+ experimental support to tree (#4205)
+* Add validity period end for trusted-root create (#4271)
+
+## Bug Fixes
+
+* Fix cert verification logic for trusted-root/SCTs (#4294)
+* force when copying the latest image to overwrite (#4298)
+* avoid double-loading trustedroot from file (#4264)
+
 # v2.5.2
 
 ## Bug Fixes
