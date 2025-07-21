@@ -17,6 +17,7 @@ package cosign
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/sha256"
 	"io"
 	"os"
@@ -55,7 +56,7 @@ func Test_FileExists(t *testing.T) {
 
 func Test_HashReader(t *testing.T) {
 	input := []byte("hello world")
-	r := NewHashReader(bytes.NewReader(input), sha256.New())
+	r := NewHashReader(bytes.NewReader(input), crypto.SHA256)
 
 	got, err := io.ReadAll(&r)
 	if err != nil {
