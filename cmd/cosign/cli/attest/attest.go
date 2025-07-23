@@ -21,7 +21,6 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -75,7 +74,6 @@ type AttestCommand struct {
 	CertPath                string
 	CertChainPath           string
 	NoUpload                bool
-	StatementPath           string
 	PredicatePath           string
 	PredicateType           string
 	Replace                 bool
@@ -93,14 +91,18 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return &options.KeyParseError{}
 	}
 
-	if options.NOf(c.PredicatePath, c.StatementPath) != 1 {
-		return fmt.Errorf("one of --predicate or --statement must be set")
+	if c.PredicatePath == "" {
+		return fmt.Errorf("predicate cannot be empty")
 	}
 
 	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
 		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
+	predicateURI, err := options.ParsePredicateType(c.PredicateType)
+	if err != nil {
+		return err
+	}
 	ref, err := name.ParseReference(imageRef, c.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing reference: %w", err)
@@ -138,52 +140,26 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	dd := cremote.NewDupeDetector(sv)
 
-	var payload []byte
-	var predicateType string
+	predicate, err := predicateReader(c.PredicatePath)
+	if err != nil {
+		return fmt.Errorf("getting predicate reader: %w", err)
+	}
+	defer predicate.Close()
 
-	if c.StatementPath != "" {
-		fmt.Fprintln(os.Stderr, "Using statement from:", c.StatementPath)
-		statement, err := predicateReader(c.StatementPath)
-		if err != nil {
-			return fmt.Errorf("getting statement reader: %w", err)
-		}
-		defer statement.Close()
-		payload, err = io.ReadAll(statement)
-		if err != nil {
-			return fmt.Errorf("could not read statement: %w", err)
-		}
-		predicateType, err = validateStatement(payload)
-		if err != nil {
-			return fmt.Errorf("invalid statement: %w", err)
-		}
-	} else {
-		predicateType, err = options.ParsePredicateType(c.PredicateType)
-		if err != nil {
-			return err
-		}
-
-		predicate, err := predicateReader(c.PredicatePath)
-		if err != nil {
-			return fmt.Errorf("getting predicate reader: %w", err)
-		}
-		defer predicate.Close()
-
-		sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
-			Predicate: predicate,
-			Type:      c.PredicateType,
-			Digest:    h.Hex,
-			Repo:      digest.Repository.String(),
-		})
-		if err != nil {
-			return err
-		}
-
-		payload, err = json.Marshal(sh)
-		if err != nil {
-			return err
-		}
+	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
+		Predicate: predicate,
+		Type:      c.PredicateType,
+		Digest:    h.Hex,
+		Repo:      digest.Repository.String(),
+	})
+	if err != nil {
+		return err
 	}
 
+	payload, err := json.Marshal(sh)
+	if err != nil {
+		return err
+	}
 	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("signing: %w", err)
@@ -231,6 +207,11 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		bundle := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 
 		opts = append(opts, static.WithRFC3161Timestamp(bundle))
+	}
+
+	predicateType, err := options.ParsePredicateType(c.PredicateType)
+	if err != nil {
+		return err
 	}
 
 	predicateTypeAnnotation := map[string]string{
@@ -287,7 +268,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.Replace {
-		ro := cremote.NewReplaceOp(predicateType)
+		ro := cremote.NewReplaceOp(predicateURI)
 		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
 	}
 
