@@ -62,9 +62,9 @@ Hr/+CxFvaJWmpYqNkLDGRU+9orzh5hI2RrcuaQ==
 `)
 )
 
-func mustCreateSignature(t *testing.T, payload []byte, b64sig string, opts ...static.Option) oci.Signature {
+func mustCreateSignature(t *testing.T, payload []byte, b64sig string, staticOpts ...static.StaticOption) oci.Signature {
 	t.Helper()
-	sig, err := static.NewSignature(payload, b64sig, opts...)
+	sig, err := static.NewSignature(payload, b64sig, staticOpts...)
 	if err != nil {
 		t.Fatalf("failed to create static signature: %v", err)
 	}

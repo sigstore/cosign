@@ -170,9 +170,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return nil
 	}
 
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+	staticOpts := []static.StaticOption{static.WithLayerMediaType(types.DssePayloadType)}
 	if sv.Cert != nil {
-		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
+		staticOpts = append(staticOpts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
 	var timestampBytes []byte
 	var tsaPayload []byte
@@ -206,7 +206,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		}
 		bundle := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
 
-		opts = append(opts, static.WithRFC3161Timestamp(bundle))
+		staticOpts = append(staticOpts, static.WithRFC3161Timestamp(bundle))
 	}
 
 	predicateType, err := options.ParsePredicateType(c.PredicateType)
@@ -218,7 +218,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		"predicateType": predicateType,
 	}
 	// Add predicateType as manifest annotation
-	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
+	staticOpts = append(staticOpts, static.WithAnnotations(predicateTypeAnnotation))
 
 	// Check whether we should be uploading to the transparency log
 	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
@@ -238,10 +238,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
+		staticOpts = append(staticOpts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
 	}
 
-	sig, err := static.NewAttestation(signedPayload, opts...)
+	sig, err := static.NewAttestation(signedPayload, staticOpts...)
 	if err != nil {
 		return err
 	}

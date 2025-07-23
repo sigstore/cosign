@@ -310,8 +310,8 @@ func TestVerifyImageSignatureWithNoChain(t *testing.T) {
 	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
 	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
 
-	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+	staticOpts := []static.StaticOption{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), staticOpts...)
 
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
@@ -354,8 +354,8 @@ func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
 	// Add one valid key here.
 	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
 
-	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
-	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+	staticOpts := []static.StaticOption{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), staticOpts...)
 
 	// Then try to validate with keys that are not ecdsa.PublicKey and should
 	// fail.
