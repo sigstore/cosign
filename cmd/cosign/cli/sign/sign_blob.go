@@ -241,17 +241,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 				return nil, fmt.Errorf("create certificate file: %w", err)
 			}
 			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
-		} else {
-			pemBytes, err := sigs.PublicKeyPem(sv, signatureoptions.WithContext(ctx))
-			if err != nil {
-				return nil, err
-			}
-			if err := os.WriteFile(outputCertificate, pemBytes, 0600); err != nil {
-				return nil, err
-			}
-			return pemBytes, nil
-		}
-
+		} 
 	}
 
 	return sig, nil

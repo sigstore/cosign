@@ -294,7 +294,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if signOpts.OutputCertificate != "" {
-		rekorBytes, err := sv.Bytes(ctx)
+		rekorBytes, err := extractCertificate(ctx,sv)
 		if err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
