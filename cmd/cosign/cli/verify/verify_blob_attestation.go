@@ -190,7 +190,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		} else if c.Digest != "" && c.DigestAlg != "" {
 			digest, err = hex.DecodeString(c.Digest)
 			if err != nil {
-				return fmt.Errorf("Unable to decode provided digest: %w", err)
+				return fmt.Errorf("unable to decode provided digest: %w", err)
 			}
 			h = v1.Hash{
 				Hex:       c.Digest,
