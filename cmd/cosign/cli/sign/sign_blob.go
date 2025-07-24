@@ -35,7 +35,6 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
