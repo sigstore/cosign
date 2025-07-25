@@ -79,6 +79,9 @@ type VerifyBlobAttestationCommand struct {
 
 	SignaturePath       string // Path to the signature
 	UseSignedTimestamps bool
+
+	Digest    string
+	DigestAlg string
 }
 
 // Exec runs the verification command
@@ -155,30 +158,44 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	var h v1.Hash
 	var digest []byte
 	if c.CheckClaims {
-		// Get the actual digest of the blob
-		var payload internal.HashReader
-		f, err := os.Open(filepath.Clean(artifactPath))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		fileInfo, err := f.Stat()
-		if err != nil {
-			return err
-		}
-		err = payloadsize.CheckSize(uint64(fileInfo.Size()))
-		if err != nil {
-			return err
-		}
+		if artifactPath != "" {
+			if c.Digest != "" && c.DigestAlg != "" {
+				ui.Warnf(ctx, "Ignoring provided digest and digestAlg in favor of provided blob")
+			}
+			// Get the actual digest of the blob
+			var payload internal.HashReader
+			f, err := os.Open(filepath.Clean(artifactPath))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			fileInfo, err := f.Stat()
+			if err != nil {
+				return err
+			}
+			err = payloadsize.CheckSize(uint64(fileInfo.Size()))
+			if err != nil {
+				return err
+			}
 
-		payload = internal.NewHashReader(f, sha256.New())
-		if _, err := io.ReadAll(&payload); err != nil {
-			return err
-		}
-		digest = payload.Sum(nil)
-		h = v1.Hash{
-			Hex:       hex.EncodeToString(digest),
-			Algorithm: "sha256",
+			payload = internal.NewHashReader(f, sha256.New())
+			if _, err := io.ReadAll(&payload); err != nil {
+				return err
+			}
+			digest = payload.Sum(nil)
+			h = v1.Hash{
+				Hex:       hex.EncodeToString(digest),
+				Algorithm: "sha256",
+			}
+		} else if c.Digest != "" && c.DigestAlg != "" {
+			digest, err = hex.DecodeString(c.Digest)
+			if err != nil {
+				return fmt.Errorf("unable to decode provided digest: %w", err)
+			}
+			h = v1.Hash{
+				Hex:       c.Digest,
+				Algorithm: c.DigestAlg,
+			}
 		}
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}

@@ -52,9 +52,11 @@ func AttestBlob() *cobra.Command {
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest-blob --predicate - --yes`,
 
-		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.Predicate.Statement == "" && len(args) != 1 {
+				return cobra.ExactArgs(1)(cmd, args)
+			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -100,13 +102,18 @@ func AttestBlob() *cobra.Command {
 				TlogUpload:        o.TlogUpload,
 				PredicateType:     o.Predicate.Type,
 				PredicatePath:     o.Predicate.Path,
+				StatementPath:     o.Predicate.Statement,
 				OutputSignature:   o.OutputSignature,
 				OutputAttestation: o.OutputAttestation,
 				OutputCertificate: o.OutputCertificate,
 				Timeout:           ro.Timeout,
 				RekorEntryType:    o.RekorEntryType,
 			}
-			return v.Exec(cmd.Context(), args[0])
+			var artifactPath string
+			if len(args) == 1 {
+				artifactPath = args[0]
+			}
+			return v.Exec(cmd.Context(), artifactPath)
 		},
 	}
 	o.AddFlags(cmd)

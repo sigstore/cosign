@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -60,6 +61,7 @@ type AttestBlobCommand struct {
 
 	ArtifactHash string
 
+	StatementPath string
 	PredicatePath string
 	PredicateType string
 
@@ -80,8 +82,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return &options.KeyParseError{}
 	}
 
-	if c.PredicatePath == "" {
-		return fmt.Errorf("predicate cannot be empty")
+	if options.NOf(c.PredicatePath, c.StatementPath) != 1 {
+		return fmt.Errorf("one of --predicate or --statement must be set")
 	}
 
 	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
@@ -98,38 +100,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
-	var artifact []byte
-	var hexDigest string
-	var err error
-
-	if c.ArtifactHash == "" {
-		if artifactPath == "-" {
-			artifact, err = io.ReadAll(os.Stdin)
-		} else {
-			fmt.Fprintln(os.Stderr, "Using payload from:", artifactPath)
-			artifact, err = os.ReadFile(filepath.Clean(artifactPath))
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.ArtifactHash == "" {
-		digest, _, err := signature.ComputeDigestForSigning(bytes.NewReader(artifact), crypto.SHA256, []crypto.Hash{crypto.SHA256, crypto.SHA384})
-		if err != nil {
-			return err
-		}
-		hexDigest = strings.ToLower(hex.EncodeToString(digest))
-	} else {
-		hexDigest = c.ArtifactHash
-	}
-
-	predicate, err := predicateReader(c.PredicatePath)
-	if err != nil {
-		return fmt.Errorf("getting predicate reader: %w", err)
-	}
-	defer predicate.Close()
-
 	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
@@ -139,19 +109,60 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	base := path.Base(artifactPath)
 
-	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
-		Predicate: predicate,
-		Type:      c.PredicateType,
-		Digest:    hexDigest,
-		Repo:      base,
-	})
-	if err != nil {
-		return err
-	}
+	var payload []byte
 
-	payload, err := json.Marshal(sh)
-	if err != nil {
-		return err
+	if c.StatementPath != "" {
+		fmt.Fprintln(os.Stderr, "Using statement from:", c.StatementPath)
+		payload, err = os.ReadFile(filepath.Clean(c.StatementPath))
+		if err != nil {
+			return fmt.Errorf("could not read statement: %w", err)
+		}
+		if _, err := validateStatement(payload); err != nil {
+			return fmt.Errorf("invalid statement: %w", err)
+		}
+
+	} else {
+		var artifact []byte
+		var hexDigest string
+		if c.ArtifactHash == "" {
+			if artifactPath == "-" {
+				artifact, err = io.ReadAll(os.Stdin)
+			} else {
+				fmt.Fprintln(os.Stderr, "Using payload from:", artifactPath)
+				artifact, err = os.ReadFile(filepath.Clean(artifactPath))
+			}
+			if err != nil {
+				return err
+			}
+		}
+
+		if c.ArtifactHash == "" {
+			digest, _, err := signature.ComputeDigestForSigning(bytes.NewReader(artifact), crypto.SHA256, []crypto.Hash{crypto.SHA256, crypto.SHA384})
+			if err != nil {
+				return err
+			}
+			hexDigest = strings.ToLower(hex.EncodeToString(digest))
+		} else {
+			hexDigest = c.ArtifactHash
+		}
+		predicate, err := predicateReader(c.PredicatePath)
+		if err != nil {
+			return fmt.Errorf("getting predicate reader: %w", err)
+		}
+		defer predicate.Close()
+		sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
+			Predicate: predicate,
+			Type:      c.PredicateType,
+			Digest:    hexDigest,
+			Repo:      base,
+		})
+		if err != nil {
+			return err
+		}
+		payload, err = json.Marshal(sh)
+		if err != nil {
+			return err
+		}
 	}
 
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
@@ -362,4 +373,12 @@ func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, pay
 	}
 
 	return contents, nil
+}
+
+func validateStatement(payload []byte) (string, error) {
+	var statement *intotov1.Statement
+	if err := json.Unmarshal(payload, &statement); err != nil {
+		return "", fmt.Errorf("invalid statement: %w", err)
+	}
+	return statement.PredicateType, nil
 }

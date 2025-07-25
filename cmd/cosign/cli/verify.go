@@ -430,10 +430,12 @@ The blob may be specified as a path to a file.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
+				Digest:                       o.Digest,
+				DigestAlg:                    o.DigestAlg,
 			}
 			// We only use the blob if we are checking claims.
-			if len(args) == 0 && o.CheckClaims {
-				return fmt.Errorf("no path to blob passed in, run `cosign verify-blob-attestation -h` for more help")
+			if o.CheckClaims && len(args) == 0 && (o.Digest == "" || o.DigestAlg == "") {
+				return fmt.Errorf("must provide path to blob or digest and digestAlg; run `cosign verify-blob-attestation -h` for more help")
 			}
 			var path string
 			if len(args) > 0 {
