@@ -30,6 +30,7 @@ type SignOptions struct {
 	OutputPayload           string
 	OutputCertificate       string
 	PayloadPath             string
+	PayloadMediaType        string
 	Recursive               bool
 	Attachment              string
 	SkipConfirmation        bool
@@ -96,6 +97,8 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
 	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
+	cmd.Flags().StringVar(&o.PayloadMediaType, "payload-media-type", "",
+		"media type of the payload. Ignored if --payload is not specified.")
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")

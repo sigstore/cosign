@@ -31,7 +31,7 @@ func TestOptions(t *testing.T) {
 
 	tests := []struct {
 		name string
-		opts []Option
+		opts []StaticOption
 		want *options
 	}{{
 		name: "no options",
@@ -42,7 +42,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with layer media type",
-		opts: []Option{WithLayerMediaType("foo")},
+		opts: []StaticOption{WithLayerMediaType("foo")},
 		want: &options{
 			LayerMediaType:  "foo",
 			ConfigMediaType: types.OCIConfigJSON,
@@ -50,7 +50,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with config media type",
-		opts: []Option{WithConfigMediaType("bar")},
+		opts: []StaticOption{WithConfigMediaType("bar")},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: "bar",
@@ -58,7 +58,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with annotations",
-		opts: []Option{WithAnnotations(map[string]string{
+		opts: []StaticOption{WithAnnotations(map[string]string{
 			"foo": "bar",
 		})},
 		want: &options{
@@ -70,7 +70,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with cert chain",
-		opts: []Option{WithCertChain([]byte("a"), []byte("b"))},
+		opts: []StaticOption{WithCertChain([]byte("a"), []byte("b"))},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
@@ -83,7 +83,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with bundle",
-		opts: []Option{WithBundle(bundle)},
+		opts: []StaticOption{WithBundle(bundle)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
@@ -94,7 +94,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with RFC3161 timestamp bundle",
-		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp)},
+		opts: []StaticOption{WithRFC3161Timestamp(rfc3161Timestamp)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
@@ -105,7 +105,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with RFC3161Timestamp and Rekor bundle",
-		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
+		opts: []StaticOption{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,
@@ -118,7 +118,7 @@ func TestOptions(t *testing.T) {
 		},
 	}, {
 		name: "with RFC3161Timestamp and Rekor bundle",
-		opts: []Option{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
+		opts: []StaticOption{WithRFC3161Timestamp(rfc3161Timestamp), WithBundle(bundle)},
 		want: &options{
 			LayerMediaType:  ctypes.SimpleSigningMediaType,
 			ConfigMediaType: types.OCIConfigJSON,

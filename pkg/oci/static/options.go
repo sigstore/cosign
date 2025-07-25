@@ -23,8 +23,8 @@ import (
 	ctypes "github.com/sigstore/cosign/v2/pkg/types"
 )
 
-// Option is a functional option for customizing static signatures.
-type Option func(*options)
+// StaticOption is a functional option for customizing static signatures.
+type StaticOption func(*options)
 
 type options struct {
 	LayerMediaType          types.MediaType
@@ -37,14 +37,14 @@ type options struct {
 	RecordCreationTimestamp bool
 }
 
-func makeOptions(opts ...Option) (*options, error) {
+func makeOptions(staticOpts ...StaticOption) (*options, error) {
 	o := &options{
 		LayerMediaType:  ctypes.SimpleSigningMediaType,
 		ConfigMediaType: types.OCIConfigJSON,
 		Annotations:     make(map[string]string),
 	}
 
-	for _, opt := range opts {
+	for _, opt := range staticOpts {
 		opt(o)
 	}
 
@@ -72,42 +72,42 @@ func makeOptions(opts ...Option) (*options, error) {
 }
 
 // WithLayerMediaType sets the media type of the signature.
-func WithLayerMediaType(mt types.MediaType) Option {
+func WithLayerMediaType(mt types.MediaType) StaticOption {
 	return func(o *options) {
 		o.LayerMediaType = mt
 	}
 }
 
 // WithConfigMediaType sets the media type of the signature.
-func WithConfigMediaType(mt types.MediaType) Option {
+func WithConfigMediaType(mt types.MediaType) StaticOption {
 	return func(o *options) {
 		o.ConfigMediaType = mt
 	}
 }
 
 // WithAnnotations sets the annotations that will be associated.
-func WithAnnotations(ann map[string]string) Option {
+func WithAnnotations(ann map[string]string) StaticOption {
 	return func(o *options) {
 		o.Annotations = ann
 	}
 }
 
 // WithBundle sets the bundle to attach to the signature
-func WithBundle(b *bundle.RekorBundle) Option {
+func WithBundle(b *bundle.RekorBundle) StaticOption {
 	return func(o *options) {
 		o.Bundle = b
 	}
 }
 
 // WithRFC3161Timestamp sets the time-stamping bundle to attach to the signature
-func WithRFC3161Timestamp(b *bundle.RFC3161Timestamp) Option {
+func WithRFC3161Timestamp(b *bundle.RFC3161Timestamp) StaticOption {
 	return func(o *options) {
 		o.RFC3161Timestamp = b
 	}
 }
 
 // WithCertChain sets the certificate chain for this signature.
-func WithCertChain(cert, chain []byte) Option {
+func WithCertChain(cert, chain []byte) StaticOption {
 	return func(o *options) {
 		o.Cert = cert
 		o.Chain = chain
@@ -115,7 +115,7 @@ func WithCertChain(cert, chain []byte) Option {
 }
 
 // WithRecordCreationTimestamp sets the feature flag to honor the creation timestamp to time of running
-func WithRecordCreationTimestamp(rct bool) Option {
+func WithRecordCreationTimestamp(rct bool) StaticOption {
 	return func(o *options) {
 		o.RecordCreationTimestamp = rct
 	}

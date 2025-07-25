@@ -89,8 +89,8 @@ func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signe
 		// each access.
 		ref = digest // nolint
 
-		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-		att, err := static.NewAttestation(payload, opts...)
+		staticOpts := []static.StaticOption{static.WithLayerMediaType(types.DssePayloadType)}
+		att, err := static.NewAttestation(payload, staticOpts...)
 		if err != nil {
 			return err
 		}

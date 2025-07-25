@@ -67,9 +67,9 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 		return nil, nil, err
 	}
 
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
+	staticOpts := []static.StaticOption{static.WithLayerMediaType(types.DssePayloadType)}
 
-	att, err := static.NewAttestation(envelopeJSON, opts...)
+	att, err := static.NewAttestation(envelopeJSON, staticOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,9 +81,9 @@ func (pa *payloadAttestor) DSSEAttest(ctx context.Context, payload io.Reader) (o
 // Option types other than `signature.SignOption` and `signature.PublicKeyOption` cause a runtime panic.
 func NewDSSEAttestor(payloadType string,
 	s signature.Signer,
-	signAndPublicKeyOptions ...interface{}) cosign.DSSEAttestor {
+	opts ...interface{}) cosign.DSSEAttestor {
 	return &payloadAttestor{
-		signer:      newSigner(s, signAndPublicKeyOptions...),
+		signer:      newSigner(s, opts...),
 		payloadType: payloadType,
 	}
 }

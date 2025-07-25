@@ -33,6 +33,7 @@ type payloadSigner struct {
 	payloadSigner         signature.Signer
 	payloadSignerOpts     []signature.SignOption
 	publicKeyProviderOpts []signature.PublicKeyOption
+	staticOpts            []static.StaticOption
 }
 
 var _ cosign.Signer = (*payloadSigner)(nil)
@@ -53,7 +54,7 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 	}
 
 	b64sig := base64.StdEncoding.EncodeToString(sig)
-	ociSig, err := static.NewSignature(payloadBytes, b64sig)
+	ociSig, err := static.NewSignature(payloadBytes, b64sig, ps.staticOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,24 +83,27 @@ func (ps *payloadSigner) signPayload(ctx context.Context, payloadBytes []byte) (
 	return sig, nil
 }
 
-func newSigner(s signature.Signer,
-	signAndPublicKeyOptions ...interface{}) payloadSigner {
+func newSigner(s signature.Signer, opts ...interface{}) payloadSigner {
 	var sOpts []signature.SignOption
 	var pkOpts []signature.PublicKeyOption
+	var staticOpts []static.StaticOption
 
-	for _, opt := range signAndPublicKeyOptions {
+	for _, opt := range opts {
 		switch o := opt.(type) {
 		case signature.SignOption:
 			sOpts = append(sOpts, o)
 		case signature.PublicKeyOption:
 			pkOpts = append(pkOpts, o)
+		case static.StaticOption:
+			staticOpts = append(staticOpts, o)
 		default:
-			panic(fmt.Sprintf("options must be of type `signature.SignOption` or `signature.PublicKeyOption`. Got a %T: %v", o, o))
+			panic(fmt.Sprintf("options must be of type `signature.SignOption`, `signature.PublicKeyOption` or `static.Option`. Got a %T: %v", o, o))
 		}
 	}
 
 	return payloadSigner{
 		payloadSigner:         s,
+		staticOpts:            staticOpts,
 		payloadSignerOpts:     sOpts,
 		publicKeyProviderOpts: pkOpts,
 	}
@@ -107,8 +111,7 @@ func newSigner(s signature.Signer,
 
 // NewSigner returns a `cosign.Signer` which uses the given `signature.Signer` to sign requested payloads.
 // Option types other than `signature.SignOption` and `signature.PublicKeyOption` cause a runtime panic.
-func NewSigner(s signature.Signer,
-	signAndPublicKeyOptions ...interface{}) cosign.Signer {
-	signer := newSigner(s, signAndPublicKeyOptions...)
+func NewSigner(s signature.Signer, opts ...interface{}) cosign.Signer {
+	signer := newSigner(s, opts...)
 	return &signer
 }
