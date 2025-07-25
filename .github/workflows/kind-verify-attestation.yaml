@@ -129,9 +129,10 @@ jobs:
       run: |
         ./cosign sign-blob README.md --fulcio-url ${FULCIO_URL} --rekor-url ${REKOR_URL} --bundle blob.sigstore.json --yes --identity-token ${OIDC_TOKEN}
 
+    # TODO - cosign sign doesn't support new bundle format yet
     - name: Verify with cosign
       run: |
-        ./cosign verify --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
+        ./cosign verify --new-bundle-format=false --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
 
     - name: Verify custom attestation with cosign, works
       run: |
