@@ -2835,6 +2835,7 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	blob := "someblob"
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicateType := "slsaprovenance"
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"123"}}],"predicateType":"something","predicate":{}}`
 
 	td1 := t.TempDir()
 	t.Cleanup(func() {
@@ -2853,6 +2854,11 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	predicatePath := filepath.Join(td1, "predicate")
 	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	statementPath := filepath.Join(td1, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2898,6 +2904,29 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	// Make sure we fail with the wrong blob (set the predicate type back)
 	blobVerifyAttestationCmd.PredicateType = predicateType
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
+
+	// Test statement signing
+	attestBlobCmd = attest.AttestBlobCommand{
+		KeyOpts:         ko,
+		StatementPath:   statementPath,
+		OutputSignature: outputSignature,
+		RekorEntryType:  "dsse",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Test statement verification
+	ko = options.KeyOpts{
+		KeyRef: pubKeyPath1,
+	}
+	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:       ko,
+		Digest:        "123",
+		DigestAlg:     "alg",
+		SignaturePath: outputSignature,
+		IgnoreTlog:    true,
+		PredicateType: "something",
+	}
+	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 }
 
 func TestOffline(t *testing.T) {

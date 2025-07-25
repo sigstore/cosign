@@ -32,7 +32,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/in-toto/in-toto-golang/in_toto"
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -111,16 +111,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	var payload []byte
 
-	fmt.Println("Using statement from:", c.StatementPath)
-
 	if c.StatementPath != "" {
 		fmt.Fprintln(os.Stderr, "Using statement from:", c.StatementPath)
-		statement, err := predicateReader(c.StatementPath)
-		if err != nil {
-			return fmt.Errorf("getting statement reader: %w", err)
-		}
-		defer statement.Close()
-		payload, err = io.ReadAll(statement)
+		payload, err = os.ReadFile(filepath.Clean(c.StatementPath))
 		if err != nil {
 			return fmt.Errorf("could not read statement: %w", err)
 		}
@@ -383,7 +376,7 @@ func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, pay
 }
 
 func validateStatement(payload []byte) (string, error) {
-	var statement *in_toto.Statement
+	var statement *intotov1.Statement
 	if err := json.Unmarshal(payload, &statement); err != nil {
 		return "", fmt.Errorf("invalid statement: %w", err)
 	}
