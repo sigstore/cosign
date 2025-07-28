@@ -44,7 +44,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.5
 	github.com/sigstore/timestamp-authority v1.2.8
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/spiffe/go-spiffe/v2 v2.5.0
 	github.com/stretchr/testify v1.10.0
@@ -58,9 +58,9 @@ require (
 	golang.org/x/term v0.33.0
 	google.golang.org/api v0.243.0
 	google.golang.org/protobuf v1.36.6
-	k8s.io/api v0.33.2
-	k8s.io/apimachinery v0.33.2
-	k8s.io/client-go v0.33.2
+	k8s.io/api v0.33.3
+	k8s.io/apimachinery v0.33.3
+	k8s.io/client-go v0.33.3
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/release-utils v0.11.1
 )
