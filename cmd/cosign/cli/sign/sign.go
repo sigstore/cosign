@@ -62,6 +62,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	// Loads OIDC providers
 	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
@@ -190,7 +191,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("accessing image: %w", err)
 			}
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
 			} else {
 				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
 			}
@@ -213,7 +214,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			}
 			digest := ref.Context().Digest(d.String())
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
 			} else {
 				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
 			}
@@ -229,10 +230,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	return nil
 }
 
-func signDigestBundle(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
-	annotations map[string]interface{},
-	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
-
+func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, sv *SignerVerifier) error {
 	digestParts := strings.Split(digest.DigestStr(), ":")
 	if len(digestParts) != 2 {
 		return fmt.Errorf("unable to parse digest %s", digest.DigestStr())
@@ -243,13 +241,13 @@ func signDigestBundle(ctx context.Context, digest name.Digest, payload []byte, k
 	}
 	predicateType := "https://sigstore.dev/cosign/sign/v1"
 
-	statement := intotov1.Statement{
+	statement := &intotov1.Statement{
 		Type:          intotov1.StatementTypeUri,
 		Subject:       []*intotov1.ResourceDescriptor{&subject},
 		PredicateType: predicateType,
 	}
 
-	payload, err := json.Marshal(statement)
+	payload, err := protojson.Marshal(statement)
 	if err != nil {
 		return err
 	}

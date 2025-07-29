@@ -80,7 +80,6 @@ func MakeNewBundle(pubKey *crypto.PublicKey, rekorEntry *models.LogEntryAnon, pa
 	var hint string
 	var rawCert []byte
 
-	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 	if pubKey != nil {
 		pkixPubKey, err := x509.MarshalPKIXPublicKey(*pubKey)
 		if err != nil {
@@ -89,6 +88,10 @@ func MakeNewBundle(pubKey *crypto.PublicKey, rekorEntry *models.LogEntryAnon, pa
 		hashedBytes := sha256.Sum256(pkixPubKey)
 		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 	} else {
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		if err != nil {
+			return nil, err
+		}
 		rawCert = cert[0].Raw
 	}
 
