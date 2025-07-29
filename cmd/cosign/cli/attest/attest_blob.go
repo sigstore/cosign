@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -311,4 +312,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	return nil
+}
+
+func validateStatement(payload []byte) (string, error) {
+	var statement *intotov1.Statement
+	if err := json.Unmarshal(payload, &statement); err != nil {
+		return "", fmt.Errorf("invalid statement: %w", err)
+	}
+	return statement.PredicateType, nil
 }
