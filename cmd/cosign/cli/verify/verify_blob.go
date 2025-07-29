@@ -113,7 +113,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 
 	// Keys are optional!
 	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
+	staticOpts := make([]static.StaticOption, 0)
 	switch {
 	case c.KeyRef != "":
 		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
@@ -270,7 +270,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			cert = bundleCert
 		}
-		opts = append(opts, static.WithBundle(b.Bundle))
+		staticOpts = append(staticOpts, static.WithBundle(b.Bundle))
 	}
 	if c.RFC3161TimestampPath != "" {
 		var rfc3161Timestamp bundle.RFC3161Timestamp
@@ -281,7 +281,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err := json.Unmarshal(ts, &rfc3161Timestamp); err != nil {
 			return err
 		}
-		opts = append(opts, static.WithRFC3161Timestamp(&rfc3161Timestamp))
+		staticOpts = append(staticOpts, static.WithRFC3161Timestamp(&rfc3161Timestamp))
 	}
 	// Set an SCT if provided via the CLI.
 	if c.SCTRef != "" {
@@ -327,7 +327,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-		opts = append(opts, static.WithCertChain(certPEM, chainPEM))
+		staticOpts = append(staticOpts, static.WithCertChain(certPEM, chainPEM))
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
@@ -342,7 +342,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	if err != nil {
 		return err
 	}
-	signature, err := static.NewSignature(blobBytes, sig, opts...)
+	signature, err := static.NewSignature(blobBytes, sig, staticOpts...)
 	if err != nil {
 		return err
 	}

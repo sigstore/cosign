@@ -37,8 +37,8 @@ const (
 )
 
 // NewSignature constructs a new oci.Signature from the provided options.
-func NewSignature(payload []byte, b64sig string, opts ...Option) (oci.Signature, error) {
-	o, err := makeOptions(opts...)
+func NewSignature(payload []byte, b64sig string, staticOpts ...StaticOption) (oci.Signature, error) {
+	o, err := makeOptions(staticOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +53,8 @@ func NewSignature(payload []byte, b64sig string, opts ...Option) (oci.Signature,
 // Since Attestation is treated just like a Signature but the actual signature
 // is baked into the payload, the Signature does not actually have
 // the Base64Signature.
-func NewAttestation(payload []byte, opts ...Option) (oci.Signature, error) {
-	return NewSignature(payload, "", opts...)
+func NewAttestation(payload []byte, staticOpts ...StaticOption) (oci.Signature, error) {
+	return NewSignature(payload, "", staticOpts...)
 }
 
 // Copy constructs a new oci.Signature from the provided one.
@@ -67,31 +67,31 @@ func Copy(sig oci.Signature) (oci.Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	var opts []Option
+	var staticOpts []StaticOption
 
 	mt, err := sig.MediaType()
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, WithLayerMediaType(mt))
+	staticOpts = append(staticOpts, WithLayerMediaType(mt))
 
 	ann, err := sig.Annotations()
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, WithAnnotations(ann))
+	staticOpts = append(staticOpts, WithAnnotations(ann))
 
 	bundle, err := sig.Bundle()
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, WithBundle(bundle))
+	staticOpts = append(staticOpts, WithBundle(bundle))
 
 	rfc3161Timestamp, err := sig.RFC3161Timestamp()
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, WithRFC3161Timestamp(rfc3161Timestamp))
+	staticOpts = append(staticOpts, WithRFC3161Timestamp(rfc3161Timestamp))
 
 	cert, err := sig.Cert()
 	if err != nil {
@@ -110,9 +110,9 @@ func Copy(sig oci.Signature) (oci.Signature, error) {
 		if err != nil {
 			return nil, err
 		}
-		opts = append(opts, WithCertChain(rawCert, rawChain))
+		staticOpts = append(staticOpts, WithCertChain(rawCert, rawChain))
 	}
-	return NewSignature(payload, b64sig, opts...)
+	return NewSignature(payload, b64sig, staticOpts...)
 }
 
 type staticLayer struct {

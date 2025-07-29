@@ -29,8 +29,8 @@ import (
 )
 
 // NewFile constructs a new v1.Image with the provided payload.
-func NewFile(payload []byte, opts ...Option) (oci.File, error) {
-	o, err := makeOptions(opts...)
+func NewFile(payload []byte, staticOpts ...StaticOption) (oci.File, error) {
+	o, err := makeOptions(staticOpts...)
 	if err != nil {
 		return nil, err
 	}
