@@ -107,6 +107,7 @@ func Attest() *cobra.Command {
 				}
 				ko.TrustedMaterial = trustedMaterial
 			}
+			// TODO: Add support for SigningConfig
 			attestCommand := attest.AttestCommand{
 				KeyOpts:                 ko,
 				RegistryOptions:         o.Registry,

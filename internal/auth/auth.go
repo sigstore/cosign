@@ -35,6 +35,8 @@ const (
 	flowClientCredentials = "client_credentials"
 )
 
+var SigstoreOIDCIssuerAPIVersions = []uint32{1}
+
 // ReadIDToken returns an OpenID Connect token from either a file or a well-known location from an identity provider
 func ReadIDToken(ctx context.Context, tokOrPath string, disableProviders bool, oidcProvider string) (string, error) {
 	idToken, err := idToken(tokOrPath)

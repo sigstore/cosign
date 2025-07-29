@@ -35,7 +35,9 @@ import (
 // GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
 func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
 	sub, tok, err := auth.AuthenticateCaller(flow, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
-
+	if err != nil {
+		return nil, err
+	}
 	publicKey, err := sv.PublicKey()
 	if err != nil {
 		return nil, err
@@ -77,7 +79,7 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 
 	idToken, err := auth.ReadIDToken(ctx, ko.IDToken, ko.OIDCDisableProviders, ko.OIDCProvider)
 	if err != nil {
-		return nil, fmt.Errorf("getting id token: %w", err)
+		return nil, fmt.Errorf("reading id token: %w", err)
 	}
 
 	flow, err := auth.GetOAuthFlow(ctx, ko.FulcioAuthFlow, idToken, ko.SkipConfirmation)

@@ -57,6 +57,7 @@ cosign attest-blob [flags]
       --rekor-entry-type string           specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
+      --signing-config-path string        path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --statement string                  path to the statement file.
@@ -67,6 +68,7 @@ cosign attest-blob [flags]
       --timestamp-server-url string       url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                       whether or not to upload to the tlog (default true)
       --type string                       specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
+      --use-signing-config                whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format
   -y, --yes                               skip confirmation prompts for non-destructive operations
 ```
 
