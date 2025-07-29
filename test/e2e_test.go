@@ -835,6 +835,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
@@ -965,6 +966,44 @@ func TestSignVerifyWithSigningConfig(t *testing.T) {
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
 	must(err, t)
+}
+
+func TestSignVerifyBundle(t *testing.T) {
+	td := t.TempDir()
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image with bundle
+	ko := options.KeyOpts{
+		KeyRef:   privKeyPath,
+		PassFunc: passFunc,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify bundle
+	cmd := cliverify.VerifyCommand{
+		KeyRef:          pubKeyPath,
+		IgnoreTlog:      true,
+		NewBundleFormat: true,
+	}
+
+	args := []string{imgName}
+
+	must(cmd.Exec(ctx, args), t)
 }
 
 func TestAttestVerify(t *testing.T) {

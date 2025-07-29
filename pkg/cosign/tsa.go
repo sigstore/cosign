@@ -18,9 +18,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/tuf"
@@ -151,4 +154,16 @@ func splitPEMCertificateChain(pem []byte) (leaves, intermediates, roots []*x509.
 	}
 
 	return leaves, intermediates, roots, nil
+}
+
+func GetDSSESigBytes(envelopeBytes []byte) ([]byte, error) {
+	var envelope dsse.Envelope
+	err := json.Unmarshal(envelopeBytes, &envelope)
+	if err != nil {
+		return nil, err
+	}
+	if len(envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("envelope has no signatures")
+	}
+	return base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
 }
