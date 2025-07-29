@@ -87,6 +87,7 @@ cosign sign [flags]
       --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
+      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle
       --oidc-client-id string                                                                    OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                                                           Disable ambient OIDC providers. When true, ambient credentials will not be read

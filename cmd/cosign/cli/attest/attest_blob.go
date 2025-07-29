@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	cosign_sign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
