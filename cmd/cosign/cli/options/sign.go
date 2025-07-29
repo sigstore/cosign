@@ -42,6 +42,7 @@ type SignOptions struct {
 	IssueCertificate        bool
 	SignContainerIdentity   string
 	RecordCreationTimestamp bool
+	NewBundleFormat         bool
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -137,4 +138,6 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature")
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false, "set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value")
+
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false, "expect the signature/attestation to be packaged in a Sigstore bundle")
 }
