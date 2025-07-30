@@ -33,22 +33,8 @@ import (
 	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
-
-type testFlow struct {
-	idt   *oauthflow.OIDCIDToken
-	email string
-	err   error
-}
-
-func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) { //nolint: revive
-	if tf.err != nil {
-		return nil, tf.err
-	}
-	return tf.idt, nil
-}
 
 type testClient struct {
 	payload  api.CertificateResponse
@@ -92,12 +78,6 @@ func TestGetCertForOauthID(t *testing.T) {
 		email:       "example@oidc.id",
 		accessToken: "abc123foobar",
 	}, {
-		desc:           "getIDToken error",
-		email:          "example@oidc.id",
-		accessToken:    "abc123foobar",
-		tokenGetterErr: errors.New("getIDToken() failed"),
-		expectErr:      true,
-	}, {
 		desc:           "SigningCert error",
 		email:          "example@oidc.id",
 		accessToken:    "abc123foobar",
@@ -121,16 +101,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.signingCertErr,
 			}
 
-			tf := testFlow{
-				email: tc.email,
-				idt: &oauthflow.OIDCIDToken{
-					RawString: tc.accessToken,
-				},
-				err: tc.tokenGetterErr,
-			}
-
-			resp, err := getCertForOauthID(sv, tscp, &tf, "", "", "", "")
-
+			resp, err := GetCert(context.TODO(), sv, tc.accessToken, "token", "", "", "", "", tscp)
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatalf("getCertForOauthID returned error: %v", err)
@@ -202,8 +173,8 @@ func TestNewSigner(t *testing.T) {
 	ctx := context.TODO()
 	ko := options.KeyOpts{
 		OIDCDisableProviders: true,
-		// random test token
-		IDToken:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+		// Generated from https://justtrustme.dev/token
+		IDToken:        "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFhOWE1YjA5LTExMzktNGU2YS1hNjMxLTA2ZTU3NDU4NzI0MSJ9.eyJleHAiOjE3NTM4MzU1ODksImlhdCI6MTc1MzgzMzc4OSwiaXNzIjoiaHR0cHM6Ly9qdXN0dHJ1c3RtZS5kZXYifQ.HlXQuroFSR1Dw0oPhl7DsctA7gtOQ7wLNN1kwdhoGwWcHfTlrlT95QMflptUgo1yfwTQyrvjaam4UUtyiHKhkuMCGN0U7SeDixUI85T6F_Sb7J1-9v62SA_OTSe5e17L-FVCkJUdH33XyjL66ajLovpgdUuO9Jw25CH2J75VkXtbT4K5KIBu4gNymMDTzVHF8KS52z_0INL_sgoWcXye5GGdXwathZBxPe2_a-SLzXDNQQyq4kcBvGog4pnV4_EuqFbA_yfj_xSeayR8_JnZQ2b0U-BwNx35-p6Aq-rqk7qMeXZXPDMmhZJWKVIV3M8QHsxwx_GxM3B4CspAk5DzxA",
 		FulcioURL:      testServer.URL,
 		FulcioAuthFlow: "token",
 	}
