@@ -118,7 +118,7 @@ jobs:
 
     # Get verification material from servers
     # NOTE: never do this in production! This is a work-around until we upgrade sigstore/scaffolding
-    - run: curl -k ${REKOR_URL}/api/v2/trustBundle | jq -r ".chains[0].certificates[]" > fulcio.pem
+    - run: curl -k ${FULCIO_URL}/api/v2/trustBundle | jq -r ".chains[0].certificates[]" > fulcio.pem
 
     - run: curl -k ${REKOR_URL}/api/v1/log/publicKey > rekor.pub
 
