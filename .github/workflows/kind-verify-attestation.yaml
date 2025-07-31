@@ -116,6 +116,15 @@ jobs:
         REPOSITORY=${PWD}/repository
         ./cosign initialize --root ${ROOT} --mirror file://${REPOSITORY}
 
+    # Get verification material from servers
+    # NOTE: never do this in production! This is a work-around until we upgrade sigstore/scaffolding
+    - run: curl -k ${REKOR_URL}/api/v2/trustBundle | jq -r ".chains[0].certificates[]" > fulcio.pem
+
+    - run: curl -k ${REKOR_URL}/api/v1/log/publicKey > rekor.pub
+
+    - name: Create trusted_root.json
+      run: ./cosign trusted-root create --certificate-chain fulcio.pem --rekor-key rekor.pub --out trusted_root.json
+
     - name: Sign demoimage with cosign
       run: |
         ./cosign sign --rekor-url ${REKOR_URL} --fulcio-url ${FULCIO_URL} --yes --allow-insecure-registry ${demoimage} --identity-token ${OIDC_TOKEN}
@@ -137,7 +146,7 @@ jobs:
     - name: Verify custom attestation with cosign, works
       run: |
         echo '::group:: test custom verify-attestation success'
-        if ! ./cosign verify-attestation --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" --policy ./test/testdata/policies/cue-works.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} ; then
+        if ! ./cosign verify-attestation --trusted-root trusted_root.json --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" --policy ./test/testdata/policies/cue-works.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} ; then
           echo Failed to verify attestation with a valid policy
           exit 1
         else
@@ -148,7 +157,7 @@ jobs:
     - name: Verify custom attestation with cosign, fails
       run: |
         echo '::group:: test custom verify-attestation success'
-        if ./cosign verify-attestation --policy ./test/testdata/policies/cue-fails.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ./cosign verify-attestation --trusted-root trusted_root.json --policy ./test/testdata/policies/cue-fails.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo custom verify-attestation succeeded with cue policy that should not work
           exit 1
         else
@@ -158,7 +167,7 @@ jobs:
 
     - name: Verify a blob
       run: |
-        ./cosign verify-blob README.md --bundle blob.sigstore.json --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
+        ./cosign verify-blob README.md --trusted-root trusted_root.json --bundle blob.sigstore.json --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local"
 
     - name: Collect diagnostics
       if: ${{ failure() }}
@@ -171,7 +180,7 @@ jobs:
     - name: Verify vuln attestation with cosign, works
       run: |
         echo '::group:: test vuln verify-attestation success'
-        if ! ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-works.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ! ./cosign verify-attestation --trusted-root trusted_root.json --type vuln --policy ./test/testdata/policies/cue-vuln-works.cue --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo Failed to verify attestation with a valid policy
           exit 1
         else
@@ -182,7 +191,7 @@ jobs:
     - name: Verify vuln attestation with cosign, fails
       run: |
         echo '::group:: test vuln verify-attestation success'
-        if ./cosign verify-attestation --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --rekor-url ${REKOR_URL} --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
+        if ./cosign verify-attestation --trusted-root trusted_root.json --type vuln --policy ./test/testdata/policies/cue-vuln-fails.cue --allow-insecure-registry ${demoimage} --certificate-identity https://kubernetes.io/namespaces/default/serviceaccounts/default --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" ; then
           echo verify-attestation succeeded with cue policy that should not work
           exit 1
         else
