@@ -33,22 +33,8 @@ import (
 	"github.com/sigstore/cosign/v2/test"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
-
-type testFlow struct {
-	idt   *oauthflow.OIDCIDToken
-	email string
-	err   error
-}
-
-func (tf *testFlow) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) { //nolint: revive
-	if tf.err != nil {
-		return nil, tf.err
-	}
-	return tf.idt, nil
-}
 
 type testClient struct {
 	payload  api.CertificateResponse
@@ -88,19 +74,15 @@ func TestGetCertForOauthID(t *testing.T) {
 
 		expectErr bool
 	}{{
-		desc:        "happy case",
-		email:       "example@oidc.id",
-		accessToken: "abc123foobar",
+		desc:  "happy case",
+		email: "example@oidc.id",
+		// Generated from https://justtrustme.dev/token?sub=test
+		accessToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFhOWE1YjA5LTExMzktNGU2YS1hNjMxLTA2ZTU3NDU4NzI0MSJ9.eyJleHAiOjE3NTQwMjk5ODcsImlhdCI6MTc1NDAyODE4NywiaXNzIjoiaHR0cHM6Ly9qdXN0dHJ1c3RtZS5kZXYiLCJzdWIiOiJ0ZXN0In0.Fyp07QRXbuK65WKVKE6S7UgB9hvmNeyqWvcCWUvhMAwHwHl9EoRNwE-a5uBXgBgLUfbOCBHfc9fBIEEayzR1dRgfUXouOSIiZYr3DZNyGLdSiptL7wQRNy4rEiW44XCYFcbOuiWaii8icQUnOUO_TehgZHqSDvBSNQZcW-Rtx4A1us-CfVtrjqSNj_d0lCNEZ-vpL-Wp7JkOKzR0bN2KzYhVYHRe-pmvrzMWFfI17khB4wE6wj3e_PjDHAKS1EqGRrIgbr5jFcv9iGaf0zTnyZ_fxCmQM2Xe1u3kFlcCS0HondSJkxQoZRnK_OZHujNyWBT6cONg7Wvclkco3LulRw",
 	}, {
-		desc:           "getIDToken error",
-		email:          "example@oidc.id",
-		accessToken:    "abc123foobar",
-		tokenGetterErr: errors.New("getIDToken() failed"),
-		expectErr:      true,
-	}, {
-		desc:           "SigningCert error",
-		email:          "example@oidc.id",
-		accessToken:    "abc123foobar",
+		desc:  "SigningCert error",
+		email: "example@oidc.id",
+		// Generated from https://justtrustme.dev/token?sub=test
+		accessToken:    "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFhOWE1YjA5LTExMzktNGU2YS1hNjMxLTA2ZTU3NDU4NzI0MSJ9.eyJleHAiOjE3NTQwMjk5NTMsImlhdCI6MTc1NDAyODE1MywiaXNzIjoiaHR0cHM6Ly9qdXN0dHJ1c3RtZS5kZXYifQ.n2JrybZ64bCeSvVVPYIEf2x9aZM-Xxwzdkq_DcPuPJuwEINFJBRiOsJ6R6MllV0YodQkshFB81YOQ4_QC5h5lfDmr-fmvxcIPw0Iw1oQkiNl73BpiWmT63dQ7DxPPnfCPW9xPmo3j8BTJ8zKNPXTyfwGEHjv6rJ56bMjRDNR0W78vG8di9R8ZCAPD7WOwWfFW4JTYrgNnsSfiTmFWl8Z5iYBnkEBCaEWldpgOuUhofQ_jdG_UbLyY3iXkOmfseKCOnYiWzp0CYbU5EYC8RHk4SfZ5JvG7rv7JPmPw2IFQdTjObX9vY6vLvP2-nMj_7hAUbBWzci9bQOAx-W7usd4qA",
 		signingCertErr: errors.New("SigningCert() failed"),
 		expectErr:      true,
 	}}
@@ -121,16 +103,7 @@ func TestGetCertForOauthID(t *testing.T) {
 				err: tc.signingCertErr,
 			}
 
-			tf := testFlow{
-				email: tc.email,
-				idt: &oauthflow.OIDCIDToken{
-					RawString: tc.accessToken,
-				},
-				err: tc.tokenGetterErr,
-			}
-
-			resp, err := getCertForOauthID(sv, tscp, &tf, "", "", "", "")
-
+			resp, err := GetCert(context.TODO(), sv, tc.accessToken, "token", "", "", "", "", tscp)
 			if err != nil {
 				if !tc.expectErr {
 					t.Fatalf("getCertForOauthID returned error: %v", err)
@@ -202,8 +175,8 @@ func TestNewSigner(t *testing.T) {
 	ctx := context.TODO()
 	ko := options.KeyOpts{
 		OIDCDisableProviders: true,
-		// random test token
-		IDToken:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+		// Generated from https://justtrustme.dev/token?sub=test
+		IDToken:        "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFhOWE1YjA5LTExMzktNGU2YS1hNjMxLTA2ZTU3NDU4NzI0MSJ9.eyJleHAiOjE3NTQwMjk5ODcsImlhdCI6MTc1NDAyODE4NywiaXNzIjoiaHR0cHM6Ly9qdXN0dHJ1c3RtZS5kZXYiLCJzdWIiOiJ0ZXN0In0.Fyp07QRXbuK65WKVKE6S7UgB9hvmNeyqWvcCWUvhMAwHwHl9EoRNwE-a5uBXgBgLUfbOCBHfc9fBIEEayzR1dRgfUXouOSIiZYr3DZNyGLdSiptL7wQRNy4rEiW44XCYFcbOuiWaii8icQUnOUO_TehgZHqSDvBSNQZcW-Rtx4A1us-CfVtrjqSNj_d0lCNEZ-vpL-Wp7JkOKzR0bN2KzYhVYHRe-pmvrzMWFfI17khB4wE6wj3e_PjDHAKS1EqGRrIgbr5jFcv9iGaf0zTnyZ_fxCmQM2Xe1u3kFlcCS0HondSJkxQoZRnK_OZHujNyWBT6cONg7Wvclkco3LulRw",
 		FulcioURL:      testServer.URL,
 		FulcioAuthFlow: "token",
 	}
