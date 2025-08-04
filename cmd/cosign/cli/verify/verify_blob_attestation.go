@@ -230,7 +230,14 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			return err
 		}
 
-		_, err = cosign.VerifyNewBundle(ctx, co, sgverify.WithArtifactDigest(h.Algorithm, digest), bundle)
+		var policyOpt sgverify.ArtifactPolicyOption
+		if c.CheckClaims {
+			policyOpt = sgverify.WithArtifactDigest(h.Algorithm, digest)
+		} else {
+			policyOpt = sgverify.WithoutArtifactUnsafe()
+		}
+
+		_, err = cosign.VerifyNewBundle(ctx, co, policyOpt, bundle)
 		if err != nil {
 			return err
 		}
