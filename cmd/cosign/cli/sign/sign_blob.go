@@ -25,7 +25,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -41,7 +40,6 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -67,39 +65,24 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 
 	if ko.SigningConfig != nil {
-		// TODO: Only ephemeral keys are currently supported
+		// TODO(#4327): Only ephemeral keys are currently supported
 		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
 		// and determine if we want to store certificates for those as well.
 		keypair, err := sign.NewEphemeralKeypair(nil)
 		if err != nil {
 			return nil, fmt.Errorf("generating keypair: %w", err)
 		}
-
-		// Retrieve ID token, from one of the following sources:
-		// * Flag value
-		// * File, path provided by flag
-		// * Provider, e.g. a well-known location of a token for an environment like K8s or CI/CD
-		// * OpenID Connect authentication
-		var idToken string
-		idToken, err = auth.ReadIDToken(ctx, ko.IDToken, ko.OIDCDisableProviders, ko.OIDCProvider)
-		if err != nil {
-			return nil, fmt.Errorf("reading ID token: %w", err)
-		}
-		if idToken == "" {
-			flow, err := auth.GetOAuthFlow(ctx, ko.FulcioAuthFlow, idToken, ko.SkipConfirmation)
-			if err != nil {
-				return nil, fmt.Errorf("setting auth flow: %w", err)
-			}
-			oidcIssuerSvc, err := root.SelectService(ko.SigningConfig.OIDCProviderURLs(), auth.SigstoreOIDCIssuerAPIVersions, time.Now())
-			if err != nil {
-				return nil, fmt.Errorf("selecting OIDC issuer: %w", err)
-			}
-			_, idToken, err = auth.AuthenticateCaller(flow, idToken, oidcIssuerSvc.URL, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL)
-			if err != nil {
-				return nil, fmt.Errorf("authenticating caller: %w", err)
-			}
-		}
-
+		idToken, err := auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+			TokenOrPath:      ko.IDToken,
+			DisableProviders: ko.OIDCDisableProviders,
+			Provider:         ko.OIDCProvider,
+			AuthFlow:         ko.FulcioAuthFlow,
+			SkipConfirm:      ko.SkipConfirmation,
+			OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
+			ClientID:         ko.OIDCClientID,
+			ClientSecret:     ko.OIDCClientSecret,
+			RedirectURL:      ko.OIDCRedirectURL,
+		})
 		data, err := io.ReadAll(&payload)
 		if err != nil {
 			return nil, fmt.Errorf("reading payload: %w", err)

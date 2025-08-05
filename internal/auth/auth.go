@@ -18,12 +18,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/providers"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"golang.org/x/term"
 )
@@ -36,6 +38,46 @@ const (
 )
 
 var SigstoreOIDCIssuerAPIVersions = []uint32{1}
+
+type IDTokenConfig struct {
+	TokenOrPath      string
+	DisableProviders bool
+	Provider         string
+	AuthFlow         string
+	SkipConfirm      bool
+	OIDCServices     []root.Service
+	ClientID         string
+	ClientSecret     string
+	RedirectURL      string
+}
+
+// RetrieveIDToken returns an ID token from one of the following sources:
+// * Flag value
+// * File, path provided by flag
+// * Provider, e.g. a well-known location of a token for an environment like K8s or CI/CD
+// * OpenID Connect authentication protocol
+func RetrieveIDToken(ctx context.Context, c IDTokenConfig) (string, error) {
+	idToken, err := ReadIDToken(ctx, c.TokenOrPath, c.DisableProviders, c.Provider)
+	if err != nil {
+		return "", fmt.Errorf("reading ID token: %w", err)
+	}
+	if idToken != "" {
+		return idToken, nil
+	}
+	flow, err := GetOAuthFlow(ctx, c.AuthFlow, idToken, c.SkipConfirm)
+	if err != nil {
+		return "", fmt.Errorf("setting auth flow: %w", err)
+	}
+	oidcIssuerSvc, err := root.SelectService(c.OIDCServices, SigstoreOIDCIssuerAPIVersions, time.Now())
+	if err != nil {
+		return "", fmt.Errorf("selecting OIDC issuer: %w", err)
+	}
+	_, idToken, err = AuthenticateCaller(flow, idToken, oidcIssuerSvc.URL, c.ClientID, c.ClientSecret, c.RedirectURL)
+	if err != nil {
+		return "", fmt.Errorf("authenticating caller: %w", err)
+	}
+	return idToken, err
+}
 
 // ReadIDToken returns an OpenID Connect token from either a file or a well-known location from an identity provider
 func ReadIDToken(ctx context.Context, tokOrPath string, disableProviders bool, oidcProvider string) (string, error) {

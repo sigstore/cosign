@@ -48,7 +48,6 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -164,37 +163,26 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		// TODO: Only ephemeral keys are currently supported
+		// TODO(#4327): Only ephemeral keys are currently supported
 		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
 		// and determine if we want to store certificates for those as well.
 		keypair, err := sign.NewEphemeralKeypair(nil)
 		if err != nil {
 			return fmt.Errorf("generating keypair: %w", err)
 		}
-
-		// Retrieve ID token, from one of the following sources:
-		// * Flag value
-		// * File, path provided by flag
-		// * Provider, e.g. a well-known location of a token for an environment like K8s or CI/CD
-		// * OpenID Connect authentication
-		var idToken string
-		idToken, err = auth.ReadIDToken(ctx, c.IDToken, c.OIDCDisableProviders, c.OIDCProvider)
+		idToken, err := auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+			TokenOrPath:      c.IDToken,
+			DisableProviders: c.OIDCDisableProviders,
+			Provider:         c.OIDCProvider,
+			AuthFlow:         c.FulcioAuthFlow,
+			SkipConfirm:      c.SkipConfirmation,
+			OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
+			ClientID:         c.OIDCClientID,
+			ClientSecret:     c.OIDCClientSecret,
+			RedirectURL:      c.OIDCRedirectURL,
+		})
 		if err != nil {
-			return fmt.Errorf("reading ID token: %w", err)
-		}
-		if idToken == "" {
-			flow, err := auth.GetOAuthFlow(ctx, c.FulcioAuthFlow, idToken, c.SkipConfirmation)
-			if err != nil {
-				return fmt.Errorf("setting auth flow: %w", err)
-			}
-			oidcIssuerSvc, err := root.SelectService(c.SigningConfig.OIDCProviderURLs(), auth.SigstoreOIDCIssuerAPIVersions, time.Now())
-			if err != nil {
-				return fmt.Errorf("selecting OIDC issuer: %w", err)
-			}
-			_, idToken, err = auth.AuthenticateCaller(flow, idToken, oidcIssuerSvc.URL, c.OIDCClientID, c.OIDCClientSecret, c.OIDCRedirectURL)
-			if err != nil {
-				return fmt.Errorf("authenticating caller: %w", err)
-			}
+			return fmt.Errorf("retrieving ID token: %w", err)
 		}
 		content := &sign.DSSEData{
 			Data:        payload,
