@@ -59,7 +59,7 @@ jobs:
       - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/auth@140bb5113ffb6b65a7e9b937a81fa96cf5064462 # v2.1.11
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
         with:
           workload_identity_provider: 'projects/498091336538/locations/global/workloadIdentityPools/githubactions/providers/sigstore-cosign'
           service_account: 'github-actions@projectsigstore.iam.gserviceaccount.com'
@@ -68,7 +68,7 @@ jobs:
         run: gcloud auth configure-docker --quiet
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
