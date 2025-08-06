@@ -76,7 +76,7 @@ func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntry
 }
 
 func MakeNewBundle(pubKey *crypto.PublicKey, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
-	// Determine if signature is certificate or not
+	// Determine if the signer is a certificate or not
 	var hint string
 	var rawCert []byte
 

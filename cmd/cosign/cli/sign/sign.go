@@ -239,12 +239,11 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	subject := intotov1.ResourceDescriptor{
 		Digest: map[string]string{digestParts[0]: digestParts[1]},
 	}
-	predicateType := "https://sigstore.dev/cosign/sign/v1"
 
 	statement := &intotov1.Statement{
 		Type:          intotov1.StatementTypeUri,
 		Subject:       []*intotov1.ResourceDescriptor{&subject},
-		PredicateType: predicateType,
+		PredicateType: types.CosignSignPredicateType,
 	}
 
 	payload, err := protojson.Marshal(statement)
@@ -316,7 +315,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	if err != nil {
 		return err
 	}
-	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
+	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, types.CosignSignPredicateType, ociremoteOpts...)
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
