@@ -166,6 +166,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		// TODO(#4327): Only ephemeral keys are currently supported
 		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
 		// and determine if we want to store certificates for those as well.
+		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
+			return fmt.Errorf("using a signing config currently only supports signing with ephemeral keys and Fulcio")
+		}
 		keypair, err := sign.NewEphemeralKeypair(nil)
 		if err != nil {
 			return fmt.Errorf("generating keypair: %w", err)

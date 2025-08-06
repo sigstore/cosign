@@ -68,6 +68,9 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		// TODO(#4327): Only ephemeral keys are currently supported
 		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
 		// and determine if we want to store certificates for those as well.
+		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" {
+			return nil, fmt.Errorf("using a signing config currently only supports signing with ephemeral keys and Fulcio")
+		}
 		keypair, err := sign.NewEphemeralKeypair(nil)
 		if err != nil {
 			return nil, fmt.Errorf("generating keypair: %w", err)
