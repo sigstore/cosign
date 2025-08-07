@@ -1004,8 +1004,9 @@ func TestSignVerifyBundle(t *testing.T) {
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootPath,
 		},
-		KeyRef:          pubKeyPath,
-		NewBundleFormat: true,
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
 	}
 
 	args := []string{imgName}
@@ -1039,7 +1040,8 @@ func TestSignVerifyBundle(t *testing.T) {
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootPath,
 		},
-		NewBundleFormat: true,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
 	}
 }
 
