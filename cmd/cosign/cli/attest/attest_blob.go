@@ -36,9 +36,11 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	cosign_sign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/internal/auth"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
@@ -46,6 +48,7 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -100,16 +103,10 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer sv.Close()
-	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
-
 	base := path.Base(artifactPath)
 
 	var payload []byte
+	var err error
 
 	if c.StatementPath != "" {
 		fmt.Fprintln(os.Stderr, "Using statement from:", c.StatementPath)
@@ -164,6 +161,53 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return err
 		}
 	}
+
+	if c.SigningConfig != nil {
+		// TODO(#4327): Only ephemeral keys are currently supported
+		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
+		// and determine if we want to store certificates for those as well.
+		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
+			return fmt.Errorf("using a signing config currently only supports signing with ephemeral keys and Fulcio")
+		}
+		keypair, err := sign.NewEphemeralKeypair(nil)
+		if err != nil {
+			return fmt.Errorf("generating keypair: %w", err)
+		}
+		idToken, err := auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+			TokenOrPath:      c.IDToken,
+			DisableProviders: c.OIDCDisableProviders,
+			Provider:         c.OIDCProvider,
+			AuthFlow:         c.FulcioAuthFlow,
+			SkipConfirm:      c.SkipConfirmation,
+			OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
+			ClientID:         c.OIDCClientID,
+			ClientSecret:     c.OIDCClientSecret,
+			RedirectURL:      c.OIDCRedirectURL,
+		})
+		if err != nil {
+			return fmt.Errorf("retrieving ID token: %w", err)
+		}
+		content := &sign.DSSEData{
+			Data:        payload,
+			PayloadType: "application/vnd.in-toto+json",
+		}
+		bundle, err := cbundle.SignData(content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
+		if err != nil {
+			return fmt.Errorf("signing bundle: %w", err)
+		}
+		if err := os.WriteFile(c.BundlePath, bundle, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
+		return nil
+	}
+
+	sv, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	defer sv.Close()
+	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
@@ -226,7 +270,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if err != nil {
 		return err
 	}
-	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
+	shouldUpload, err := cosign_sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
 	if err != nil {
 		return fmt.Errorf("upload to tlog: %w", err)
 	}
@@ -314,7 +358,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	return nil
 }
 
-func makeNewBundle(sv *sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
+func makeNewBundle(sv *cosign_sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
 	// Determine if signature is certificate or not
 	var hint string
 	var rawCert []byte

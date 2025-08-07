@@ -168,8 +168,8 @@ func TestNewSigner(t *testing.T) {
 			ctx := context.Background()
 			ko := options.KeyOpts{
 				OIDCDisableProviders: true,
-				// random test token
-				IDToken:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+				// Generated from https://justtrustme.dev/token?sub=test-subject
+				IDToken:        "eyJhbGciOiJSUzI1NiIsImtpZCI6ImFhOWE1YjA5LTExMzktNGU2YS1hNjMxLTA2ZTU3NDU4NzI0MSJ9.eyJleHAiOjE3NTQwMjgzODMsImlhdCI6MTc1NDAyNjU4MywiaXNzIjoiaHR0cHM6Ly9qdXN0dHJ1c3RtZS5kZXYiLCJzdWIiOiJ0ZXN0LXN1YmplY3QifQ.lfLAxD5XnbtvmGbgJTTV8nLDxUk9_KemdFG3_HydIWwLdKR86KYwwJn_5ONdycVuNluLOx96xA6jc4m1CjzH9N5Dafw4MQpjzXJWFlhM9sehW8VU_TzH1lEfY3KTxwDBRkZnVGXr3bJGowfdTyWLJxgl16nVTqsRAqIsTE4SEVHscDP1r5T0_B7RQ4Sjih1Z7zlIYzXxpAiVCOZ321Gqgxtej_xPfZ9rk1Z5-Uw-8sc6spog8Uca3kqumncPgM0su1ww5bWmawb4msqUnoOcPCPo-oywC-gdssWt_HmFPRhvREvdv5eYNDfp1bjS-nWAGJN7a4iO9qGBJed7zI6JNA",
 				FulcioURL:      testServer.URL,
 				FulcioAuthFlow: "token",
 			}
@@ -183,12 +183,14 @@ func TestNewSigner(t *testing.T) {
 			}
 
 			fs, err := NewSigner(ctx, ko, sv)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if test.embeddedSCT {
 				assert.Empty(t, fs.SCT)
 			} else {
 				assert.NotEmpty(t, fs.SCT)
 			}
-			assert.NoError(t, err)
 		})
 	}
 }

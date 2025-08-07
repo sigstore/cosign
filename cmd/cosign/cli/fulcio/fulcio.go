@@ -24,44 +24,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
+	"github.com/sigstore/cosign/v2/internal/auth"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/providers"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"golang.org/x/term"
 )
 
-const (
-	flowNormal            = "normal"
-	flowDevice            = "device"
-	flowToken             = "token"
-	flowClientCredentials = "client_credentials"
-)
-
-type oidcConnector interface {
-	OIDConnect(string, string, string, string) (*oauthflow.OIDCIDToken, error)
-}
-
-type realConnector struct {
-	flow oauthflow.TokenGetter
-}
-
-func (rf *realConnector) OIDConnect(url, clientID, secret, redirectURL string) (*oauthflow.OIDCIDToken, error) {
-	return oauthflow.OIDConnect(url, clientID, secret, redirectURL, rf.flow)
-}
-
-func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connector oidcConnector, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string) (*api.CertificateResponse, error) {
-	tok, err := connector.OIDConnect(oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
+// GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
+func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
+	sub, tok, err := auth.AuthenticateCaller(flow, idToken, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
 	if err != nil {
 		return nil, err
 	}
-
 	publicKey, err := sv.PublicKey()
 	if err != nil {
 		return nil, err
@@ -71,7 +47,7 @@ func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connect
 		return nil, err
 	}
 	// Sign the email address as part of the request
-	proof, err := sv.SignMessage(strings.NewReader(tok.Subject))
+	proof, err := sv.SignMessage(strings.NewReader(sub))
 	if err != nil {
 		return nil, err
 	}
@@ -83,26 +59,9 @@ func getCertForOauthID(sv signature.SignerVerifier, fc api.LegacyClient, connect
 		SignedEmailAddress: proof,
 	}
 
-	return fc.SigningCert(cr, tok.RawString)
-}
+	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
-// GetCert returns the PEM-encoded signature of the OIDC identity returned as part of an interactive oauth2 flow plus the PEM-encoded cert chain.
-func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL string, fClient api.LegacyClient) (*api.CertificateResponse, error) {
-	c := &realConnector{}
-	switch flow {
-	case flowClientCredentials:
-		c.flow = oauthflow.NewClientCredentialsFlow(oidcIssuer)
-	case flowDevice:
-		c.flow = oauthflow.NewDeviceFlowTokenGetterForIssuer(oidcIssuer)
-	case flowNormal:
-		c.flow = oauthflow.DefaultIDTokenGetter
-	case flowToken:
-		c.flow = &oauthflow.StaticTokenGetter{RawToken: idToken}
-	default:
-		return nil, fmt.Errorf("unsupported oauth flow: %s", flow)
-	}
-
-	return getCertForOauthID(sv, fClient, c, oidcIssuer, oidcClientID, oidcClientSecret, oidcRedirectURL)
+	return fClient.SigningCert(cr, tok)
 }
 
 type Signer struct {
@@ -118,65 +77,26 @@ func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerV
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
 	}
 
-	idToken, err := idToken(ko.IDToken)
+	idToken, err := auth.ReadIDToken(ctx, ko.IDToken, ko.OIDCDisableProviders, ko.OIDCProvider)
 	if err != nil {
-		return nil, fmt.Errorf("getting id token: %w", err)
-	}
-	var provider providers.Interface
-	// If token is not set in the options, get one from the provders
-	if idToken == "" && providers.Enabled(ctx) && !ko.OIDCDisableProviders {
-		if ko.OIDCProvider != "" {
-			provider, err = providers.ProvideFrom(ctx, ko.OIDCProvider)
-			if err != nil {
-				return nil, fmt.Errorf("getting provider: %w", err)
-			}
-			idToken, err = provider.Provide(ctx, "sigstore")
-		} else {
-			idToken, err = providers.Provide(ctx, "sigstore")
-		}
-		if err != nil {
-			return nil, fmt.Errorf("fetching ambient OIDC credentials: %w", err)
-		}
+		return nil, fmt.Errorf("reading id token: %w", err)
 	}
 
-	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
-
-	var flow string
-	switch {
-	case ko.FulcioAuthFlow != "":
-		// Caller manually set flow option.
-		flow = ko.FulcioAuthFlow
-	case idToken != "":
-		flow = flowToken
-	case !term.IsTerminal(0):
-		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
-		flow = flowDevice
-	default:
-		var statementErr error
-		privacy.StatementOnce.Do(func() {
-			ui.Infof(ctx, privacy.Statement)
-			ui.Infof(ctx, privacy.StatementConfirmation)
-			if !ko.SkipConfirmation {
-				if err := ui.ConfirmContinue(ctx); err != nil {
-					statementErr = err
-				}
-			}
-		})
-		if statementErr != nil {
-			return nil, statementErr
-		}
-		flow = flowNormal
+	flow, err := auth.GetOAuthFlow(ctx, ko.FulcioAuthFlow, idToken, ko.SkipConfirmation)
+	if err != nil {
+		return nil, fmt.Errorf("setting auth flow: %w", err)
 	}
-	Resp, err := GetCert(ctx, signer, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient) // TODO, use the chain.
+
+	resp, err := GetCert(ctx, signer, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}
 
 	f := &Signer{
 		SignerVerifier: signer,
-		Cert:           Resp.CertPEM,
-		Chain:          Resp.ChainPEM,
-		SCT:            Resp.SCT,
+		Cert:           resp.CertPEM,
+		Chain:          resp.ChainPEM,
+		SCT:            resp.SCT,
 	}
 
 	return f, nil
@@ -203,17 +123,4 @@ func NewClient(fulcioURL string) (api.LegacyClient, error) {
 	}
 	fClient := api.NewClient(fulcioServer, api.WithUserAgent(options.UserAgent()))
 	return fClient, nil
-}
-
-// idToken allows users to either pass in an identity token directly
-// or a path to an identity token via the --identity-token flag
-func idToken(s string) (string, error) {
-	// If this is a valid raw token or is empty, just return it
-	if _, err := jwt.ParseSigned(s); err == nil || s == "" {
-		return s, nil
-	}
-
-	// Otherwise, if this is a path to a token return the contents
-	c, err := os.ReadFile(s)
-	return string(c), err
 }

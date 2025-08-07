@@ -43,6 +43,7 @@ type bundleMutator struct {
 
 	eraseTSA  bool
 	eraseTlog bool
+	eraseSET  bool
 }
 
 func (b *bundleMutator) Timestamps() ([][]byte, error) {
@@ -55,6 +56,21 @@ func (b *bundleMutator) Timestamps() ([][]byte, error) {
 func (b *bundleMutator) TlogEntries() ([]*tlog.Entry, error) {
 	if b.eraseTlog {
 		return []*tlog.Entry{}, nil
+	}
+	if b.eraseSET {
+		var entries []*tlog.Entry
+		oldEntries, err := b.SignedEntity.TlogEntries()
+		if err != nil {
+			return nil, err
+		}
+		for _, entry := range oldEntries {
+			mutEntry, err := tlog.NewEntry([]byte(entry.Body().(string)), entry.IntegratedTime().Unix(), entry.LogIndex(), []byte(entry.LogKeyID()), []byte{}, nil)
+			if err != nil {
+				return nil, err
+			}
+			entries = append(entries, mutEntry)
+		}
+		return entries, nil
 	}
 	return b.SignedEntity.TlogEntries()
 }
@@ -260,6 +276,19 @@ func TestVerifyBundle(t *testing.T) {
 			},
 			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
 			entity:               &bundleMutator{SignedEntity: attestation, eraseTlog: true},
+			wantErr:              true,
+		},
+		{
+			name: "require SET, missing set",
+			checkOpts: &cosign.CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				IgnoreTlog:          false,
+				UseSignedTimestamps: false, // both set to false requires an SET
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               &bundleMutator{SignedEntity: attestation, eraseSET: true},
 			wantErr:              true,
 		},
 		{
