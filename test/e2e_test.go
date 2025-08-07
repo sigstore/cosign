@@ -837,7 +837,6 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
@@ -1042,7 +1041,6 @@ func TestSignVerifyBundle(t *testing.T) {
 		},
 		NewBundleFormat: true,
 	}
-
 }
 
 func TestAttestVerify(t *testing.T) {
