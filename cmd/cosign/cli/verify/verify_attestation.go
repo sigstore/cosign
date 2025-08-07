@@ -75,6 +75,7 @@ type VerifyAttestationCommand struct {
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
 	HashAlgorithm                crypto.Hash
+	TrustedRootPath              string
 }
 
 // Exec runs the verification command

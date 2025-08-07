@@ -140,6 +140,7 @@ against the transparency log.`,
 				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				NewBundleFormat:              o.CommonVerifyOptions.NewBundleFormat,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
@@ -254,6 +255,7 @@ against the transparency log.`,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				HashAlgorithm:                hashAlgorithm,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
