@@ -157,7 +157,7 @@ func TestValidationJSON(t *testing.T) {
 				}
 			`,
 			pass:     false,
-			errorMsg: "authorityMatches.keysignature.signatures: invalid value [{subject:\"PLACEHOLDER\",issuer:\"PLACEHOLDER\"}] (does not satisfy list.MinItems(2))",
+			errorMsg: "authorityMatches.keysignature.signatures: invalid value [{subject:\"PLACEHOLDER\",issuer:\"PLACEHOLDER\"}] (does not satisfy list.MinItems(2)): len(list) < MinItems(2) (1 < 2)",
 		},
 	}
 
