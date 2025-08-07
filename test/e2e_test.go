@@ -1011,6 +1011,38 @@ func TestSignVerifyBundle(t *testing.T) {
 
 	args := []string{imgName}
 	must(cmd.Exec(ctx, args), t)
+
+	// Sign image with Fulcio
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko = options.KeyOpts{
+		IDToken:          identityToken,
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify Fulcio-signed image
+	cmd = cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer:     os.Getenv("OIDC_URL"),
+			CertIdentityRegexp: ".+",
+		},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		NewBundleFormat: true,
+	}
+
 }
 
 func TestAttestVerify(t *testing.T) {
