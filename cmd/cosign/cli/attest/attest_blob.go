@@ -18,8 +18,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -33,7 +31,6 @@ import (
 	"time"
 
 	intotov1 "github.com/in-toto/attestation/go/v1"
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	cosign_sign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -45,15 +42,12 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/types"
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // nolint
@@ -236,7 +230,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		// will use the DSSE Sig field, so we choose what signature to send to
 		// the timestamp authority based on our output format.
 		if c.NewBundleFormat {
-			tsaPayload, err = getEnvelopeSigBytes(sig)
+			tsaPayload, err = cosign.GetDSSESigBytes(sig)
 			if err != nil {
 				return err
 			}
@@ -296,7 +290,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if c.BundlePath != "" {
 		var contents []byte
 		if c.NewBundleFormat {
-			contents, err = makeNewBundle(sv, rekorEntry, payload, sig, signer, timestampBytes)
+			var pubKey *crypto.PublicKey
+			pk, err := sv.PublicKey()
+			if err == nil {
+				pubKey = &pk
+			}
+
+			contents, err = cbundle.MakeNewBundle(pubKey, rekorEntry, payload, sig, signer, timestampBytes)
 			if err != nil {
 				return err
 			}
@@ -356,67 +356,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	return nil
-}
-
-func makeNewBundle(sv *cosign_sign.SignerVerifier, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
-	// Determine if signature is certificate or not
-	var hint string
-	var rawCert []byte
-
-	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-	if err != nil || len(cert) == 0 {
-		pubKey, err := sv.PublicKey()
-		if err != nil {
-			return nil, err
-		}
-		pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
-		if err != nil {
-			return nil, err
-		}
-		hashedBytes := sha256.Sum256(pkixPubKey)
-		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
-	} else {
-		rawCert = cert[0].Raw
-	}
-
-	bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var envelope dsse.Envelope
-	err = json.Unmarshal(sig, &envelope)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(envelope.Signatures) == 0 {
-		return nil, fmt.Errorf("no signature in DSSE envelope")
-	}
-
-	sigBytes, err := base64.StdEncoding.DecodeString(envelope.Signatures[0].Sig)
-	if err != nil {
-		return nil, err
-	}
-
-	bundle.Content = &protobundle.Bundle_DsseEnvelope{
-		DsseEnvelope: &protodsse.Envelope{
-			Payload:     payload,
-			PayloadType: envelope.PayloadType,
-			Signatures: []*protodsse.Signature{
-				{
-					Sig: sigBytes,
-				},
-			},
-		},
-	}
-
-	contents, err := protojson.Marshal(bundle)
-	if err != nil {
-		return nil, err
-	}
-
-	return contents, nil
 }
 
 func validateStatement(payload []byte) (string, error) {

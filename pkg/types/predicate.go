@@ -1,4 +1,5 @@
-// Copyright 2023 The Sigstore Authors.
+//
+// Copyright 2021 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attest
+package types //nolint: revive // that is a valid package name :)
 
-import (
-	"fmt"
-	"io"
-	"os"
+const (
+	CosignSignPredicateType = "https://sigstore.dev/cosign/sign/v1"
 )
-
-func predicateReader(predicatePath string) (io.ReadCloser, error) {
-	if predicatePath == "-" {
-		fmt.Fprintln(os.Stderr, "Using payload from: standard input")
-		return os.Stdin, nil
-	}
-
-	fmt.Fprintln(os.Stderr, "Using payload from:", predicatePath)
-	f, err := os.Open(predicatePath)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
-}

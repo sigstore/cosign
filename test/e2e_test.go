@@ -573,17 +573,19 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 	home, err := os.UserHomeDir()
 	must(err, t)
 	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
-	tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
-	tsaFP, err := os.Create(tsaPath)
-	must(err, t)
-	must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
 	out := filepath.Join(downloadDirectory, "trusted_root.json")
 	cmd := &trustedroot.CreateCmd{
-		CertChain:        []string{caPath},
-		CtfeKeyPath:      []string{ctfePath},
-		Out:              out,
-		RekorKeyPath:     []string{rekorPath},
-		TSACertChainPath: []string{tsaPath},
+		CertChain:    []string{caPath},
+		CtfeKeyPath:  []string{ctfePath},
+		Out:          out,
+		RekorKeyPath: []string{rekorPath},
+	}
+	if tsaURL != "" {
+		tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
+		tsaFP, err := os.Create(tsaPath)
+		must(err, t)
+		must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
+		cmd.TSACertChainPath = []string{tsaPath}
 	}
 	must(cmd.Exec(context.TODO()), t)
 	return out
@@ -965,6 +967,82 @@ func TestSignVerifyWithSigningConfig(t *testing.T) {
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
 	must(err, t)
+}
+
+func TestSignVerifyBundle(t *testing.T) {
+	td := t.TempDir()
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image with key in bundle format
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify bundle
+	trustedRootPath := prepareTrustedRoot(t, "")
+
+	cmd := cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+	}
+
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+
+	// Sign image with Fulcio
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko = options.KeyOpts{
+		IDToken:          identityToken,
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify Fulcio-signed image
+	cmd = cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer:     os.Getenv("OIDC_URL"),
+			CertIdentityRegexp: ".+",
+		},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+	}
 }
 
 func TestAttestVerify(t *testing.T) {

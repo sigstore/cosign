@@ -45,7 +45,7 @@ cosign verify-blob-attestation [flags]
       --check-claims                                    if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified. (default true)
       --digest string                                   Digest to use for verifying in-toto subject (instead of providing a blob)
       --digestAlg string                                Digest algorithm to use for verifying in-toto subject (instead of providing a blob)
-      --experimental-oci11                              set to true to enable experimental OCI 1.1 behaviour
+      --experimental-oci11                              set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)
   -h, --help                                            help for verify-blob-attestation
       --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log

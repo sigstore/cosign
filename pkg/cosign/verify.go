@@ -248,9 +248,9 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 
 	if !co.IgnoreTlog {
 		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1))
-		// Verifying a Fulcio certificate and no signed timestamp will be provided, so
-		// use the timestamp from the log. For Rekor v2, a signed timestamp must be provided.
-		if !co.UseSignedTimestamps && co.SigVerifier == nil {
+		// If you aren't using a signed timestamp, use the time from the transparency log.
+		// For Rekor v2, a signed timestamp must be provided.
+		if !co.UseSignedTimestamps {
 			verifierOptions = append(verifierOptions, verify.WithIntegratedTimestamps(1))
 		}
 	}
