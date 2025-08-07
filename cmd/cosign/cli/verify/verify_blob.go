@@ -114,7 +114,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath),
+		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
 	}
 
 	// Keys are optional!
