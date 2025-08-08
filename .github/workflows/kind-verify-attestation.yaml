@@ -111,7 +111,6 @@ jobs:
         # Grab the compressed repository for airgap testing.
         kubectl -n tuf-system get secrets tuf-root -ojsonpath='{.data.repository}'  | base64 -d > ./repository.tar.gz
         tar -zxvf ./repository.tar.gz
-        # Grab the compressed repository for airgap testing.
         PWD=$(pwd)
         ROOT=${PWD}/repository/1.root.json
         REPOSITORY=${PWD}/repository
