@@ -73,7 +73,6 @@ type VerifyAttestationCommand struct {
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
-	TrustedRootPath              string
 }
 
 // Exec runs the verification command
