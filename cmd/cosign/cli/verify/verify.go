@@ -86,7 +86,6 @@ type VerifyCommand struct {
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
 	NewBundleFormat              bool
-	TrustedRootPath              string
 }
 
 // Exec runs the verification command
