@@ -248,17 +248,28 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 
 	if !co.IgnoreTlog {
 		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1))
-		// If you aren't using a signed timestamp, use the time from the transparency log.
+		// If you aren't using a signed timestamp, use the time from the transparency log
+		// to verify Fulcio certificates, or require no timestamp to verify a key.
 		// For Rekor v2, a signed timestamp must be provided.
 		if !co.UseSignedTimestamps {
-			verifierOptions = append(verifierOptions, verify.WithIntegratedTimestamps(1))
+			if co.SigVerifier == nil {
+				verifierOptions = append(verifierOptions, verify.WithIntegratedTimestamps(1))
+			} else {
+				verifierOptions = append(verifierOptions, verify.WithNoObserverTimestamps())
+			}
 		}
 	}
 	if co.UseSignedTimestamps {
 		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
 	}
+	// A time verification policy must be provided. Without a signed timestamp or integrated timestamp,
+	// verify a certificate with the current time, or require no timestamp to verify a key.
 	if co.IgnoreTlog && !co.UseSignedTimestamps {
-		verifierOptions = append(verifierOptions, verify.WithCurrentTime())
+		if co.SigVerifier == nil {
+			verifierOptions = append(verifierOptions, verify.WithCurrentTime())
+		} else {
+			verifierOptions = append(verifierOptions, verify.WithNoObserverTimestamps())
+		}
 	}
 
 	return vTrustedMaterial, verifierOptions, policyOptions, nil

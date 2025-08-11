@@ -37,7 +37,7 @@ require (
 	github.com/sigstore/rekor v1.4.0
 	github.com/sigstore/rekor-tiles v0.1.7-0.20250624231741-98cd4a77300f
 	github.com/sigstore/sigstore v1.9.5
-	github.com/sigstore/sigstore-go v1.1.1
+	github.com/sigstore/sigstore-go v1.1.2-0.20250811211025-bac873564adb
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3
@@ -287,7 +287,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
