@@ -1043,6 +1043,8 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat:     true,
 		UseSignedTimestamps: false,
 	}
+
+	must(cmd.Exec(ctx, args), t)
 }
 
 func TestAttestVerify(t *testing.T) {
