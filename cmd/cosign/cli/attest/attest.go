@@ -18,7 +18,6 @@ package attest
 import (
 	"bytes"
 	"context"
-	"crypto"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
 	"fmt"
@@ -252,10 +251,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		var pubKey *crypto.PublicKey
-		pk, err := sv.PublicKey()
-		if err == nil {
-			pubKey = &pk
+		pubKey, err := sv.PublicKey()
+		if err != nil {
+			return err
 		}
 		bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
 		if err != nil {

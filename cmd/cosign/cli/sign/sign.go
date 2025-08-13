@@ -305,10 +305,9 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
-	var pubKey *crypto.PublicKey
-	pk, err := sv.PublicKey()
-	if err == nil {
-		pubKey = &pk
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return err
 	}
 
 	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)

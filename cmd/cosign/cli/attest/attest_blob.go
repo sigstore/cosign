@@ -290,10 +290,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if c.BundlePath != "" {
 		var contents []byte
 		if c.NewBundleFormat {
-			var pubKey *crypto.PublicKey
-			pk, err := sv.PublicKey()
-			if err == nil {
-				pubKey = &pk
+			pubKey, err := sv.PublicKey()
+			if err != nil {
+				return err
 			}
 
 			contents, err = cbundle.MakeNewBundle(pubKey, rekorEntry, payload, sig, signer, timestampBytes)
