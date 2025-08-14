@@ -1008,8 +1008,32 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat:     true,
 		UseSignedTimestamps: false,
 	}
-
 	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+
+	// Sign image with key in bundle format without Rekor
+	_, privKeyPath, pubKeyPath = keypair(t, td)
+	ko = options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Verify bundle without Rekor
+	cmd = cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: false,
+	}
 	must(cmd.Exec(ctx, args), t)
 
 	// Sign image with Fulcio
@@ -1043,7 +1067,6 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat:     true,
 		UseSignedTimestamps: false,
 	}
-
 	must(cmd.Exec(ctx, args), t)
 }
 
