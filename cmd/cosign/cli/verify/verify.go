@@ -141,6 +141,18 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		NewBundleFormat:              c.NewBundleFormat,
 	}
 
+	// Check to see if we are using the new bundle format or not
+	if !c.LocalImage {
+		ref, err := name.ParseReference(images[0], c.NameOptions...)
+		if err == nil && c.NewBundleFormat {
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co)
+			if len(newBundles) == 0 || err != nil {
+				c.NewBundleFormat = false
+				co.NewBundleFormat = false
+			}
+		}
+	}
+
 	if c.TrustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
 		if err != nil {
