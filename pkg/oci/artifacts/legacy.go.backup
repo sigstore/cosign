@@ -1,0 +1,380 @@
+//
+// Copyright 2024 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package artifacts
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	ifulcio "github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio"
+	ipayload "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+)
+
+// LegacyArtifactManager implements the ArtifactManager interface using legacy tag-based storage
+type LegacyArtifactManager struct {
+	opts []ociremote.Option
+}
+
+// FindArtifacts implements unified artifact discovery for legacy mode
+func (m *LegacyArtifactManager) FindArtifacts(ctx context.Context, subject name.Digest, artifactType string, filters ...Filter) ([]Artifact, error) {
+	switch artifactType {
+	case "sig":
+		signatures, err := m.FindSignatures(ctx, subject)
+		if err != nil {
+			return nil, err
+		}
+		var artifacts []Artifact
+		for _, sig := range signatures {
+			content, _ := json.Marshal(sig)
+			artifact := Artifact{
+				Type:      "sig",
+				Content:   content,
+				MediaType: "application/vnd.dev.cosign.simplesigning.v1+json",
+				Digest:    subject,
+				Metadata: map[string]interface{}{
+					"signature": sig.Base64Signature,
+					"payload":   sig.Payload,
+					"cert":      sig.Cert,
+					"chain":     sig.Chain,
+					"bundle":    sig.Bundle,
+				},
+			}
+			// Apply filters
+			includeArtifact := true
+			for _, filter := range filters {
+				if !filter.Apply(artifact) {
+					includeArtifact = false
+					break
+				}
+			}
+			if includeArtifact {
+				artifacts = append(artifacts, artifact)
+			}
+		}
+		return artifacts, nil
+	case "att":
+		attestations, err := m.FindAttestations(ctx, subject, "")
+		if err != nil {
+			return nil, err
+		}
+		var artifacts []Artifact
+		for _, att := range attestations {
+			content, _ := json.Marshal(att)
+			artifact := Artifact{
+				Type:      "att",
+				Content:   content,
+				MediaType: "application/vnd.dsse.envelope.v1+json",
+				Digest:    subject,
+				Metadata: map[string]interface{}{
+					"payloadType": att.PayloadType,
+					"payload":     att.PayLoad,
+					"signatures":  att.Signatures,
+				},
+			}
+			// Apply filters
+			includeArtifact := true
+			for _, filter := range filters {
+				if !filter.Apply(artifact) {
+					includeArtifact = false
+					break
+				}
+			}
+			if includeArtifact {
+				artifacts = append(artifacts, artifact)
+			}
+		}
+		return artifacts, nil
+	case "sbom":
+		sboms, err := m.FindSBOMs(ctx, subject)
+		if err != nil {
+			return nil, err
+		}
+		var artifacts []Artifact
+		for _, sbom := range sboms {
+			artifact := Artifact{
+				Type:      "sbom",
+				Content:   sbom.Content,
+				MediaType: sbom.MediaType,
+				Digest:    sbom.Digest,
+				Metadata:  map[string]interface{}{},
+			}
+			// Apply filters
+			includeArtifact := true
+			for _, filter := range filters {
+				if !filter.Apply(artifact) {
+					includeArtifact = false
+					break
+				}
+			}
+			if includeArtifact {
+				artifacts = append(artifacts, artifact)
+			}
+		}
+		return artifacts, nil
+	default:
+		return nil, fmt.Errorf("unsupported artifact type: %s", artifactType)
+	}
+}
+
+// AttachArtifact implements unified artifact attachment for legacy mode
+func (m *LegacyArtifactManager) AttachArtifact(ctx context.Context, subject name.Digest, artifact Artifact, opts AttachOptions) error {
+	switch artifact.Type {
+	case "sig":
+		var sig cosign.SignedPayload
+		if err := json.Unmarshal(artifact.Content, &sig); err != nil {
+			return fmt.Errorf("invalid signature artifact: %w", err)
+		}
+		// Convert to oci.Signature for attachment
+		ociSig, err := static.NewSignature(sig.Payload, sig.Base64Signature)
+		if err != nil {
+			return fmt.Errorf("creating oci signature: %w", err)
+		}
+		return m.AttachSignature(ctx, subject, ociSig, opts)
+	case "att":
+		var att cosign.AttestationPayload
+		if err := json.Unmarshal(artifact.Content, &att); err != nil {
+			return fmt.Errorf("invalid attestation artifact: %w", err)
+		}
+		// Convert to oci.Signature for attachment
+		ociAtt, err := static.NewAttestation([]byte(att.PayLoad))
+		if err != nil {
+			return fmt.Errorf("creating oci attestation: %w", err)
+		}
+		return m.AttachAttestation(ctx, subject, ociAtt, opts)
+	case "sbom":
+		mediaType := types.MediaType(artifact.MediaType)
+		return m.AttachSBOM(ctx, subject, artifact.Content, mediaType, opts)
+	default:
+		return fmt.Errorf("unsupported artifact type for attachment: %s", artifact.Type)
+	}
+}
+
+// CreateArtifact implements unified artifact creation for legacy mode
+func (m *LegacyArtifactManager) CreateArtifact(ctx context.Context, subject name.Digest, content []byte, artifactType string, signingOpts SigningOptions, attachOpts AttachOptions) error {
+	switch artifactType {
+	case "sig":
+		return m.CreateSignature(ctx, subject, content, signingOpts, attachOpts)
+	case "att":
+		if signingOpts.AttestSpecific == nil {
+			return fmt.Errorf("attestation creation requires AttestSpecific options")
+		}
+		return m.CreateAttestation(ctx, subject, content, signingOpts.AttestSpecific.PredicateType, signingOpts, attachOpts)
+	default:
+		return fmt.Errorf("unsupported artifact type for creation: %s", artifactType)
+	}
+}
+
+// FindSignatures implements legacy signature discovery
+func (m *LegacyArtifactManager) FindSignatures(_ context.Context, subject name.Digest) ([]cosign.SignedPayload, error) {
+	simg, err := ociremote.SignedImage(subject, m.opts...)
+	if err != nil {
+		return nil, err
+	}
+	return cosign.FetchSignatures(simg)
+}
+
+// FindAttestations implements legacy attestation discovery
+func (m *LegacyArtifactManager) FindAttestations(_ context.Context, subject name.Digest, predicateType string) ([]cosign.AttestationPayload, error) {
+	se, err := ociremote.SignedEntity(subject, m.opts...)
+	if err != nil {
+		return nil, err
+	}
+	return cosign.FetchAttestations(se, predicateType)
+}
+
+// FindSBOMs implements legacy SBOM discovery
+func (m *LegacyArtifactManager) FindSBOMs(_ context.Context, subject name.Digest) ([]SBOMArtifact, error) {
+	se, err := ociremote.SignedEntity(subject, m.opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use existing SBOM attachment mechanism
+	file, err := se.Attachment("sbom")
+	if err != nil {
+		return nil, err
+	}
+
+	mt, err := file.FileMediaType()
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := file.Payload()
+	if err != nil {
+		return nil, err
+	}
+
+	return []SBOMArtifact{{
+		MediaType: string(mt),
+		Content:   payload,
+		Digest:    subject, // The attachment is linked to this subject
+	}}, nil
+}
+
+// AttachSignature implements legacy signature attachment
+func (m *LegacyArtifactManager) AttachSignature(_ context.Context, subject name.Digest, signature oci.Signature, _ AttachOptions) error {
+	se, err := ociremote.SignedEntity(subject, m.opts...)
+	if err != nil {
+		return err
+	}
+
+	newSE, err := mutate.AttachSignatureToEntity(se, signature)
+	if err != nil {
+		return err
+	}
+
+	return ociremote.WriteSignatures(subject.Repository, newSE, m.opts...)
+}
+
+// AttachAttestation implements legacy attestation attachment
+func (m *LegacyArtifactManager) AttachAttestation(_ context.Context, subject name.Digest, attestation oci.Signature, _ AttachOptions) error {
+	se, err := ociremote.SignedEntity(subject, m.opts...)
+	if err != nil {
+		return err
+	}
+
+	newSE, err := mutate.AttachAttestationToEntity(se, attestation)
+	if err != nil {
+		return err
+	}
+
+	return ociremote.WriteAttestations(subject.Repository, newSE, m.opts...)
+}
+
+// AttachSBOM implements legacy SBOM attachment
+func (m *LegacyArtifactManager) AttachSBOM(_ context.Context, subject name.Digest, sbom []byte, mediaType types.MediaType, _ AttachOptions) error {
+	se, err := ociremote.SignedEntity(subject, m.opts...)
+	if err != nil {
+		return err
+	}
+
+	file, err := static.NewFile(sbom, static.WithLayerMediaType(mediaType))
+	if err != nil {
+		return err
+	}
+	newSE, err := mutate.AttachFileToEntity(se, "sbom", file)
+	if err != nil {
+		return err
+	}
+
+	return ociremote.WriteAttestations(subject.Repository, newSE, m.opts...)
+}
+
+// CreateAttestation implements legacy attestation creation and attachment
+func (m *LegacyArtifactManager) CreateAttestation(ctx context.Context, subject name.Digest, predicate []byte, predicateType string, signingOpts SigningOptions, _ AttachOptions) error {
+	// Creating attestations requires complex signing logic that belongs in the CLI layer
+	// This method should not be used - use AttachAttestation with a pre-created attestation instead
+	return fmt.Errorf("CreateAttestation not implemented - use AttachAttestation instead")
+}
+	defer sv.Close()
+
+	// Create the attestation statement
+	statement, err := createAttestationStatement(subject, predicate, predicateType)
+	if err != nil {
+		return fmt.Errorf("creating attestation statement: %w", err)
+	}
+
+	// Create signer with certificate support
+	s := createSigner(sv, signingOpts)
+
+	// Sign the attestation
+	ociSig, _, err := s.Sign(ctx, bytes.NewReader(statement))
+	if err != nil {
+		return fmt.Errorf("signing attestation: %w", err)
+	}
+
+	// Extract the signed payload from the signature
+	signedPayload, err := ociSig.Payload()
+	if err != nil {
+		return fmt.Errorf("extracting payload: %w", err)
+	}
+
+	// Create OCI attestation
+	opts := []static.Option{
+		static.WithLayerMediaType("application/vnd.dev.cosign.simplesigning.v1+json"),
+	}
+	if predicateType != "" {
+		opts = append(opts, static.WithAnnotations(map[string]string{
+			"predicateType": predicateType,
+		}))
+	}
+
+	sig, err := static.NewAttestation(signedPayload, opts...)
+	if err != nil {
+		return fmt.Errorf("creating attestation: %w", err)
+	}
+
+	// Get the signed entity for attachment
+	se := ociremote.SignedUnknown(subject, m.opts...)
+
+	// Attach attestation to entity using legacy method
+	newSE, err := mutate.AttachAttestationToEntity(se, sig)
+	if err != nil {
+		return fmt.Errorf("attaching attestation: %w", err)
+	}
+
+	// Write attestations back to registry
+	return ociremote.WriteAttestations(subject.Repository, newSE, m.opts...)
+}
+
+// CreateSignature implements legacy signature creation and attachment
+func (m *LegacyArtifactManager) CreateSignature(ctx context.Context, subject name.Digest, payload []byte, signingOpts SigningOptions, _ AttachOptions) error {
+	// Creating signatures requires complex signing logic that belongs in the CLI layer
+	// This method should not be used - use AttachSignature with a pre-created signature instead
+	return fmt.Errorf("CreateSignature not implemented - use AttachSignature instead")
+}
+
+// createSigner creates a configured signer with certificate support
+func createSigner(sv *sign.SignerVerifier, _ SigningOptions) icos.Signer {
+	// Start with basic payload signer
+	var s icos.Signer
+	s = ipayload.NewSigner(sv)
+
+	// Add certificate chain support if available
+	if sv.Cert != nil {
+		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
+	}
+
+	// Note: TSA and Rekor support would be added here in a full implementation
+	// but are omitted to avoid import cycles and complexity for this demo
+
+	return s
+}
+
+// createAttestationStatement creates an in-toto attestation statement
+func createAttestationStatement(subject name.Digest, predicate []byte, predicateType string) ([]byte, error) {
+	// Simple attestation statement - in practice this would create proper in-toto format
+	statement := map[string]interface{}{
+		"_type":         "https://in-toto.io/Statement/v0.1",
+		"subject":       []map[string]interface{}{{"name": subject.String()}},
+		"predicateType": predicateType,
+		"predicate":     json.RawMessage(predicate),
+	}
+
+	return json.Marshal(statement)
+}
