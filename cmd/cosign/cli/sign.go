@@ -76,6 +76,12 @@ race conditions or (worse) malicious tampering.
   # sign a container image with a key, attaching a certificate and certificate chain
   cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE DIGEST>
 
+  # sign a container image with a key, attaching a certificate and certificate chain from a URL
+  cosign sign --key cosign.key --cert https://example.com/cert --cert-chain https://example.com/cert-chain <IMAGE DIGEST> 
+
+  # sign a container image with a key, attaching a certificate and certificate chain from an environment variable
+  cosign sign --key cosign.key --cert https://example.com/cert --cert-chain https://example.com/cert-chain <IMAGE DIGEST>
+
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
