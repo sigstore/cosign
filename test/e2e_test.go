@@ -1887,7 +1887,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	// Ensure it verifies if you deafult to the new protobuf bundle format
+	// Ensure it verifies if you default to the new protobuf bundle format
 	verifyAttestation.NewBundleFormat = true
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
