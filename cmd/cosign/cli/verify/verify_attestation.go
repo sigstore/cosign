@@ -129,7 +129,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		if err == nil && c.NewBundleFormat {
 			newBundles, _, err := cosign.GetBundles(ctx, ref, co)
 			if len(newBundles) == 0 || err != nil {
-				c.NewBundleFormat = false
 				co.NewBundleFormat = false
 			}
 		}
@@ -155,7 +154,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	}
 
-	if c.NewBundleFormat {
+	if co.NewBundleFormat {
 		if err = checkSigstoreBundleUnsupportedOptions(c); err != nil {
 			return err
 		}
@@ -165,7 +164,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !c.NewBundleFormat {
+	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) && !co.NewBundleFormat {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
 		if err != nil {
 			return fmt.Errorf("getting ctlog public keys: %w", err)
@@ -173,7 +172,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	// If we are using signed timestamps, we need to load the TSA certificates
-	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !c.NewBundleFormat {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !co.NewBundleFormat {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -231,7 +230,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case c.CertRef != "":
-		if c.NewBundleFormat {
+		if co.NewBundleFormat {
 			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
 			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
 		}
@@ -274,7 +273,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 			co.SCT = sct
 		}
 	case c.TrustedRootPath != "":
-		if !c.NewBundleFormat {
+		if !co.NewBundleFormat {
 			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
 		}
 
