@@ -99,21 +99,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
-	trustedMaterial, err := cosign.TrustedRoot()
-	if err != nil {
-		ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-	}
-
-	if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) > 0 ||
-		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) != "" ||
-		env.Getenv(env.VariableSigstoreRootFile) != "" ||
-		env.Getenv(env.VariableSigstoreRekorPublicKey) != "" ||
-		env.Getenv(env.VariableSigstoreTSACertificateFile) != "" {
-		// trusted_root.json was found, but a cert chain was explicitly provided, or environment variables point to the key material,
-		// so don't overrule the user's intentions.
-		trustedMaterial = nil
-	}
-
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
 		CertGithubWorkflowTrigger:    c.CertGithubWorkflowTrigger,
@@ -128,7 +113,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
-		TrustedMaterial:              trustedMaterial,
 	}
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
