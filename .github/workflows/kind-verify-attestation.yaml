@@ -156,7 +156,7 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@b1933e3d1f574c772dc7efd68c2060dafbc25e8c # v1.4.9
+      uses: chainguard-dev/actions/kind-diag@de82dfd62f186b1b55bd0cdf084f484496d88ee3 # v1.4.11
 
     - name: Create vuln attestation for it
       run: |
