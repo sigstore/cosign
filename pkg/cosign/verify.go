@@ -1618,7 +1618,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
+func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
@@ -1665,7 +1665,7 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
 func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := getBundles(ctx, signedImgRef, co)
+	bundles, hash, err := GetBundles(ctx, signedImgRef, co)
 	if err != nil {
 		return nil, false, err
 	}

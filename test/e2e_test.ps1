@@ -34,9 +34,9 @@ Write-Output $pass | .\cosign.exe generate-key-pair
 $signing_key = "cosign.key"
 $verification_key = "cosign.pub"
 
-$test_img = "ghcr.io/distroless/static"
-Write-Output $pass | .\cosign.exe sign --key $signing_key --output-signature interactive.sig --output-payload interactive.payload --tlog-upload=false $test_img
-.\cosign.exe verify --key $verification_key --signature interactive.sig --payload interactive.payload --insecure-ignore-tlog=true $test_img
+Write-Output "hello world" | Out-File -FilePath "hello_world.txt"
+Write-Output $pass | .\cosign.exe sign-blob --key $signing_key --bundle test.sigstore.json --tlog-upload=false hello_world.txt
+.\cosign.exe verify-blob --key $verification_key --bundle test.sigstore.json --insecure-ignore-tlog=true hello_world.txt
 
 Pop-Location
 
