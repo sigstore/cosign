@@ -224,7 +224,9 @@ func (taggable taggableManifest) MediaType() (types.MediaType, error) {
 	return taggable.mediaType, nil
 }
 
-func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
+// WriteReferrer writes a referrer manifest for a given subject digest.
+// It uploads the provided layers and creates a manifest that refers to the subject.
+func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annotations map[string]string, opts ...Option) error {
 	o := makeOptions(d.Repository, opts...)
 
 	signTarget := d.String()
@@ -252,27 +254,30 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		return fmt.Errorf("failed to upload layer: %w", err)
 	}
 
-	// generate bundle media type string
-	bundleMediaType, err := sgbundle.MediaTypeString("0.3")
-	if err != nil {
-		return fmt.Errorf("failed to generate bundle media type string: %w", err)
-	}
+	layerDescriptors := make([]v1.Descriptor, len(layers))
+	for i, layer := range layers {
+		mediaType, err := layer.MediaType()
+		if err != nil {
+			return fmt.Errorf("failed to get media type: %w", err)
+		}
+		layerDigest, err := layer.Digest()
+		if err != nil {
+			return fmt.Errorf("failed to calculate digest: %w", err)
+		}
+		layerSize, err := layer.Size()
+		if err != nil {
+			return fmt.Errorf("failed to calculate size: %w", err)
+		}
 
-	// Write the bundle layer
-	layer := static.NewLayer(bundleBytes, types.MediaType(bundleMediaType))
-	blobDigest, err := layer.Digest()
-	if err != nil {
-		return fmt.Errorf("failed to calculate digest: %w", err)
-	}
-
-	blobSize, err := layer.Size()
-	if err != nil {
-		return fmt.Errorf("failed to calculate size: %w", err)
-	}
-
-	err = remote.WriteLayer(d.Repository, layer, o.ROpt...)
-	if err != nil {
-		return fmt.Errorf("failed to upload layer: %w", err)
+		err = remote.WriteLayer(d.Repository, layer, o.ROpt...)
+		if err != nil {
+			return fmt.Errorf("failed to upload layer: %w", err)
+		}
+		layerDescriptors[i] = v1.Descriptor{
+			MediaType: mediaType,
+			Digest:    layerDigest,
+			Size:      layerSize,
+		}
 	}
 
 	// Create a manifest that includes the blob as a layer
@@ -281,28 +286,18 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		MediaType:     types.OCIManifestSchema1,
 		Config: v1.Descriptor{
 			MediaType:    types.MediaType("application/vnd.oci.empty.v1+json"),
-			ArtifactType: bundleMediaType,
+			ArtifactType: artifactType,
 			Digest:       configDigest,
 			Size:         configSize,
 		},
-		Layers: []v1.Descriptor{
-			{
-				MediaType: types.MediaType(bundleMediaType),
-				Digest:    blobDigest,
-				Size:      blobSize,
-			},
-		},
+		Layers: layerDescriptors,
 		Subject: &v1.Descriptor{
 			MediaType: desc.MediaType,
 			Digest:    desc.Digest,
 			Size:      desc.Size,
 		},
-		Annotations: map[string]string{
-			"org.opencontainers.image.created":  time.Now().UTC().Format(time.RFC3339),
-			"dev.sigstore.bundle.content":       "dsse-envelope",
-			"dev.sigstore.bundle.predicateType": predicateType,
-		},
-	}, bundleMediaType}
+		Annotations: annotations,
+	}, artifactType}
 
 	targetRef, err := manifest.targetRef(d.Repository)
 	if err != nil {
@@ -314,6 +309,50 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 	}
 
 	return nil
+}
+
+func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
+	// generate bundle media type string
+	bundleMediaType, err := sgbundle.MediaTypeString("0.3")
+	if err != nil {
+		return fmt.Errorf("failed to generate bundle media type string: %w", err)
+	}
+
+	// Write the bundle layer
+	layer := static.NewLayer(bundleBytes, types.MediaType(bundleMediaType))
+
+	annotations := map[string]string{
+		"org.opencontainers.image.created":  time.Now().UTC().Format(time.RFC3339),
+		"dev.sigstore.bundle.content":       "dsse-envelope",
+		"dev.sigstore.bundle.predicateType": predicateType,
+	}
+
+	return WriteReferrer(d, bundleMediaType, []v1.Layer{layer}, annotations, opts...)
+}
+
+// WriteAttestationsReferrer publishes the attestations attached to the given entity
+// into the provided repository using the referrers API.
+func WriteAttestationsReferrer(d name.Digest, se oci.SignedEntity, opts ...Option) error {
+	atts, err := se.Attestations()
+	if err != nil {
+		return err
+	}
+	layers, err := atts.Layers()
+	if err != nil {
+		return err
+	}
+
+	annotations := map[string]string{
+		"org.opencontainers.image.created": time.Now().UTC().Format(time.RFC3339),
+	}
+
+	// We have to pick an artifactType for the referrer manifest. The attestation
+	// layers themselves are DSSE envelopes, which wrap in-toto statements.
+	// For discovery, the artifactType should describe the semantic content (the
+	// in-toto statement) rather than the wrapper format (the DSSE envelope).
+	// Using the in-toto media type is the most appropriate and conventional choice,
+	// as policy engines and other tools will query for attestations using this type.
+	return WriteReferrer(d, ctypes.IntotoPayloadType, layers, annotations, opts...)
 }
 
 // referrerManifest implements Taggable for use in remote.Put.
