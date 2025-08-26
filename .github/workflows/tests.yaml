@@ -67,7 +67,7 @@ jobs:
       - name: Run Go tests
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        uses: codecov/codecov-action@fdcc8476540edceab3de004e990f80d881c6cc00 # v5.5.0
         with:
           env_vars: OS
       - name: Run Go tests w/ `-race`
@@ -169,7 +169,7 @@ jobs:
 
       - name: Collect diagnostics
         if: ${{ failure() }}
-        uses: chainguard-dev/actions/kind-diag@de82dfd62f186b1b55bd0cdf084f484496d88ee3 # v1.4.11
+        uses: chainguard-dev/actions/kind-diag@be7b31a01af8ce7228fe901326f1d223fb788e14 # v1.4.12
 
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
