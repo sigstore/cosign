@@ -797,8 +797,8 @@ github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdn
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
-github.com/buildkite/agent/v3 v3.98.2 h1:VOOxv8XD8HVCtEvtRPQhvB6k2Gorha2gN1wGh94gYAA=
-github.com/buildkite/agent/v3 v3.98.2/go.mod h1:+zCvvo/OlOwfs+AH3QvSn37H3cBXP3Fe18eoSbqUvnY=
+github.com/buildkite/agent/v3 v3.103.1 h1:PdbUrGUeQaf4xIaWSXQEYWf4Q6SB9gHUWlC/r6bHHig=
+github.com/buildkite/agent/v3 v3.103.1/go.mod h1:OSoURonIdwLChSvNXxnmywtqD0xnqbFdvgMAkfxTOPg=
 github.com/buildkite/go-pipeline v0.15.0 h1:ae/TEXC/4HhajbED2vKcRL5vZTtb9C71cajzwoBlP8s=
 github.com/buildkite/go-pipeline v0.15.0/go.mod h1:VE37qY3X5pmAKKUMoDZvPsHOQuyakB9cmXj9Qn6QasA=
 github.com/buildkite/interpolate v0.1.5 h1:v2Ji3voik69UZlbfoqzx+qfcsOKLA61nHdU79VV+tPU=
