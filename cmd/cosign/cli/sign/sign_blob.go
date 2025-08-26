@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -30,6 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v2/internal/auth"
 	internal "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
@@ -39,6 +41,7 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
@@ -61,6 +64,46 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		// we do not use ed25519ph for ed25519 keys when the signatures are not
 		// uploaded to the Tlog.
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
+	if ko.SigningConfig != nil {
+		// TODO(#4327): Only ephemeral keys are currently supported
+		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
+		// and determine if we want to store certificates for those as well.
+		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" {
+			return nil, fmt.Errorf("using a signing config currently only supports signing with ephemeral keys and Fulcio")
+		}
+		keypair, err := sign.NewEphemeralKeypair(nil)
+		if err != nil {
+			return nil, fmt.Errorf("generating keypair: %w", err)
+		}
+		idToken, err := auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+			TokenOrPath:      ko.IDToken,
+			DisableProviders: ko.OIDCDisableProviders,
+			Provider:         ko.OIDCProvider,
+			AuthFlow:         ko.FulcioAuthFlow,
+			SkipConfirm:      ko.SkipConfirmation,
+			OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
+			ClientID:         ko.OIDCClientID,
+			ClientSecret:     ko.OIDCClientSecret,
+			RedirectURL:      ko.OIDCRedirectURL,
+		})
+		data, err := io.ReadAll(&payload)
+		if err != nil {
+			return nil, fmt.Errorf("reading payload: %w", err)
+		}
+		content := &sign.PlainData{
+			Data: data,
+		}
+		bundle, err := cbundle.SignData(content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
+		if err != nil {
+			return nil, fmt.Errorf("signing bundle: %w", err)
+		}
+		if err := os.WriteFile(ko.BundlePath, bundle, 0600); err != nil {
+			return nil, fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		return bundle, nil
 	}
 
 	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
@@ -133,7 +176,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 
 		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
-		// TODO: Consider uploading RFC3161 TS to Rekor
 
 		if rfc3161Timestamp == nil {
 			return nil, fmt.Errorf("rfc3161 timestamp is nil")

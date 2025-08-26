@@ -85,6 +85,7 @@ type VerifyCommand struct {
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
+	NewBundleFormat              bool
 }
 
 // Exec runs the verification command
@@ -157,12 +158,30 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
+	if c.NewBundleFormat {
+		if c.CertRef != "" {
+			return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
+		}
+		if c.CertChain != "" {
+			return fmt.Errorf("unsupported: certificate chain may not be provided using --certificate-chain when using --new-bundle-format (cert must be in bundle)")
+		}
+		if c.CARoots != "" || c.CAIntermediates != "" {
+			return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --new-bundle-format")
+		}
+		if c.TSACertChainPath != "" {
+			return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --new-bundle-format")
+		}
+		if co.TrustedMaterial == nil {
+			return fmt.Errorf("trusted root is required when using new bundle format")
+		}
+	}
+
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
 	// If we are using signed timestamps and there is no trusted root, we need to load the TSA certificates
-	if co.UseSignedTimestamps && co.TrustedMaterial == nil {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !c.NewBundleFormat {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -172,7 +191,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog {
+	if !c.IgnoreTlog && !c.NewBundleFormat {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -229,6 +248,10 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
+		if c.NewBundleFormat {
+			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
+			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
+		}
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
@@ -292,10 +315,20 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	fulcioVerified := (co.SigVerifier == nil)
 
 	for _, img := range images {
+		var verified []oci.Signature
+		var bundleVerified bool
+
 		if c.LocalImage {
-			verified, bundleVerified, err := cosign.VerifyLocalImageSignatures(ctx, img, co)
-			if err != nil {
-				return err
+			if c.NewBundleFormat {
+				verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
+				if err != nil {
+					return err
+				}
+			} else {
+				verified, bundleVerified, err = cosign.VerifyLocalImageSignatures(ctx, img, co)
+				if err != nil {
+					return err
+				}
 			}
 			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
 			PrintVerification(ctx, verified, c.Output)
@@ -304,14 +337,23 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return fmt.Errorf("parsing reference: %w", err)
 			}
-			ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
-			if err != nil {
-				return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
-			}
 
-			verified, bundleVerified, err := cosign.VerifyImageSignatures(ctx, ref, co)
-			if err != nil {
-				return cosignError.WrapError(err)
+			if c.NewBundleFormat {
+				// OCI bundle always contains attestation
+				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
+				if err != nil {
+					return err
+				}
+			} else {
+				ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
+				if err != nil {
+					return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
+				}
+
+				verified, bundleVerified, err = cosign.VerifyImageSignatures(ctx, ref, co)
+				if err != nil {
+					return cosignError.WrapError(err)
+				}
 			}
 
 			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)

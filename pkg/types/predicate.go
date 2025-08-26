@@ -13,21 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types //nolint:revive
+package types //nolint: revive // that is a valid package name :)
 
 const (
-	JSONInputFormat = "json"
-	XMLInputFormat  = "xml"
-	TextInputFormat = "text"
-)
-
-const (
-	CycloneDXXMLMediaType  = "application/vnd.cyclonedx+xml"
-	CycloneDXJSONMediaType = "application/vnd.cyclonedx+json"
-	SyftMediaType          = "application/vnd.syft+json"
-	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
-	SPDXMediaType          = "text/spdx"
-	SPDXJSONMediaType      = "text/spdx+json"
-	WasmLayerMediaType     = "application/vnd.wasm.content.layer.v1+wasm"
-	WasmConfigMediaType    = "application/vnd.wasm.config.v1+json"
+	CosignSignPredicateType = "https://sigstore.dev/cosign/sign/v1"
 )

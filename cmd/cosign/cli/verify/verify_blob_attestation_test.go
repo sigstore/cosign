@@ -37,6 +37,7 @@ gZPFIp557+TOoDxf14FODWc+sIPETk0OgCplAk60doVXbCv33IU4rXZHrg==
 
 const (
 	blobContents                         = "some-payload"
+	blobSha256                           = "658781cd4ed9bca60dacd09f7bb914bb51502e8b5d619f57f39a1d652596cc24"
 	anotherBlobContents                  = "another-blob"
 	hugeBlobContents                     = "hugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayload"
 	blobSLSAProvenanceSignature          = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHQ3SW01aGJXVWlPaUppYkc5aUlpd2laR2xuWlhOMElqcDdJbk5vWVRJMU5pSTZJalkxT0RjNE1XTmtOR1ZrT1dKallUWXdaR0ZqWkRBNVpqZGlZamt4TkdKaU5URTFNREpsT0dJMVpEWXhPV1kxTjJZek9XRXhaRFkxTWpVNU5tTmpNalFpZlgxZExDSndjbVZrYVdOaGRHVWlPbnNpWW5WcGJHUmxjaUk2ZXlKcFpDSTZJaklpZlN3aVluVnBiR1JVZVhCbElqb2llQ0lzSW1sdWRtOWpZWFJwYjI0aU9uc2lZMjl1Wm1sblUyOTFjbU5sSWpwN2ZYMTlmUT09Iiwic2lnbmF0dXJlcyI6W3sia2V5aWQiOiIiLCJzaWciOiJNRVVDSUE4S2pacWtydDkwZnpCb2pTd3d0ajNCcWI0MUU2cnV4UWs5N1RMbnB6ZFlBaUVBek9Bak9Uenl2VEhxYnBGREFuNnpocmc2RVp2N2t4SzVmYVJvVkdZTWgyYz0ifV19"
@@ -59,6 +60,7 @@ func TestVerifyBlobAttestation(t *testing.T) {
 	tests := []struct {
 		description   string
 		blobPath      string
+		digest        string
 		bundlePath    string
 		signature     string
 		predicateType string
@@ -125,6 +127,12 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			bundlePath: makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "c29tZXRoaW5nCg=="),
 			blobPath:   blobPath,
 			shouldErr:  true,
+		}, {
+			description:   "verify with digest instead of blob",
+			predicateType: "slsaprovenance",
+			blobPath:      "",
+			digest:        blobSha256,
+			signature:     blobSLSAProvenanceSignature,
 		},
 	}
 
@@ -145,6 +153,10 @@ func TestVerifyBlobAttestation(t *testing.T) {
 				IgnoreTlog:    true,
 				CheckClaims:   true,
 				PredicateType: test.predicateType,
+			}
+			if test.digest != "" {
+				cmd.Digest = test.digest
+				cmd.DigestAlg = "sha256"
 			}
 			if test.bundlePath != "" {
 				cmd.BundlePath = test.bundlePath
@@ -173,6 +185,7 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 		description string
 		blobPath    string
 		signature   string
+		bundlePath  string
 	}{
 		{
 			description: "verify a predicate",
@@ -186,6 +199,11 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 			signature:   blobSLSAProvenanceSignature,
 			// This works because we're not checking the claims. It doesn't matter what we put in here - it should pass so long as the DSSE signagure can be verified.
 			blobPath: anotherBlobPath,
+		}, {
+			description: "verify a predicate with a bundle with another blob path",
+			// From blobSLSAProvenanceSignature
+			bundlePath: makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "MEUCIA8KjZqkrt90fzBojSwwtj3Bqb41E6ruxQk97TLnpzdYAiEAzOAjOTzyvTHqbpFDAn6zhrg6EZv7kxK5faRoVGYMh2c="),
+			blobPath:   anotherBlobPath,
 		}, {
 			description: "verify a predicate with /dev/null",
 			signature:   blobSLSAProvenanceSignature,
@@ -207,6 +225,11 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 				IgnoreTlog:    true,
 				CheckClaims:   false,
 				PredicateType: "slsaprovenance",
+			}
+			if test.bundlePath != "" {
+				cmd.BundlePath = test.bundlePath
+				cmd.NewBundleFormat = true
+				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
 			}
 			if err := cmd.Exec(ctx, test.blobPath); err != nil {
 				t.Fatalf("verifyBlobAttestation()= %v", err)

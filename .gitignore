@@ -27,7 +27,7 @@
 bin*
 dist/
 cosignImagerefs
-bundle
+/bundle
 signature
 certificate
 sigstore-conformance

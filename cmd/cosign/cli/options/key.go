@@ -61,6 +61,9 @@ type KeyOpts struct {
 	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
 	TrustedMaterial root.TrustedMaterial
 
+	// SigningConfig contains the list of service URLs for Sigstore services.
+	SigningConfig *root.SigningConfig
+
 	// DefaultLoadOptions may be set to control the behaviour of
 	// `LoadDefaultSigner/Verifier` family of functions. Some public/private key
 	// types have ambiguities with regards to the signing algorithm to use (e.g.

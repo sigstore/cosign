@@ -32,6 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -45,6 +46,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
@@ -53,10 +55,14 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	// Loads OIDC providers
 	_ "github.com/sigstore/cosign/v2/pkg/providers/all"
@@ -184,7 +190,11 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			} else if err != nil {
 				return fmt.Errorf("accessing image: %w", err)
 			}
-			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+			if signOpts.NewBundleFormat {
+				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
+			} else {
+				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -203,7 +213,11 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("computing digest: %w", err)
 			}
 			digest := ref.Context().Digest(d.String())
-			err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+			if signOpts.NewBundleFormat {
+				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
+			} else {
+				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
 			}
@@ -214,6 +228,93 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	}
 
 	return nil
+}
+
+func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, sv *SignerVerifier) error {
+	digestParts := strings.Split(digest.DigestStr(), ":")
+	if len(digestParts) != 2 {
+		return fmt.Errorf("unable to parse digest %s", digest.DigestStr())
+	}
+
+	subject := intotov1.ResourceDescriptor{
+		Digest: map[string]string{digestParts[0]: digestParts[1]},
+	}
+
+	statement := &intotov1.Statement{
+		Type:          intotov1.StatementTypeUri,
+		Subject:       []*intotov1.ResourceDescriptor{&subject},
+		PredicateType: types.CosignSignPredicateType,
+	}
+
+	payload, err := protojson.Marshal(statement)
+	if err != nil {
+		return err
+	}
+
+	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
+	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("signing: %w", err)
+	}
+
+	var timestampBytes []byte
+	if ko.TSAServerURL != "" {
+		tsaPayload, err := cosign.GetDSSESigBytes(signedPayload)
+		if err != nil {
+			return err
+		}
+		tc := client.NewTSAClient(ko.TSAServerURL)
+		if ko.TSAClientCert != "" {
+			tc = client.NewTSAClientMTLS(ko.TSAServerURL,
+				ko.TSAClientCACert,
+				ko.TSAClientCert,
+				ko.TSAClientKey,
+				ko.TSAServerName,
+			)
+		}
+		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
+		if err != nil {
+			return err
+		}
+	}
+
+	signerBytes, err := sv.Bytes(ctx)
+	if err != nil {
+		return err
+	}
+
+	var rekorEntry *models.LogEntryAnon
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
+	if err != nil {
+		return fmt.Errorf("should upload to tlog: %w", err)
+	}
+	if shouldUpload {
+		rClient, err := rekor.NewClient(ko.RekorURL)
+		if err != nil {
+			return err
+		}
+		rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rClient, signedPayload, signerBytes)
+		if err != nil {
+			return err
+		}
+	}
+
+	regOpts := signOpts.Registry
+	ociremoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
+
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return err
+	}
+
+	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+	if err != nil {
+		return err
+	}
+	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, types.CosignSignPredicateType, ociremoteOpts...)
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,

@@ -58,6 +58,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -1371,6 +1372,26 @@ func TestValidateAndUnpackCertWithIntermediatesSuccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("CheckCertificatePolicy expected no error, got err = %v", err)
 	}
+}
+
+func TestValidateUnpackCertWithTrustedMaterial(t *testing.T) {
+	subject := "email@email"
+	oidcIssuer := "https://accounts.google.com"
+	var ca root.FulcioCertificateAuthority
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	ca.Root = rootCert
+	leafCert, _, _ := test.GenerateLeafCert(subject, oidcIssuer, rootCert, rootKey)
+	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, []root.CertificateAuthority{&ca}, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	co := &CheckOpts{
+		TrustedMaterial: trustedRoot,
+		IgnoreSCT:       true,
+		Identities:      []Identity{{Subject: subject, Issuer: oidcIssuer}},
+	}
+	_, err = ValidateAndUnpackCert(leafCert, co)
+	assert.NoError(t, err)
 }
 
 func TestValidateAndUnpackCertWithSCT(t *testing.T) {

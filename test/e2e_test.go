@@ -60,6 +60,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/signingconfig"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
@@ -573,17 +574,19 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 	home, err := os.UserHomeDir()
 	must(err, t)
 	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
-	tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
-	tsaFP, err := os.Create(tsaPath)
-	must(err, t)
-	must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
 	out := filepath.Join(downloadDirectory, "trusted_root.json")
 	cmd := &trustedroot.CreateCmd{
-		CertChain:        []string{caPath},
-		CtfeKeyPath:      []string{ctfePath},
-		Out:              out,
-		RekorKeyPath:     []string{rekorPath},
-		TSACertChainPath: []string{tsaPath},
+		CertChain:    []string{caPath},
+		CtfeKeyPath:  []string{ctfePath},
+		Out:          out,
+		RekorKeyPath: []string{rekorPath},
+	}
+	if tsaURL != "" {
+		tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
+		tsaFP, err := os.Create(tsaPath)
+		must(err, t)
+		must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
+		cmd.TSACertChainPath = []string{tsaPath}
 	}
 	must(cmd.Exec(context.TODO()), t)
 	return out
@@ -833,6 +836,239 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			}
 		})
 	}
+}
+
+func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
+	startTime := "2024-01-01T00:00:00Z"
+	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
+	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
+	oidcSpec := fmt.Sprintf("url=%s,api-version=1,operator=oidc-op,start-time=%s", oidcURL, startTime)
+	tsaSpec := fmt.Sprintf("url=%s,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)
+
+	downloadDirectory := t.TempDir()
+	out := filepath.Join(downloadDirectory, "signing_config.v0.2.json")
+	cmd := &signingconfig.CreateCmd{
+		FulcioSpecs:       []string{fulcioSpec},
+		RekorSpecs:        []string{rekorSpec},
+		OIDCProviderSpecs: []string{oidcSpec},
+		TSASpecs:          []string{tsaSpec},
+		RekorConfig:       "EXACT:1",
+		TSAConfig:         "ANY",
+		Out:               out,
+	}
+	must(cmd.Exec(context.TODO()), t)
+	return out
+}
+
+func TestSignVerifyWithSigningConfig(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko := options.KeyOpts{
+		IDToken:          identityToken,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign a blob
+	blob := "someblob"
+	blobDir := t.TempDir()
+	bp := filepath.Join(blobDir, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+
+	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", true)
+	must(err, t)
+
+	// Verify a blob
+	issuer := os.Getenv("OIDC_URL")
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: issuer,
+			CertIdentity:   certID,
+		},
+		UseSignedTimestamps: true,
+	}
+	err = verifyBlobCmd.Exec(ctx, bp)
+	must(err, t)
+
+	// Sign an attestation
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
+	attestDir := t.TempDir()
+	statementPath := filepath.Join(attestDir, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = attBundlePath
+
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		RekorEntryType: "dsse",
+		StatementPath:  statementPath,
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Verify an attestation
+	verifyBlobAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+		KeyOpts: ko,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: issuer,
+			CertIdentity:   certID,
+		},
+		UseSignedTimestamps: true,
+		Digest:              "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+		DigestAlg:           "alg",
+		CheckClaims:         true,
+	}
+	err = verifyBlobAttestationCmd.Exec(ctx, "")
+	must(err, t)
+}
+
+func TestSignVerifyBundle(t *testing.T) {
+	td := t.TempDir()
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image with key in bundle format
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify bundle
+	trustedRootPath := prepareTrustedRoot(t, "")
+
+	cmd := cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+	}
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+
+	// Sign image with key in bundle format without Rekor
+	_, privKeyPath, pubKeyPath = keypair(t, td)
+	ko = options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	// Verify bundle without Rekor
+	cmd = cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: false,
+	}
+	must(cmd.Exec(ctx, args), t)
+
+	// Sign image with Fulcio
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko = options.KeyOpts{
+		IDToken:          identityToken,
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify Fulcio-signed image
+	cmd = cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer:     os.Getenv("OIDC_URL"),
+			CertIdentityRegexp: ".+",
+		},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+	}
+	must(cmd.Exec(ctx, args), t)
 }
 
 func TestAttestVerify(t *testing.T) {
@@ -2954,6 +3190,7 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	blob := "someblob"
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicateType := "slsaprovenance"
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
 
 	td1 := t.TempDir()
 	t.Cleanup(func() {
@@ -2972,6 +3209,11 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	predicatePath := filepath.Join(td1, "predicate")
 	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	statementPath := filepath.Join(td1, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3017,6 +3259,29 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	// Make sure we fail with the wrong blob (set the predicate type back)
 	blobVerifyAttestationCmd.PredicateType = predicateType
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
+
+	// Test statement signing
+	attestBlobCmd = attest.AttestBlobCommand{
+		KeyOpts:         ko,
+		StatementPath:   statementPath,
+		OutputSignature: outputSignature,
+		RekorEntryType:  "dsse",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Test statement verification
+	ko = options.KeyOpts{
+		KeyRef: pubKeyPath1,
+	}
+	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:       ko,
+		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+		DigestAlg:     "alg",
+		SignaturePath: outputSignature,
+		IgnoreTlog:    true,
+		PredicateType: "something",
+	}
+	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 }
 
 func TestOffline(t *testing.T) {

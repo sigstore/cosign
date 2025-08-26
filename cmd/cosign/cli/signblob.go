@@ -26,6 +26,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -105,6 +106,22 @@ func SignBlob() *cobra.Command {
 					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 				}
 				ko.TrustedMaterial = trustedMaterial
+			}
+			if (o.UseSigningConfig || o.SigningConfigPath != "") && o.BundlePath == "" {
+				return fmt.Errorf("must provide --bundle with --signing-config or --use-signing-config")
+			}
+			if o.UseSigningConfig {
+				signingConfig, err := cosign.SigningConfig()
+				if err != nil {
+					return fmt.Errorf("error getting signing config from TUF: %w", err)
+				}
+				ko.SigningConfig = signingConfig
+			} else if o.SigningConfigPath != "" {
+				signingConfig, err := root.NewSigningConfigFromPath(o.SigningConfigPath)
+				if err != nil {
+					return fmt.Errorf("error reading signing config from file: %w", err)
+				}
+				ko.SigningConfig = signingConfig
 			}
 
 			for _, blob := range args {

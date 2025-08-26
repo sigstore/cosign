@@ -184,7 +184,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		// will use the DSSE Sig field, so we choose what signature to send to
 		// the timestamp authority based on our output format.
 		if c.KeyOpts.NewBundleFormat {
-			tsaPayload, err = getEnvelopeSigBytes(signedPayload)
+			tsaPayload, err = cosign.GetDSSESigBytes(signedPayload)
 			if err != nil {
 				return err
 			}
@@ -251,7 +251,11 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return err
 		}
-		bundleBytes, err := makeNewBundle(sv, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+		pubKey, err := sv.PublicKey()
+		if err != nil {
+			return err
+		}
+		bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
 		if err != nil {
 			return err
 		}
