@@ -35,6 +35,7 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	cosign_sign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/internal/auth"
+	"github.com/sigstore/cosign/v2/internal/key"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
@@ -157,30 +158,50 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		// TODO(#4327): Only ephemeral keys are currently supported
-		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
-		// and determine if we want to store certificates for those as well.
+		var keypair sign.Keypair
+		var ephemeralKeypair bool
+		var idToken string
+		var err error
+
+		// Set to false so sigstore-go fetches the Fulcio certificate,
+		// otherwise SignerFromKeyOpts would through the old signing path
+		issueCertForKey := c.IssueCertificateForExistingKey
+		c.IssueCertificateForExistingKey = false
+
 		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
-			return fmt.Errorf("using a signing config currently only supports signing with ephemeral keys and Fulcio")
+			sv, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+			if err != nil {
+				return fmt.Errorf("getting signer: %w", err)
+			}
+			keypair, err = key.NewSignerVerifierKeypair(sv)
+			if err != nil {
+				return fmt.Errorf("creating signerverifier keypair: %w", err)
+			}
+		} else {
+			keypair, err = sign.NewEphemeralKeypair(nil)
+			if err != nil {
+				return fmt.Errorf("generating keypair: %w", err)
+			}
+			ephemeralKeypair = true
 		}
-		keypair, err := sign.NewEphemeralKeypair(nil)
-		if err != nil {
-			return fmt.Errorf("generating keypair: %w", err)
+
+		if ephemeralKeypair || issueCertForKey {
+			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+				TokenOrPath:      c.IDToken,
+				DisableProviders: c.OIDCDisableProviders,
+				Provider:         c.OIDCProvider,
+				AuthFlow:         c.FulcioAuthFlow,
+				SkipConfirm:      c.SkipConfirmation,
+				OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
+				ClientID:         c.OIDCClientID,
+				ClientSecret:     c.OIDCClientSecret,
+				RedirectURL:      c.OIDCRedirectURL,
+			})
+			if err != nil {
+				return fmt.Errorf("retrieving ID token: %w", err)
+			}
 		}
-		idToken, err := auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
-			TokenOrPath:      c.IDToken,
-			DisableProviders: c.OIDCDisableProviders,
-			Provider:         c.OIDCProvider,
-			AuthFlow:         c.FulcioAuthFlow,
-			SkipConfirm:      c.SkipConfirmation,
-			OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
-			ClientID:         c.OIDCClientID,
-			ClientSecret:     c.OIDCClientSecret,
-			RedirectURL:      c.OIDCRedirectURL,
-		})
-		if err != nil {
-			return fmt.Errorf("retrieving ID token: %w", err)
-		}
+
 		content := &sign.DSSEData{
 			Data:        payload,
 			PayloadType: "application/vnd.in-toto+json",

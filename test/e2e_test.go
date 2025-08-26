@@ -971,6 +971,106 @@ func TestSignVerifyWithSigningConfig(t *testing.T) {
 	must(err, t)
 }
 
+func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	_, privKeyPath, pubKeyPath := keypair(t, t.TempDir())
+
+	ko := options.KeyOpts{
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign a blob using a provided key
+	blob := "someblob"
+	blobDir := t.TempDir()
+	bp := filepath.Join(blobDir, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+	ko.KeyRef = privKeyPath
+
+	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", true)
+	must(err, t)
+
+	// Verify a blob with the key in the trusted root
+	ko.KeyRef = pubKeyPath
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko,
+	}
+	err = verifyBlobCmd.Exec(ctx, bp)
+	must(err, t)
+
+	// Sign an attestation with a provided key
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
+	attestDir := t.TempDir()
+	statementPath := filepath.Join(attestDir, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = attBundlePath
+	ko.KeyRef = privKeyPath
+
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		RekorEntryType: "dsse",
+		StatementPath:  statementPath,
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Verify an attestation with the key in the trusted root
+	ko.KeyRef = pubKeyPath
+	verifyBlobAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:     ko,
+		Digest:      "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+		DigestAlg:   "alg",
+		CheckClaims: true,
+	}
+	err = verifyBlobAttestationCmd.Exec(ctx, "")
+	must(err, t)
+}
+
 func TestSignVerifyBundle(t *testing.T) {
 	td := t.TempDir()
 	repo, stop := reg(t)

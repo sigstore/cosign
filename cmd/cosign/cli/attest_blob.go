@@ -89,7 +89,11 @@ func AttestBlob() *cobra.Command {
 				BundlePath:               o.BundlePath,
 				NewBundleFormat:          o.NewBundleFormat,
 			}
-			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
+			// Fetch a trusted root when:
+			// * requesting a certificate and no CT log key is provided to verify an SCT
+			// * using a signing config and signing using sigstore-go
+			if (o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+				(o.UseSigningConfig || o.SigningConfigPath != "") {
 				if o.TrustedRootPath != "" {
 					ko.TrustedMaterial, err = root.NewTrustedRootFromPath(o.TrustedRootPath)
 					if err != nil {
