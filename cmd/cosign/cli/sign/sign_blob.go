@@ -66,6 +66,39 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
+	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+	if err != nil {
+		return nil, err
+	}
+	defer sv.Close()
+
+	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
+		ui.Infof(ctx, "Non SHA256 hash function is not supported for old bundle format. Use --new-bundle-format to use the new bundle format or use different signing key/algorithm.")
+		if !ko.SkipConfirmation {
+			if err := ui.ConfirmContinue(ctx); err != nil {
+				return nil, err
+			}
+		}
+		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
+	}
+
+	if payloadPath == "-" {
+		payload = internal.NewHashReader(os.Stdin, hashFunction)
+	} else {
+		ui.Infof(ctx, "Using payload from: %s", payloadPath)
+		f, err := os.Open(filepath.Clean(payloadPath))
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		payload = internal.NewHashReader(f, hashFunction)
+	}
+
 	if ko.SigningConfig != nil {
 		// TODO(#4327): Only ephemeral keys are currently supported
 		// Need to add support for self-managed keys (e.g. PKCS11, KMS, on disk)
@@ -104,42 +137,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		}
 		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 		return bundle, nil
-	}
-
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
-	if err != nil {
-		return nil, err
-	}
-	defer sv.Close()
-
-	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
-		ui.Infof(ctx, "Non SHA256 hash function is not supported for old bundle format. Use --new-bundle-format to use the new bundle format or use different signing key/algorithm.")
-		if !ko.SkipConfirmation {
-			if err := ui.ConfirmContinue(ctx); err != nil {
-				return nil, err
-			}
-		}
-		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
-	}
-
-	if payloadPath == "-" {
-		payload = internal.NewHashReader(os.Stdin, hashFunction)
-	} else {
-		ui.Infof(ctx, "Using payload from: %s", payloadPath)
-		f, err := os.Open(filepath.Clean(payloadPath))
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		payload = internal.NewHashReader(f, hashFunction)
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
