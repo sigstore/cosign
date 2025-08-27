@@ -29,7 +29,9 @@ import (
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	cosign_sign "github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/internal/auth"
+	"github.com/sigstore/cosign/v2/internal/key"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	tsaclient "github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
@@ -43,13 +45,14 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
+func uploadToTlog(ctx context.Context, sv *cosign_sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err
@@ -132,20 +135,6 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// each access.
 	ref = digest // nolint
 
-	sv, genKey, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	if genKey || c.IssueCertificateForExistingKey {
-		sv, err = sign.KeylessSigner(ctx, c.KeyOpts, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
-	dd := cremote.NewDupeDetector(sv)
-
 	predicate, err := predicateReader(c.PredicatePath)
 	if err != nil {
 		return fmt.Errorf("getting predicate reader: %w", err)
@@ -166,6 +155,83 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
+
+	if c.SigningConfig != nil {
+		var keypair sign.Keypair
+		var ephemeralKeypair bool
+		var idToken string
+		var sv *cosign_sign.SignerVerifier
+		var err error
+
+		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
+			sv, _, err = cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+			if err != nil {
+				return fmt.Errorf("getting signer: %w", err)
+			}
+			keypair, err = key.NewSignerVerifierKeypair(sv, c.DefaultLoadOptions)
+			if err != nil {
+				return fmt.Errorf("creating signerverifier keypair: %w", err)
+			}
+		} else {
+			keypair, err = sign.NewEphemeralKeypair(nil)
+			if err != nil {
+				return fmt.Errorf("generating keypair: %w", err)
+			}
+			ephemeralKeypair = true
+		}
+		defer func() {
+			if sv != nil {
+				sv.Close()
+			}
+		}()
+
+		if ephemeralKeypair || c.IssueCertificateForExistingKey {
+			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+				TokenOrPath:      c.IDToken,
+				DisableProviders: c.OIDCDisableProviders,
+				Provider:         c.OIDCProvider,
+				AuthFlow:         c.FulcioAuthFlow,
+				SkipConfirm:      c.SkipConfirmation,
+				OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
+				ClientID:         c.OIDCClientID,
+				ClientSecret:     c.OIDCClientSecret,
+				RedirectURL:      c.OIDCRedirectURL,
+			})
+			if err != nil {
+				return fmt.Errorf("retrieving ID token: %w", err)
+			}
+		}
+
+		content := &sign.DSSEData{
+			Data:        payload,
+			PayloadType: "application/vnd.in-toto+json",
+		}
+		bundle, err := cbundle.SignData(content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
+		if err != nil {
+			return fmt.Errorf("signing bundle: %w", err)
+		}
+
+		ociremoteOpts, err := c.RegistryOptions.ClientOpts(ctx)
+		if err != nil {
+			return err
+		}
+		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
+	}
+
+	sv, genKey, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || c.IssueCertificateForExistingKey {
+		sv, err = cosign_sign.KeylessSigner(ctx, c.KeyOpts, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
+	}
+	defer sv.Close()
+	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
+	dd := cremote.NewDupeDetector(sv)
+
 	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("signing: %w", err)
@@ -227,7 +293,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
 
 	// Check whether we should be uploading to the transparency log
-	shouldUpload, err := sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
+	shouldUpload, err := cosign_sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}

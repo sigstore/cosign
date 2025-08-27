@@ -38,6 +38,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
+	"github.com/sigstore/cosign/v2/internal/auth"
+	"github.com/sigstore/cosign/v2/internal/key"
 	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
 	ifulcio "github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio"
 	ipayload "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
@@ -57,6 +59,7 @@ import (
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/cosign/v2/pkg/types"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -142,20 +145,8 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, genKey, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	if genKey || ko.IssueCertificateForExistingKey {
-		sv, err = KeylessSigner(ctx, ko, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
-	dd := cremote.NewDupeDetector(sv)
-
 	var staticPayload []byte
+	var err error
 	if signOpts.PayloadPath != "" {
 		ui.Infof(ctx, "Using payload from: %s", signOpts.PayloadPath)
 		staticPayload, err = os.ReadFile(filepath.Clean(signOpts.PayloadPath))
@@ -197,9 +188,9 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("accessing image: %w", err)
 			}
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
+				err = signDigestBundle(ctx, digest, ko, signOpts)
 			} else {
-				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
@@ -220,9 +211,9 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			}
 			digest := ref.Context().Digest(d.String())
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts, sv)
+				err = signDigestBundle(ctx, digest, ko, signOpts)
 			} else {
-				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, dd, sv, se)
+				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
@@ -236,7 +227,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	return nil
 }
 
-func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, sv *SignerVerifier) error {
+func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions) error {
 	digestParts := strings.Split(digest.DigestStr(), ":")
 	if len(digestParts) != 2 {
 		return fmt.Errorf("unable to parse digest %s", digest.DigestStr())
@@ -256,6 +247,81 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	if err != nil {
 		return err
 	}
+
+	if ko.SigningConfig != nil {
+		var keypair sign.Keypair
+		var ephemeralKeypair bool
+		var idToken string
+		var sv *SignerVerifier
+		var err error
+
+		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" || signOpts.Cert != "" {
+			sv, _, err = SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+			if err != nil {
+				return fmt.Errorf("getting signer: %w", err)
+			}
+			keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+			if err != nil {
+				return fmt.Errorf("creating signerverifier keypair: %w", err)
+			}
+		} else {
+			keypair, err = sign.NewEphemeralKeypair(nil)
+			if err != nil {
+				return fmt.Errorf("generating keypair: %w", err)
+			}
+			ephemeralKeypair = true
+		}
+		defer func() {
+			if sv != nil {
+				sv.Close()
+			}
+		}()
+
+		if ephemeralKeypair || ko.IssueCertificateForExistingKey {
+			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
+				TokenOrPath:      ko.IDToken,
+				DisableProviders: ko.OIDCDisableProviders,
+				Provider:         ko.OIDCProvider,
+				AuthFlow:         ko.FulcioAuthFlow,
+				SkipConfirm:      ko.SkipConfirmation,
+				OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
+				ClientID:         ko.OIDCClientID,
+				ClientSecret:     ko.OIDCClientSecret,
+				RedirectURL:      ko.OIDCRedirectURL,
+			})
+			if err != nil {
+				return fmt.Errorf("retrieving ID token: %w", err)
+			}
+		}
+
+		content := &sign.DSSEData{
+			Data:        payload,
+			PayloadType: "application/vnd.in-toto+json",
+		}
+		bundle, err := cbundle.SignData(content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
+		if err != nil {
+			return fmt.Errorf("signing bundle: %w", err)
+		}
+
+		regOpts := signOpts.Registry
+		ociremoteOpts, err := regOpts.ClientOpts(ctx)
+		if err != nil {
+			return fmt.Errorf("constructing client options: %w", err)
+		}
+		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
+	}
+
+	sv, genKey, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || ko.IssueCertificateForExistingKey {
+		sv, err = KeylessSigner(ctx, ko, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
+	}
+	defer sv.Close()
 
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
@@ -324,8 +390,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
-	annotations map[string]interface{},
-	dd mutate.DupeDetector, sv *SignerVerifier, se oci.SignedEntity) error {
+	annotations map[string]interface{}, se oci.SignedEntity) error {
 	var err error
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
@@ -338,6 +403,19 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("payload: %w", err)
 		}
 	}
+
+	sv, genKey, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	if err != nil {
+		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || ko.IssueCertificateForExistingKey {
+		sv, err = KeylessSigner(ctx, ko, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
+	}
+	defer sv.Close()
+	dd := cremote.NewDupeDetector(sv)
 
 	var s icos.Signer
 	s = ipayload.NewSigner(sv)
