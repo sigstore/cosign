@@ -57,7 +57,7 @@ cosign sign-blob [flags]
       --output-signature string          write the signature to FILE
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string         write the RFC3161 timestamp to a file
-      --signing-config-path string       path to a signing config file. Must provide --bundle, which will output verification material in the new format
+      --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-client-cacert string   path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
@@ -66,6 +66,7 @@ cosign sign-blob [flags]
       --timestamp-server-name string     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string      url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                      whether or not to upload to the tlog (default true)
+      --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
       --use-signing-config               whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```

@@ -90,11 +90,18 @@ func AttestBlob() *cobra.Command {
 				NewBundleFormat:          o.NewBundleFormat,
 			}
 			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
-				trustedMaterial, err := cosign.TrustedRoot()
-				if err != nil {
-					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+				if o.TrustedRootPath != "" {
+					ko.TrustedMaterial, err = root.NewTrustedRootFromPath(o.TrustedRootPath)
+					if err != nil {
+						return fmt.Errorf("loading trusted root: %w", err)
+					}
+				} else {
+					trustedMaterial, err := cosign.TrustedRoot()
+					if err != nil {
+						ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+					}
+					ko.TrustedMaterial = trustedMaterial
 				}
-				ko.TrustedMaterial = trustedMaterial
 			}
 			if (o.UseSigningConfig || o.SigningConfigPath != "") && o.BundlePath == "" {
 				return fmt.Errorf("must provide --bundle with --signing-config or --use-signing-config")
