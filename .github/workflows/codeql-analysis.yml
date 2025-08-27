@@ -65,11 +65,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Set correct version of Golang to use during CodeQL run
-      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+    - name: Extract version of Go to use
+      run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+
+    - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
-        go-version-file: 'go.mod'
+        go-version: '${{ env.GOVERSION }}'
         check-latest: true
+        cache: false
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
