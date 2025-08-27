@@ -146,7 +146,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	if err != nil {
 		return err
 	}
-	desc, err := remote.Head(ref, o.ROpt...)
+	desc, err := remoteHead(ref, o.ROpt...)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	for _, v := range s {
-		if err := remote.WriteLayer(d.Repository, v, o.ROpt...); err != nil {
+		if err := remoteWriteLayer(d.Repository, v, o.ROpt...); err != nil {
 			return err
 		}
 	}
@@ -176,7 +176,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	configLayer := static.NewLayer(configBytes, configDesc.MediaType)
-	if err := remote.WriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
+	if err := remoteWriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
 		return err
 	}
 
@@ -208,7 +208,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	// TODO: use ui.Infof
 	fmt.Fprintf(os.Stderr, "Uploading signature for [%s] to [%s] with config.mediaType [%s] layers[0].mediaType [%s].\n",
 		d.String(), targetRef.String(), artifactType, ctypes.SimpleSigningMediaType)
-	return remote.Put(targetRef, &taggableManifest{raw: b, mediaType: m.MediaType}, o.ROpt...)
+	return remotePut(targetRef, &taggableManifest{raw: b, mediaType: m.MediaType}, o.ROpt...)
 }
 
 type taggableManifest struct {
@@ -234,7 +234,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 	if err != nil {
 		return err
 	}
-	desc, err := remote.Head(ref, o.ROpt...)
+	desc, err := remoteHead(ref, o.ROpt...)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 	if err != nil {
 		return fmt.Errorf("failed to calculate size: %w", err)
 	}
-	err = remote.WriteLayer(d.Repository, configLayer, o.ROpt...)
+	err = remoteWriteLayer(d.Repository, configLayer, o.ROpt...)
 	if err != nil {
 		return fmt.Errorf("failed to upload layer: %w", err)
 	}
@@ -269,7 +269,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			return fmt.Errorf("failed to calculate size: %w", err)
 		}
 
-		err = remote.WriteLayer(d.Repository, layer, o.ROpt...)
+		err = remoteWriteLayer(d.Repository, layer, o.ROpt...)
 		if err != nil {
 			return fmt.Errorf("failed to upload layer: %w", err)
 		}
@@ -304,7 +304,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 		return fmt.Errorf("failed to create target reference: %w", err)
 	}
 
-	if err := remote.Put(targetRef, manifest, o.ROpt...); err != nil {
+	if err := remotePut(targetRef, manifest, o.ROpt...); err != nil {
 		return fmt.Errorf("failed to upload manifest: %w", err)
 	}
 
@@ -355,7 +355,7 @@ func WriteAttestationsReferrer(d name.Digest, se oci.SignedEntity, opts ...Optio
 	return WriteReferrer(d, ctypes.IntotoPayloadType, layers, annotations, opts...)
 }
 
-// referrerManifest implements Taggable for use in remote.Put.
+// referrerManifest implements Taggable for use in remotePut.
 // This type also augments the built-in v1.Manifest with an ArtifactType field
 // which is part of the OCI 1.1 Image Manifest spec but is unsupported by
 // go-containerregistry at this time.
