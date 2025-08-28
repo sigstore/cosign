@@ -50,14 +50,13 @@ import (
 func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Hash) (internal.HashReader, func() error, error) {
 	if payloadPath == "-" {
 		return internal.NewHashReader(os.Stdin, hashFunction), func() error { return nil }, nil
-	} else {
-		ui.Infof(ctx, "Using payload from: %s", payloadPath)
-		f, err := os.Open(filepath.Clean(payloadPath))
-		if err != nil {
-			return internal.HashReader{}, nil, err
-		}
-		return internal.NewHashReader(f, hashFunction), f.Close, nil
 	}
+	ui.Infof(ctx, "Using payload from: %s", payloadPath)
+	f, err := os.Open(filepath.Clean(payloadPath))
+	if err != nil {
+		return internal.HashReader{}, nil, err
+	}
+	return internal.NewHashReader(f, hashFunction), f.Close, nil
 }
 
 // nolint
