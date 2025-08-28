@@ -66,6 +66,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	cert_test "github.com/sigstore/cosign/v2/internal/test"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
@@ -1803,17 +1804,17 @@ func TestVerifyWithCARoots(t *testing.T) {
 	}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
-	rootCert, rootKey, _ := GenerateRootCa()
-	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	rootCert, rootKey, _ := cert_test.GenerateRootCa()
+	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	privKeyRef := importECDSAPrivateKey(t, privKey, td, "cosign-test-key.pem")
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 
-	rootCert02, rootKey02, _ := GenerateRootCa()
-	subCert02, subKey02, _ := GenerateSubordinateCa(rootCert02, rootKey02)
-	leafCert02, _, _ := GenerateLeafCert("subject02@mail.com", "oidc-issuer02", subCert02, subKey02)
+	rootCert02, rootKey02, _ := cert_test.GenerateRootCa()
+	subCert02, subKey02, _ := cert_test.GenerateSubordinateCa(rootCert02, rootKey02)
+	leafCert02, _, _ := cert_test.GenerateLeafCert("subject02@mail.com", "oidc-issuer02", subCert02, subKey02)
 	pemRoot02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert02.Raw})
 	pemSub02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert02.Raw})
 	pemLeaf02 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert02.Raw})

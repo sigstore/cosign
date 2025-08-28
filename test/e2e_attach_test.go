@@ -45,6 +45,7 @@ import (
 	cliverify "github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	cert_test "github.com/sigstore/cosign/v2/internal/test"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
@@ -73,11 +74,11 @@ func TestAttachSignature(t *testing.T) {
 
 	// Scenario 1: attach a single signature with certificate and certificate chain to an artifact
 	// and verify it using the root certificate.
-	rootCert1, rootKey1, _ := GenerateRootCa()
+	rootCert1, rootKey1, _ := cert_test.GenerateRootCa()
 	pemRoot1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert1.Raw})
 	pemRootRef1 := mkfile(string(pemRoot1), td, t)
-	subCert1, subKey1, _ := GenerateSubordinateCa(rootCert1, rootKey1)
-	leafCert1, privKey1, _ := GenerateLeafCert("foo@example.com", "oidc-issuer", subCert1, subKey1)
+	subCert1, subKey1, _ := cert_test.GenerateSubordinateCa(rootCert1, rootKey1)
+	leafCert1, privKey1, _ := cert_test.GenerateLeafCert("foo@example.com", "oidc-issuer", subCert1, subKey1)
 	pemSub1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw})
 	pemLeaf1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert1.Raw})
 	pemLeafRef1 := mkfile(string(pemLeaf1), td, t)
@@ -122,11 +123,11 @@ func TestAttachSignature(t *testing.T) {
 
 	// Scenario 2: Attaches second signature with another certificate and  certificate chain to the
 	// same artifact and verify it using both root certificates separately.
-	rootCert2, rootKey2, _ := GenerateRootCa()
+	rootCert2, rootKey2, _ := cert_test.GenerateRootCa()
 	pemRoot2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert2.Raw})
 	pemRootRef2 := mkfile(string(pemRoot2), td, t)
-	subCert2, subKey2, _ := GenerateSubordinateCa(rootCert2, rootKey2)
-	leafCert2, privKey2, _ := GenerateLeafCert("foo@exampleclient.com", "oidc-issuer", subCert2, subKey2)
+	subCert2, subKey2, _ := cert_test.GenerateSubordinateCa(rootCert2, rootKey2)
+	leafCert2, privKey2, _ := cert_test.GenerateLeafCert("foo@exampleclient.com", "oidc-issuer", subCert2, subKey2)
 	pemSub2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw})
 	pemLeaf2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert2.Raw})
 	pemLeafRef2 := mkfile(string(pemLeaf2), td, t)
@@ -187,9 +188,9 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 	b := bytes.Buffer{}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
-	rootCert, rootKey, _ := GenerateRootCa()
-	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	rootCert, rootKey, _ := cert_test.GenerateRootCa()
+	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
@@ -257,9 +258,9 @@ func TestAttachWithRekorBundle(t *testing.T) {
 	b := bytes.Buffer{}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
-	rootCert, rootKey, _ := GenerateRootCa()
-	subCert, subKey, _ := GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	rootCert, rootKey, _ := cert_test.GenerateRootCa()
+	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
