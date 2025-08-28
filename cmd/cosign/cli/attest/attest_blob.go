@@ -161,15 +161,11 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		var keypair sign.Keypair
 		var ephemeralKeypair bool
 		var idToken string
+		var sv *cosign_sign.SignerVerifier
 		var err error
 
-		// Set to false so sigstore-go fetches the Fulcio certificate,
-		// otherwise SignerFromKeyOpts would through the old signing path
-		issueCertForKey := c.IssueCertificateForExistingKey
-		c.IssueCertificateForExistingKey = false
-
 		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
-			sv, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+			sv, _, err = cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 			if err != nil {
 				return fmt.Errorf("getting signer: %w", err)
 			}
@@ -184,8 +180,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			}
 			ephemeralKeypair = true
 		}
+		defer func() {
+			if sv != nil {
+				sv.Close()
+			}
+		}()
 
-		if ephemeralKeypair || issueCertForKey {
+		if ephemeralKeypair || c.IssueCertificateForExistingKey {
 			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
 				TokenOrPath:      c.IDToken,
 				DisableProviders: c.OIDCDisableProviders,
@@ -217,9 +218,15 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return nil
 	}
 
-	sv, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, genKey, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || c.IssueCertificateForExistingKey {
+		sv, err = cosign_sign.KeylessSigner(ctx, c.KeyOpts, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
 	}
 	defer sv.Close()
 	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)

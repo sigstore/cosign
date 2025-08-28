@@ -83,15 +83,11 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		var keypair sign.Keypair
 		var ephemeralKeypair bool
 		var idToken string
+		var sv *SignerVerifier
 		var err error
 
-		// Set to false so sigstore-go fetches the Fulcio certificate,
-		// otherwise SignerFromKeyOpts would through the old signing path
-		issueCertForKey := ko.IssueCertificateForExistingKey
-		ko.IssueCertificateForExistingKey = false
-
 		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" {
-			sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+			sv, _, err = SignerFromKeyOpts(ctx, "", "", ko)
 			if err != nil {
 				return nil, fmt.Errorf("getting signer: %w", err)
 			}
@@ -106,8 +102,13 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			}
 			ephemeralKeypair = true
 		}
+		defer func() {
+			if sv != nil {
+				sv.Close()
+			}
+		}()
 
-		if ephemeralKeypair || issueCertForKey {
+		if ephemeralKeypair || ko.IssueCertificateForExistingKey {
 			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
 				TokenOrPath:      ko.IDToken,
 				DisableProviders: ko.OIDCDisableProviders,
@@ -147,9 +148,15 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return bundle, nil
 	}
 
-	sv, err := SignerFromKeyOpts(ctx, "", "", ko)
+	sv, genKey, err := SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
+	}
+	if genKey || ko.IssueCertificateForExistingKey {
+		sv, err = KeylessSigner(ctx, ko, sv)
+		if err != nil {
+			return nil, fmt.Errorf("getting Fulcio signer: %w", err)
+		}
 	}
 	defer sv.Close()
 
