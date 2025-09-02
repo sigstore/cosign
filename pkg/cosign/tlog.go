@@ -55,6 +55,36 @@ import (
 // This is the rekor transparency log public key target name
 var rekorTargetStr = `rekor.pub`
 
+type NamedHash interface {
+	hash.Hash
+	crypto.SignerOpts
+}
+
+type CryptoNamedHash struct {
+	hash.Hash
+	hashType crypto.Hash
+}
+
+func (h CryptoNamedHash) HashFunc() crypto.Hash {
+	return h.hashType
+}
+
+func NewCryptoNamedHash(hashType crypto.Hash) NamedHash {
+	return CryptoNamedHash{Hash: hashType.New(), hashType: hashType}
+}
+
+type SHA256NamedHash struct {
+	hash.Hash
+}
+
+func (h SHA256NamedHash) HashFunc() crypto.Hash {
+	return crypto.SHA256
+}
+
+func WrapSHA256Hash(hash hash.Hash) NamedHash {
+	return SHA256NamedHash{Hash: hash}
+}
+
 // TransparencyLogPubKey contains the ECDSA verification key and the current status
 // of the key according to TUF metadata, whether it's active or expired.
 type TransparencyLogPubKey struct {
@@ -172,7 +202,14 @@ func rekorPubsFromClient(rekorClient *client.Rekor) (*TrustedTransparencyLogPubK
 
 // TLogUpload will upload the signature, public key and payload to the transparency log.
 func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature []byte, sha256CheckSum hash.Hash, pemBytes []byte) (*models.LogEntryAnon, error) {
-	re := rekorEntry(sha256CheckSum, signature, pemBytes)
+	cryptoChecksum := WrapSHA256Hash(sha256CheckSum)
+	return TLogUploadWithCustomHash(ctx, rekorClient, signature, cryptoChecksum, pemBytes)
+}
+
+// TLogUploadWithCustomHash will upload the signature, public key and payload to
+// the transparency log. Clients can use this to specify a custom hash function.
+func TLogUploadWithCustomHash(ctx context.Context, rekorClient *client.Rekor, signature []byte, checksum NamedHash, pemBytes []byte) (*models.LogEntryAnon, error) {
+	re := rekorEntry(checksum, signature, pemBytes)
 	returnVal := models.Hashedrekord{
 		APIVersion: swag.String(re.APIVersion()),
 		Spec:       re.HashedRekordObj,
@@ -231,16 +268,26 @@ func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.Proposed
 	return nil, errors.New("bad response from server")
 }
 
-func rekorEntry(sha256CheckSum hash.Hash, signature, pubKey []byte) hashedrekord_v001.V001Entry {
-	// TODO: Signatures created on a digest using a hash algorithm other than SHA256 will fail
-	// upload right now. Plumb information on the hash algorithm used when signing from the
-	// SignerVerifier to use for the HashedRekordObj.Data.Hash.Algorithm.
+func rekorEntryHashAlgorithm(checksum crypto.SignerOpts) string {
+	switch checksum.HashFunc() {
+	case crypto.SHA256:
+		return models.HashedrekordV001SchemaDataHashAlgorithmSha256
+	case crypto.SHA384:
+		return models.HashedrekordV001SchemaDataHashAlgorithmSha384
+	case crypto.SHA512:
+		return models.HashedrekordV001SchemaDataHashAlgorithmSha512
+	default:
+		return models.HashedrekordV001SchemaDataHashAlgorithmSha256
+	}
+}
+
+func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.V001Entry {
 	return hashedrekord_v001.V001Entry{
 		HashedRekordObj: models.HashedrekordV001Schema{
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Algorithm: swag.String(models.HashedrekordV001SchemaDataHashAlgorithmSha256),
-					Value:     swag.String(hex.EncodeToString(sha256CheckSum.Sum(nil))),
+					Algorithm: swag.String(rekorEntryHashAlgorithm(checksum)),
+					Value:     swag.String(hex.EncodeToString(checksum.Sum(nil))),
 				},
 			},
 			Signature: &models.HashedrekordV001SchemaSignature{
@@ -393,7 +440,7 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 		}
 		proposedEntry = []models.ProposedEntry{dsseEntry, intotoEntry}
 	} else {
-		sha256CheckSum := sha256.New()
+		sha256CheckSum := NewCryptoNamedHash(crypto.SHA256)
 		if _, err := sha256CheckSum.Write(payload); err != nil {
 			return nil, err
 		}

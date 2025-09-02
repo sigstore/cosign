@@ -17,6 +17,7 @@ package sign
 
 import (
 	"context"
+	"crypto"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -42,8 +43,21 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
+
+func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Hash) (internal.HashReader, func() error, error) {
+	if payloadPath == "-" {
+		return internal.NewHashReader(os.Stdin, hashFunction), func() error { return nil }, nil
+	}
+	ui.Infof(ctx, "Using payload from: %s", payloadPath)
+	f, err := os.Open(filepath.Clean(payloadPath))
+	if err != nil {
+		return internal.HashReader{}, nil, err
+	}
+	return internal.NewHashReader(f, hashFunction), f.Close, nil
+}
 
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
@@ -52,16 +66,16 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	if payloadPath == "-" {
-		payload = internal.NewHashReader(os.Stdin, sha256.New())
-	} else {
-		ui.Infof(ctx, "Using payload from: %s", payloadPath)
-		f, err := os.Open(filepath.Clean(payloadPath))
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		payload = internal.NewHashReader(f, sha256.New())
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
+	if err != nil {
+		return nil, fmt.Errorf("upload to tlog: %w", err)
+	}
+
+	if !shouldUpload {
+		// To maintain backwards compatibility with older cosign versions,
+		// we do not use ed25519ph for ed25519 keys when the signatures are not
+		// uploaded to the Tlog.
+		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
 	if ko.SigningConfig != nil {
@@ -86,6 +100,15 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			ClientSecret:     ko.OIDCClientSecret,
 			RedirectURL:      ko.OIDCRedirectURL,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("retrieving ID token: %w", err)
+		}
+
+		payload, closePayload, err := getPayload(ctx, payloadPath, protoHashAlgoToHash(keypair.GetHashAlgorithm()))
+		if err != nil {
+			return nil, fmt.Errorf("getting payload: %w", err)
+		}
+		defer closePayload()
 		data, err := io.ReadAll(&payload)
 		if err != nil {
 			return nil, fmt.Errorf("reading payload: %w", err)
@@ -109,6 +132,27 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return nil, err
 	}
 	defer sv.Close()
+
+	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
+		ui.Infof(ctx, "Non SHA256 hash function is not supported for old bundle format. Use --new-bundle-format to use the new bundle format or use different signing key/algorithm.")
+		if !ko.SkipConfirmation {
+			if err := ui.ConfirmContinue(ctx); err != nil {
+				return nil, err
+			}
+		}
+		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
+	}
+
+	payload, closePayload, err := getPayload(ctx, payloadPath, hashFunction)
+	if err != nil {
+		return nil, err
+	}
+	defer closePayload()
 
 	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
@@ -160,10 +204,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
 		}
 	}
-	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-	if err != nil {
-		return nil, fmt.Errorf("upload to tlog: %w", err)
-	}
 	if shouldUpload {
 		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {
@@ -173,7 +213,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		if err != nil {
 			return nil, err
 		}
-		rekorEntry, err = cosign.TLogUpload(ctx, rekorClient, sig, &payload, rekorBytes)
+		rekorEntry, err = cosign.TLogUploadWithCustomHash(ctx, rekorClient, sig, &payload, rekorBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -217,7 +257,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			bundle.Content = &protobundle.Bundle_MessageSignature{
 				MessageSignature: &protocommon.MessageSignature{
 					MessageDigest: &protocommon.HashOutput{
-						Algorithm: protocommon.HashAlgorithm_SHA2_256,
+						Algorithm: hashFuncToProtoBundle(payload.HashFunc()),
 						Digest:    digest,
 					},
 					Signature: sig,
@@ -300,4 +340,46 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 		return signer, nil
 	}
 	return nil, nil
+}
+
+func getHashFunction(sv *SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (crypto.Hash, error) {
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
+	}
+
+	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
+
+	// TODO: Ideally the SignerVerifier should have a method to get the hash function
+	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
+	if err != nil {
+		return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
+	}
+	return algo.GetHashType(), nil
+}
+
+func hashFuncToProtoBundle(hashFunc crypto.Hash) protocommon.HashAlgorithm {
+	switch hashFunc {
+	case crypto.SHA256:
+		return protocommon.HashAlgorithm_SHA2_256
+	case crypto.SHA384:
+		return protocommon.HashAlgorithm_SHA2_384
+	case crypto.SHA512:
+		return protocommon.HashAlgorithm_SHA2_512
+	default:
+		return protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED
+	}
+}
+
+func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
+	switch hashFunc {
+	case protocommon.HashAlgorithm_SHA2_256:
+		return crypto.SHA256
+	case protocommon.HashAlgorithm_SHA2_384:
+		return crypto.SHA384
+	case protocommon.HashAlgorithm_SHA2_512:
+		return crypto.SHA512
+	default:
+		return crypto.Hash(0)
+	}
 }

@@ -73,6 +73,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -2328,7 +2329,7 @@ func TestGenerateKeyPairEnvVar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo")); err != nil {
+	if _, err := cosign.LoadPrivateKey(keys.PrivateBytes, []byte("foo"), nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -2581,6 +2582,124 @@ func TestSignBlobNewBundle(t *testing.T) {
 
 	// Verify should succeed now that bundle is written
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
+func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
+	tts := []struct {
+		algo v1.PublicKeyDetails
+	}{
+		{v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384},
+		{v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
+		{v1.PublicKeyDetails_PKIX_ED25519},
+		{v1.PublicKeyDetails_PKIX_ED25519_PH},
+	}
+
+	td := t.TempDir()
+
+	// set up SIGSTORE_ variables to point to keys for the local instances
+	err := setLocalEnv(t, td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use the CreateCmd approach to create a trusted root
+	rootFile := os.Getenv("SIGSTORE_ROOT_FILE")
+	ctfePubKey := os.Getenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE")
+	rekorPubKey := os.Getenv("SIGSTORE_REKOR_PUBLIC_KEY")
+	// Create a temporary file for the trusted root JSON
+	trustedRootPath := filepath.Join(td, "trustedroot.json")
+
+	// Create a CreateCmd instance
+	createCmd := trustedroot.CreateCmd{
+		CertChain:    []string{rootFile},
+		Out:          trustedRootPath,
+		RekorKeyPath: []string{rekorPubKey},
+		CtfeKeyPath:  []string{ctfePubKey},
+	}
+
+	// Execute the command to create the trusted root
+	if err := createCmd.Exec(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.algo.String(), func(t *testing.T) {
+			td1 := t.TempDir()
+
+			blob := "someblob"
+			blobPath := filepath.Join(td1, blob)
+			if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+			ctx := context.Background()
+			_, privKeyPath, _ := keypairWithAlgorithm(t, td1, tt.algo)
+
+			verifyBlobCmd := cliverify.VerifyBlobCmd{
+				TrustedRootPath: trustedRootPath,
+				KeyOpts: options.KeyOpts{
+					FulcioURL:        fulcioURL,
+					RekorURL:         rekorURL,
+					PassFunc:         passFunc,
+					BundlePath:       bundlePath,
+					NewBundleFormat:  true,
+					SkipConfirmation: true,
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertOidcIssuerRegexp: ".*",
+					CertIdentityRegexp:   ".*",
+				},
+			}
+
+			// Verify should fail before bundle is written
+			mustErr(verifyBlobCmd.Exec(ctx, blobPath), t)
+
+			// Produce signed bundle
+			ko := options.KeyOpts{
+				FulcioURL:                      fulcioURL,
+				RekorURL:                       rekorURL,
+				IDToken:                        identityToken,
+				KeyRef:                         privKeyPath,
+				PassFunc:                       passFunc,
+				BundlePath:                     bundlePath,
+				NewBundleFormat:                true,
+				IssueCertificateForExistingKey: true,
+				SkipConfirmation:               true,
+			}
+
+			if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", true); err != nil {
+				t.Fatal(err)
+			}
+
+			// Copy bundle to /tmp with test name
+			bundleBytes, err := os.ReadFile(bundlePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tmpBundlePath := filepath.Join("/tmp", fmt.Sprintf("bundle-%s", tt.algo))
+			if err := os.WriteFile(tmpBundlePath, bundleBytes, 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			// Verify should succeed now that bundle is written
+			must(verifyBlobCmd.Exec(ctx, blobPath), t)
+		})
+	}
 }
 
 func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
