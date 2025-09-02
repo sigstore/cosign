@@ -1,8 +1,6 @@
 module github.com/sigstore/cosign/v2
 
-go 1.24.3
-
-toolchain go1.24.6
+go 1.24.6
 
 require (
 	cuelang.org/go v0.14.1
@@ -32,7 +30,7 @@ require (
 	github.com/moby/term v0.5.2
 	github.com/mozillazg/docker-credential-acr-helper v0.4.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/open-policy-agent/opa v1.7.1
+	github.com/open-policy-agent/opa v1.8.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1
 	github.com/sigstore/fulcio v1.7.1
 	github.com/sigstore/protobuf-specs v0.5.0
@@ -150,6 +148,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.14.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v28.2.2+incompatible // indirect
@@ -178,6 +177,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
@@ -214,6 +214,12 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc/v3 v3.0.0 // indirect
+	github.com/lestrrat-go/jwx/v3 v3.0.10 // indirect
+	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20240620165639-de9c06129bec // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -244,6 +250,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
+	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -265,6 +272,7 @@ require (
 	github.com/transparency-dev/formats v0.0.0-20250421220931-bb8ad4d07c26 // indirect
 	github.com/transparency-dev/tessera v1.0.0-rc2 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
+	github.com/valyala/fastjson v1.6.4 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
