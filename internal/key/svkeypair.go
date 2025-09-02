@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -42,7 +43,7 @@ type SignerVerifierKeypair struct {
 }
 
 // NewSignerVerifierKeypair creates a new SignerVerifierKeypair from a SignerVerifier.
-func NewSignerVerifierKeypair(sv signature.SignerVerifier) (*SignerVerifierKeypair, error) {
+func NewSignerVerifierKeypair(sv signature.SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifierKeypair, error) {
 	pubKey, err := sv.PublicKey()
 	if err != nil {
 		return nil, fmt.Errorf("getting public key: %w", err)
@@ -66,8 +67,7 @@ func NewSignerVerifierKeypair(sv signature.SignerVerifier) (*SignerVerifierKeypa
 		return nil, errors.New("unsupported key type")
 	}
 
-	// TODO: Ideally SignerVerifier would return its configured hash.
-	algo, err := signature.GetDefaultAlgorithmDetails(pubKey)
+	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *cosign.GetDefaultLoadOptions(defaultLoadOptions)...)
 	if err != nil {
 		return nil, fmt.Errorf("getting default algorithm details: %w", err)
 	}

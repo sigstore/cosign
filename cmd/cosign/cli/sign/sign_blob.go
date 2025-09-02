@@ -91,7 +91,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			if err != nil {
 				return nil, fmt.Errorf("getting signer: %w", err)
 			}
-			keypair, err = key.NewSignerVerifierKeypair(sv)
+			keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
 			if err != nil {
 				return nil, fmt.Errorf("creating signerverifier keypair: %w", err)
 			}

@@ -169,7 +169,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			if err != nil {
 				return fmt.Errorf("getting signer: %w", err)
 			}
-			keypair, err = key.NewSignerVerifierKeypair(sv)
+			keypair, err = key.NewSignerVerifierKeypair(sv, c.DefaultLoadOptions)
 			if err != nil {
 				return fmt.Errorf("creating signerverifier keypair: %w", err)
 			}

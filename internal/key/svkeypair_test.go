@@ -122,7 +122,7 @@ func TestNewKMSKeypair(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kp, err := NewSignerVerifierKeypair(tc.sv)
+			kp, err := NewSignerVerifierKeypair(tc.sv, nil)
 			if tc.expectErr {
 				if err == nil {
 					t.Errorf("expected an error, but got none")
@@ -147,7 +147,7 @@ func TestKMSKeypair_Methods(t *testing.T) {
 		t.Fatalf("failed to generate ecdsa key: %v", err)
 	}
 	sv := &mockSignerVerifier{pubKey: &ecdsaPriv.PublicKey}
-	kp, err := NewSignerVerifierKeypair(sv)
+	kp, err := NewSignerVerifierKeypair(sv, nil)
 	if err != nil {
 		t.Fatalf("failed to create KMSKeypair: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestKMSKeypair_Methods(t *testing.T) {
 			pubKey:  &ecdsaPriv.PublicKey,
 			signErr: errors.New("signing failed"),
 		}
-		errKP, err := NewSignerVerifierKeypair(errSV)
+		errKP, err := NewSignerVerifierKeypair(errSV, nil)
 		if err != nil {
 			t.Fatalf("failed to create KMSKeypair: %v", err)
 		}
