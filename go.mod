@@ -45,7 +45,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.5
 	github.com/sigstore/timestamp-authority v1.2.8
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.9
 	github.com/spf13/viper v1.20.1
 	github.com/spiffe/go-spiffe/v2 v2.6.0
