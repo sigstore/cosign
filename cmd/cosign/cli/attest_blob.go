@@ -65,31 +65,36 @@ func AttestBlob() *cobra.Command {
 			}
 
 			ko := options.KeyOpts{
-				KeyRef:                   o.Key,
-				PassFunc:                 generate.GetPass,
-				Sk:                       o.SecurityKey.Use,
-				Slot:                     o.SecurityKey.Slot,
-				FulcioURL:                o.Fulcio.URL,
-				IDToken:                  o.Fulcio.IdentityToken,
-				FulcioAuthFlow:           o.Fulcio.AuthFlow,
-				InsecureSkipFulcioVerify: o.Fulcio.InsecureSkipFulcioVerify,
-				RekorURL:                 o.Rekor.URL,
-				OIDCIssuer:               o.OIDC.Issuer,
-				OIDCClientID:             o.OIDC.ClientID,
-				OIDCClientSecret:         oidcClientSecret,
-				OIDCRedirectURL:          o.OIDC.RedirectURL,
-				OIDCProvider:             o.OIDC.Provider,
-				SkipConfirmation:         o.SkipConfirmation,
-				TSAClientCACert:          o.TSAClientCACert,
-				TSAClientKey:             o.TSAClientKey,
-				TSAClientCert:            o.TSAClientCert,
-				TSAServerName:            o.TSAServerName,
-				TSAServerURL:             o.TSAServerURL,
-				RFC3161TimestampPath:     o.RFC3161TimestampPath,
-				BundlePath:               o.BundlePath,
-				NewBundleFormat:          o.NewBundleFormat,
+				KeyRef:                         o.Key,
+				PassFunc:                       generate.GetPass,
+				Sk:                             o.SecurityKey.Use,
+				Slot:                           o.SecurityKey.Slot,
+				FulcioURL:                      o.Fulcio.URL,
+				IDToken:                        o.Fulcio.IdentityToken,
+				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
+				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
+				RekorURL:                       o.Rekor.URL,
+				OIDCIssuer:                     o.OIDC.Issuer,
+				OIDCClientID:                   o.OIDC.ClientID,
+				OIDCClientSecret:               oidcClientSecret,
+				OIDCRedirectURL:                o.OIDC.RedirectURL,
+				OIDCProvider:                   o.OIDC.Provider,
+				SkipConfirmation:               o.SkipConfirmation,
+				TSAClientCACert:                o.TSAClientCACert,
+				TSAClientKey:                   o.TSAClientKey,
+				TSAClientCert:                  o.TSAClientCert,
+				TSAServerName:                  o.TSAServerName,
+				TSAServerURL:                   o.TSAServerURL,
+				RFC3161TimestampPath:           o.RFC3161TimestampPath,
+				IssueCertificateForExistingKey: o.IssueCertificate,
+				BundlePath:                     o.BundlePath,
+				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
+			// Fetch a trusted root when:
+			// * requesting a certificate and no CT log key is provided to verify an SCT
+			// * using a signing config and signing using sigstore-go
+			if (o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+				(o.UseSigningConfig || o.SigningConfigPath != "") {
 				if o.TrustedRootPath != "" {
 					ko.TrustedMaterial, err = root.NewTrustedRootFromPath(o.TrustedRootPath)
 					if err != nil {

@@ -22,9 +22,10 @@ import (
 
 // AttestOptions is the top level wrapper for the attest command.
 type AttestBlobOptions struct {
-	Key       string
-	Cert      string
-	CertChain string
+	Key              string
+	Cert             string
+	CertChain        string
+	IssueCertificate bool
 
 	SkipConfirmation     bool
 	TlogUpload           bool
@@ -144,4 +145,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"path to an RFC 3161 timestamp bundle FILE")
 	// _ = cmd.MarkFlagFilename("rfc3161-timestamp-bundle") // no typical extensions
+
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"issue a code signing certificate from Fulcio, even if a key is provided")
 }

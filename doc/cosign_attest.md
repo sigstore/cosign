@@ -58,6 +58,7 @@ cosign attest [flags]
   -h, --help                                                                                     help for attest
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
+      --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
       --new-bundle-format                                                                        attach a Sigstore bundle using OCI referrers API

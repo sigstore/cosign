@@ -142,9 +142,15 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	sv, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	sv, genKey, err := SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || ko.IssueCertificateForExistingKey {
+		sv, err = KeylessSigner(ctx, ko, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
 	}
 	defer sv.Close()
 	dd := cremote.NewDupeDetector(sv)
@@ -640,7 +646,7 @@ func adaptSignerVerifierToFulcio(sv *SignerVerifier) (*SignerVerifier, error) {
 	return sv, nil
 }
 
-func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
+func KeylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
 	var (
 		k   *fulcio.Signer
 		err error
@@ -668,7 +674,7 @@ func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) 
 	}, nil
 }
 
-func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, error) {
+func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
 	var sv *SignerVerifier
 	var err error
 	genKey := false
@@ -683,14 +689,9 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 		sv, err = signerFromNewKey()
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-
-	if ko.IssueCertificateForExistingKey || genKey {
-		return keylessSigner(ctx, ko, sv)
-	}
-
-	return sv, nil
+	return sv, genKey, nil
 }
 
 type SignerVerifier struct {

@@ -132,9 +132,15 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// each access.
 	ref = digest // nolint
 
-	sv, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, genKey, err := sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
+	}
+	if genKey || c.IssueCertificateForExistingKey {
+		sv, err = sign.KeylessSigner(ctx, c.KeyOpts, sv)
+		if err != nil {
+			return fmt.Errorf("getting Fulcio signer: %w", err)
+		}
 	}
 	defer sv.Close()
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)

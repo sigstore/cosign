@@ -26,6 +26,7 @@ type AttestOptions struct {
 	Key                     string
 	Cert                    string
 	CertChain               string
+	IssueCertificate        bool
 	NoUpload                bool
 	Replace                 bool
 	SkipConfirmation        bool
@@ -106,6 +107,9 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false,
 		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
+
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"issue a code signing certificate from Fulcio, even if a key is provided")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false, "attach a Sigstore bundle using OCI referrers API")
 }
