@@ -625,10 +625,7 @@ func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.L
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
 
-	if defaultLoadOptions == nil {
-		// Cosign uses ED25519ph by default for ED25519 keys
-		defaultLoadOptions = &[]signature.LoadOption{signatureoptions.WithED25519ph()}
-	}
+	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
 	sv, err := signature.LoadSignerVerifierFromAlgorithmDetails(privKey, algo, *defaultLoadOptions...)
 	if err != nil {
 		return nil, err
