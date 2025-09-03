@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -66,6 +67,21 @@ func SignBlob() *cobra.Command {
 			if options.NOf(o.Key, o.SecurityKey.Use) > 1 {
 				return &options.KeyParseError{}
 			}
+
+			// Check if the algorithm is in the list of supported algorithms
+			supportedAlgorithms := cosign.GetSupportedAlgorithms()
+			isValid := false
+			for _, algo := range supportedAlgorithms {
+				if algo == o.SigningAlgorithm {
+					isValid = true
+					break
+				}
+			}
+			if !isValid {
+				return fmt.Errorf("invalid signing algorithm: %s. Supported algorithms are: %s",
+					o.SigningAlgorithm, strings.Join(supportedAlgorithms, ", "))
+			}
+
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
