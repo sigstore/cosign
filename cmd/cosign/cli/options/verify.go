@@ -137,6 +137,7 @@ type VerifyAttestationOptions struct {
 	CertVerify          CertVerifyOptions
 	Registry            RegistryOptions
 	Predicate           PredicateRemoteOptions
+	SignatureDigest     SignatureDigestOptions
 	Policies            []string
 	LocalImage          bool
 }
@@ -151,6 +152,7 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -178,6 +180,7 @@ type VerifyBlobOptions struct {
 	CertVerify          CertVerifyOptions
 	Rekor               RekorOptions
 	CommonVerifyOptions CommonVerifyOptions
+	SignatureDigest     SignatureDigestOptions
 
 	RFC3161TimestampPath string
 }
@@ -190,6 +193,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -233,6 +237,7 @@ type VerifyBlobAttestationOptions struct {
 	CertVerify          CertVerifyOptions
 	Rekor               RekorOptions
 	CommonVerifyOptions CommonVerifyOptions
+	SignatureDigest     SignatureDigestOptions
 
 	RFC3161TimestampPath string
 
@@ -249,6 +254,7 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
+	o.SignatureDigest.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")

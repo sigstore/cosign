@@ -1198,6 +1198,8 @@ github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31
 github.com/hashicorp/hcl v1.0.1-vault-5/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
 github.com/hashicorp/vault/api v1.16.0 h1:nbEYGJiAPGzT9U4oWgaaB0g+Rj8E59QuHKyA5LhwQN4=
 github.com/hashicorp/vault/api v1.16.0/go.mod h1:KhuUhzOD8lDSk29AtzNjgAu2kxRA9jL9NAbkFlqvkBA=
+github.com/haydentherapper/sigstore-go v0.0.0-20250904203112-9f828c3bdc96 h1:0hSvTSf1MUJUv1ALZF1QaOm1G6/37uKHcoOwP3HwJTg=
+github.com/haydentherapper/sigstore-go v0.0.0-20250904203112-9f828c3bdc96/go.mod h1:32P7sjztT2Ssa2oyh9d4plLmU5SZY187t5r3nzAMI2I=
 github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef h1:A9HsByNhogrvm9cWb28sjiS3i7tcKCkflWFEkHfuAgM=
 github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef/go.mod h1:lADxMC39cJJqL93Duh1xhAs4I2Zs8mKS89XWXFGp9cs=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
@@ -1429,8 +1431,6 @@ github.com/sigstore/rekor-tiles v0.1.10 h1:10LVWV+isl43KpjmAID/DH/wT7LeYj3j0eW5p
 github.com/sigstore/rekor-tiles v0.1.10/go.mod h1:SDtO+1nGYo6hEPTyshgd4EFDP3gZyZuVCUukBCqaqz0=
 github.com/sigstore/sigstore v1.9.6-0.20250729224751-181c5d3339b3 h1:IEhSeWfhTd0kaBpHUXniWU2Tl5K5OUACN69mi1WGd+8=
 github.com/sigstore/sigstore v1.9.6-0.20250729224751-181c5d3339b3/go.mod h1:JuqyPRJYnkNl6OTnQiG503EUnKih4P5EV6FUw+1B0iA=
-github.com/sigstore/sigstore-go v1.1.2-0.20250811211025-bac873564adb h1:Yy/pIVtUFjyTSAbr+7jIg5YKTaDXsoHAn9/a8DMyAhQ=
-github.com/sigstore/sigstore-go v1.1.2-0.20250811211025-bac873564adb/go.mod h1:kjsxkuzk8dd8bCODeVb9lDSYiMRxxomF3MvBMstHqJM=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5 h1:qp2VFyKuFQvTGmZwk5Q7m5nE4NwnF9tHwkyz0gtWAck=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5/go.mod h1:DKlQjjr+GsWljEYPycI0Sf8URLCk4EbGA9qYjF47j4g=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5 h1:CRZcdYn5AOptStsLRAAACudAVmb1qUbhMlzrvm7ju3o=

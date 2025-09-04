@@ -17,6 +17,7 @@ package verify
 
 import (
 	"context"
+	"crypto"
 	"errors"
 	"flag"
 	"fmt"
@@ -73,12 +74,18 @@ type VerifyAttestationCommand struct {
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
+	HashAlgorithm                crypto.Hash
 }
 
 // Exec runs the verification command
 func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (err error) {
 	if len(images) == 0 {
 		return flag.ErrHelp
+	}
+
+	// always default to sha256 if the algorithm hasn't been explicitly set
+	if c.HashAlgorithm == 0 {
+		c.HashAlgorithm = crypto.SHA256
 	}
 
 	// We can't have both a key and a security key
@@ -191,7 +198,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	// Keys are optional!
 	switch {
 	case keyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, keyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}

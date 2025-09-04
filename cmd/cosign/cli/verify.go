@@ -218,6 +218,11 @@ against the transparency log.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
+			}
+
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
@@ -247,6 +252,7 @@ against the transparency log.`,
 				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+				HashAlgorithm:                hashAlgorithm,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
@@ -330,6 +336,11 @@ The blob may be specified as a path to a file or - for stdin.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:               o.Key,
 				Sk:                   o.SecurityKey.Use,
@@ -359,6 +370,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
+				HashAlgorithm:                hashAlgorithm,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
@@ -401,6 +413,11 @@ The blob may be specified as a path to a file.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
+			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+			if err != nil {
+				return err
+			}
+
 			ko := options.KeyOpts{
 				KeyRef:               o.Key,
 				Sk:                   o.SecurityKey.Use,
@@ -434,6 +451,7 @@ The blob may be specified as a path to a file.`,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 				Digest:                       o.Digest,
 				DigestAlg:                    o.DigestAlg,
+				HashAlgorithm:                hashAlgorithm,
 			}
 			// We only use the blob if we are checking claims.
 			if o.CheckClaims && len(args) == 0 && (o.Digest == "" || o.DigestAlg == "") {

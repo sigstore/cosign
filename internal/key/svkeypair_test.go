@@ -177,6 +177,13 @@ func TestKMSKeypair_Methods(t *testing.T) {
 		}
 	})
 
+	t.Run("GetPublicKey", func(t *testing.T) {
+		pub := kp.GetPublicKey()
+		if !pub.(*ecdsa.PublicKey).Equal(&ecdsaPriv.PublicKey) {
+			t.Error("public keys do not match")
+		}
+	})
+
 	t.Run("GetPublicKeyPem", func(t *testing.T) {
 		pem, err := kp.GetPublicKeyPem()
 		if err != nil {
