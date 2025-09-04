@@ -25,6 +25,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/spf13/cobra"
 )
 
@@ -101,14 +102,39 @@ func Attest() *cobra.Command {
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" { // Get the trusted root if using fulcio for signing
-				trustedMaterial, err := cosign.TrustedRoot()
-				if err != nil {
-					ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+			// Fetch a trusted root when:
+			// * requesting a certificate and no CT log key is provided to verify an SCT
+			// * using a signing config and signing using sigstore-go
+			if (o.Key == "" && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+				(o.UseSigningConfig || o.SigningConfigPath != "") {
+				if o.TrustedRootPath != "" {
+					ko.TrustedMaterial, err = root.NewTrustedRootFromPath(o.TrustedRootPath)
+					if err != nil {
+						return fmt.Errorf("loading trusted root: %w", err)
+					}
+				} else {
+					ko.TrustedMaterial, err = cosign.TrustedRoot()
+					if err != nil {
+						ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+					}
 				}
-				ko.TrustedMaterial = trustedMaterial
 			}
-			// TODO(#4324): Add support for SigningConfig
+
+			if (o.UseSigningConfig || o.SigningConfigPath != "") && !o.NewBundleFormat {
+				return fmt.Errorf("must provide --new-bundle-format with --signing-config or --use-signing-config")
+			}
+			if o.UseSigningConfig {
+				ko.SigningConfig, err = cosign.SigningConfig()
+				if err != nil {
+					return fmt.Errorf("error getting signing config from TUF: %w", err)
+				}
+			} else if o.SigningConfigPath != "" {
+				ko.SigningConfig, err = root.NewSigningConfigFromPath(o.SigningConfigPath)
+				if err != nil {
+					return fmt.Errorf("error reading signing config from file: %w", err)
+				}
+			}
+
 			attestCommand := attest.AttestCommand{
 				KeyOpts:                 ko,
 				RegistryOptions:         o.Registry,
