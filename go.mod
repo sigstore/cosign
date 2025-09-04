@@ -2,6 +2,9 @@ module github.com/sigstore/cosign/v2
 
 go 1.24.6
 
+// TODO: Remove
+replace github.com/sigstore/sigstore-go => github.com/haydentherapper/sigstore-go v0.0.0-20250904203112-9f828c3bdc96
+
 require (
 	cuelang.org/go v0.14.1
 	github.com/ThalesIgnite/crypto11 v1.2.5

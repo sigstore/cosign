@@ -79,14 +79,20 @@ type VerifyBlobAttestationCommand struct {
 	SignaturePath       string // Path to the signature
 	UseSignedTimestamps bool
 
-	Digest    string
-	DigestAlg string
+	Digest        string
+	DigestAlg     string
+	HashAlgorithm crypto.Hash
 }
 
 // Exec runs the verification command
 func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath string) (err error) {
 	if options.NOf(c.SignaturePath, c.BundlePath) == 0 {
 		return fmt.Errorf("please specify path to the DSSE envelope signature via --signature or --bundle")
+	}
+
+	// always default to sha256 if the algorithm hasn't been explicitly set
+	if c.HashAlgorithm == 0 {
+		c.HashAlgorithm = crypto.SHA256
 	}
 
 	// Require a certificate/key OR a local bundle file that has the cert.
@@ -126,7 +132,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	opts := make([]static.Option, 0)
 	switch {
 	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRef(ctx, c.KeyRef)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
