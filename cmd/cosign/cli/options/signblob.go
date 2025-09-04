@@ -92,6 +92,8 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file. Must provide --bundle, which will output verification material in the new format")
 
+	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
+
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"optional path to a TrustedRoot JSON file to verify a signature after signing")
 
