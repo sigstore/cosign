@@ -6,7 +6,7 @@ require (
 	cuelang.org/go v0.14.1
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.10.1
-	github.com/buildkite/agent/v3 v3.103.1
+	github.com/buildkite/agent/v3 v3.104.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/depcheck-test/depcheck-test v0.0.0-20220607135614-199033aaa936
@@ -126,7 +126,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.33.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.44.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.44.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.28.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.34.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.38.0 // indirect
@@ -135,7 +135,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/buildkite/go-pipeline v0.15.0 // indirect
 	github.com/buildkite/interpolate v0.1.5 // indirect
-	github.com/buildkite/roko v1.3.1 // indirect
+	github.com/buildkite/roko v1.4.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
