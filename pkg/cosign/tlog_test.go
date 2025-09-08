@@ -29,7 +29,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
@@ -214,9 +214,9 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 	lea := &models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
-		LogIndex:       swag.Int64(0),
-		LogID:          swag.String(logID),
-		IntegratedTime: swag.Int64(time.Now().Unix()),
+		LogIndex:       conv.Pointer(int64(0)),
+		LogID:          conv.Pointer(logID),
+		IntegratedTime: conv.Pointer(time.Now().Unix()),
 	}
 	entryUUID, err := ComputeLeafHash(lea)
 	if err != nil {
@@ -224,9 +224,9 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 	lea.Verification = &models.LogEntryAnonVerification{
 		InclusionProof: &models.InclusionProof{
-			LogIndex: swag.Int64(0),
-			TreeSize: swag.Int64(1),
-			RootHash: swag.String(hex.EncodeToString(entryUUID)),
+			LogIndex: conv.Pointer(int64(0)),
+			TreeSize: conv.Pointer(int64(1)),
+			RootHash: conv.Pointer(hex.EncodeToString(entryUUID)),
 			Hashes:   []string{},
 		},
 	}

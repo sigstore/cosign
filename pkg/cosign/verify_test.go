@@ -40,7 +40,7 @@ import (
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -1689,9 +1689,9 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 	integratedTime := time.Now().Unix()
 	logEntry := models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
-		IntegratedTime: swag.Int64(integratedTime),
-		LogIndex:       swag.Int64(0),
-		LogID:          swag.String(logID),
+		IntegratedTime: conv.Pointer(integratedTime),
+		LogIndex:       conv.Pointer(int64(0)),
+		LogID:          conv.Pointer(logID),
 	}
 
 	// Canonicalize the log entry and sign it
@@ -1711,9 +1711,9 @@ func createRekorEntry(ctx context.Context, t *testing.T, logID string, signer si
 	logEntry.Verification = &models.LogEntryAnonVerification{
 		SignedEntryTimestamp: signedEntryTimestamp,
 		InclusionProof: &models.InclusionProof{
-			LogIndex: swag.Int64(0),
-			TreeSize: swag.Int64(1),
-			RootHash: swag.String(hex.EncodeToString(entryUUID)),
+			LogIndex: conv.Pointer(int64(0)),
+			TreeSize: conv.Pointer(int64(1)),
+			RootHash: conv.Pointer(hex.EncodeToString(entryUUID)),
 			Hashes:   []string{},
 		},
 	}
