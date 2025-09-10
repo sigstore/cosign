@@ -2792,6 +2792,45 @@ func TestSignBlobNewBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
 }
 
+func TestSignBlobNewBundleNonSHA256(t *testing.T) {
+	td1 := t.TempDir()
+
+	blob := "someblob"
+	blobPath := filepath.Join(td1, blob)
+	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+	ctx := context.Background()
+
+	// Generate ecdsa-p521 key
+	_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512)
+
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	ko1 := options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts:       ko1,
+		IgnoreTlog:    true,
+		HashAlgorithm: crypto.SHA512,
+	}
+	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
 func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 	tts := []struct {
 		algo v1.PublicKeyDetails
@@ -2801,8 +2840,9 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
-		{v1.PublicKeyDetails_PKIX_ED25519},
-		{v1.PublicKeyDetails_PKIX_ED25519_PH},
+		// ed25519 and ed25519ph aren't supported for the default flow.
+		// By default, we sign using the prehash variant for a ed25519 key.
+		// Rekor supports ed25519ph for a hashedrekord, but Fulcio doesn't.
 	}
 
 	td := t.TempDir()

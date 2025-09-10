@@ -72,15 +72,6 @@ type Signer struct {
 }
 
 func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*Signer, error) {
-	return NewSignerWithAdapter(ctx, ko, signer, signer)
-}
-
-// NewSignerWithAdapter creates a Fulcio Signer with a `fulcioSigner` that is
-// used to sign the Proof Of Possession sent to Fulcio. In most cases this will
-// be the same as the `signer`, however it is possible to use a different signer.
-// For example when ed25519ph is used for signing, the `fulcioSigner` will be
-// the equivalent PureED25519 signer, given that Fulcio does not support ed25519ph.
-func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier, fulcioSigner signature.SignerVerifier) (*Signer, error) {
 	fClient, err := NewClient(ko.FulcioURL)
 	if err != nil {
 		return nil, fmt.Errorf("creating Fulcio client: %w", err)
@@ -96,7 +87,7 @@ func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signat
 		return nil, fmt.Errorf("setting auth flow: %w", err)
 	}
 
-	resp, err := GetCert(ctx, fulcioSigner, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient)
+	resp, err := GetCert(ctx, signer, idToken, flow, ko.OIDCIssuer, ko.OIDCClientID, ko.OIDCClientSecret, ko.OIDCRedirectURL, fClient)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving cert: %w", err)
 	}

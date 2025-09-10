@@ -30,11 +30,7 @@ import (
 )
 
 func NewSigner(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier) (*fulcio.Signer, error) {
-	return NewSignerWithAdapter(ctx, ko, signer, signer)
-}
-
-func NewSignerWithAdapter(ctx context.Context, ko options.KeyOpts, signer signature.SignerVerifier, fulcioSigner signature.SignerVerifier) (*fulcio.Signer, error) {
-	fs, err := fulcio.NewSignerWithAdapter(ctx, ko, signer, fulcioSigner)
+	fs, err := fulcio.NewSigner(ctx, ko, signer)
 	if err != nil {
 		return nil, err
 	}

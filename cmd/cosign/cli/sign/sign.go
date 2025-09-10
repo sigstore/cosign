@@ -702,45 +702,22 @@ func signerFromNewKey() (*SignerVerifier, error) {
 	}, nil
 }
 
-// adaptSignerVerifierToFulcio adapts, if necessary, the SignerVerifier to be
-// used to interact with Fulcio.
-//
-// This is needed in particular for ED25519 keys with the pre-hashed version of
-// the algorithm, which is not supported by Fulcio. This function creates a
-// ED25519 SignerVerifier based on that instead.
-func adaptSignerVerifierToFulcio(sv *SignerVerifier) (*SignerVerifier, error) {
-	if ed25519phSV, ok := sv.SignerVerifier.(*signature.ED25519phSignerVerifier); ok {
-		signerVerifier, err := ed25519phSV.ToED25519SignerVerifier()
-		if err != nil {
-			return nil, err
-		}
-
-		return &SignerVerifier{
-			SignerVerifier: signerVerifier,
-			Cert:           sv.Cert,
-			Chain:          sv.Chain,
-		}, nil
-	}
-	return sv, nil
-}
-
 func KeylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
 	var (
 		k   *fulcio.Signer
 		err error
 	)
 
-	fulcioSV, err := adaptSignerVerifierToFulcio(sv)
-	if err != nil {
-		return nil, fmt.Errorf("adapting signer verifier to Fulcio: %w", err)
+	if _, ok := sv.SignerVerifier.(*signature.ED25519phSignerVerifier); ok {
+		return nil, fmt.Errorf("ed25519ph unsupported by Fulcio")
 	}
 
 	if ko.InsecureSkipFulcioVerify {
-		if k, err = fulcio.NewSignerWithAdapter(ctx, ko, sv, fulcioSV); err != nil {
+		if k, err = fulcio.NewSigner(ctx, ko, sv); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	} else {
-		if k, err = fulcioverifier.NewSignerWithAdapter(ctx, ko, sv, fulcioSV); err != nil {
+		if k, err = fulcioverifier.NewSigner(ctx, ko, sv); err != nil {
 			return nil, fmt.Errorf("getting key from Fulcio: %w", err)
 		}
 	}
