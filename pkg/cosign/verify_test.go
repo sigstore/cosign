@@ -539,8 +539,14 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 	signer, publicKey := generateSigner(t)
 	blob, blobSignature, blobSignatureBase64 := generateBlobSignature(t, signer)
 
-	// Create an OCI signature which will be verified.
-	ociSignature, err := static.NewSignature(blob, blobSignatureBase64)
+	// Create an OCI signature with a mock certificate which will be verified.
+	opts := []static.Option{}
+	opts = append(opts, static.WithCertChain([]byte(testLeafCert), []byte{}))
+	ociSignature, err := static.NewSignature(blob, blobSignatureBase64, opts...)
+	require.NoError(t, err, "error creating OCI signature with certificate")
+
+	// Create an OCI signature without certificate to test error
+	ociSignatureNoCert, err := static.NewSignature(blob, blobSignatureBase64)
 	require.NoError(t, err, "error creating OCI signature")
 
 	// Set up mock Rekor signer and log ID.
@@ -584,13 +590,27 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 
 	tests := []struct {
 		name        string
+		signature   oci.Signature
 		checkOpts   CheckOpts
 		rekorClient *client.Rekor
 		expectError bool
 		errorMsg    string
 	}{
 		{
-			name: "Verification succeeds with valid Rekor public keys",
+			name:      "Verification fails without certificate",
+			signature: ociSignatureNoCert,
+			checkOpts: CheckOpts{
+				SigVerifier:  signer,
+				RekorClient:  mockClient,
+				RekorPubKeys: trustedRekorPubKeys,
+				Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			},
+			rekorClient: mockClient,
+			expectError: true,
+		},
+		{
+			name:      "Verification succeeds with valid Rekor public keys",
+			signature: ociSignature,
 			checkOpts: CheckOpts{
 				SigVerifier:  signer,
 				RekorClient:  mockClient,
@@ -601,7 +621,8 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "Verification fails with no Rekor public keys",
+			name:      "Verification fails with no Rekor public keys",
+			signature: ociSignature,
 			checkOpts: CheckOpts{
 				SigVerifier: signer,
 				RekorClient: mockClient,
@@ -612,7 +633,8 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 			errorMsg:    "no valid tlog entries found no trusted rekor public keys provided",
 		},
 		{
-			name: "Verification fails with non-matching Rekor public keys",
+			name:      "Verification fails with non-matching Rekor public keys",
+			signature: ociSignature,
 			checkOpts: CheckOpts{
 				SigVerifier:  signer,
 				RekorClient:  mockClient,
@@ -627,13 +649,14 @@ func TestImageSignatureVerificationWithRekor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bundleVerified, err := VerifyImageSignature(ctx, ociSignature, v1.Hash{}, &tt.checkOpts)
+			bundleVerified, err := VerifyImageSignature(ctx, tt.signature, v1.Hash{}, &tt.checkOpts)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errorMsg)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, bundleVerified, "bundle verification failed")
+				// when verifying against Rekor, we expect bundleVerified to be false
+				assert.False(t, bundleVerified, "bundle verification failed")
 			}
 		})
 	}
@@ -713,7 +736,18 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
 	}
-	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
+	rawSig, err := sig.Signature()
+	if err != nil {
+		t.Fatalf("error getting raw signature: %v", err)
+	}
+
+	// Create an OCI signature with a mock certificate which will be verified.
+	opts := []static.Option{}
+	opts = append(opts, static.WithCertChain([]byte(testLeafCert), []byte{}))
+	ociSig, err := static.NewSignature(payload, base64.StdEncoding.EncodeToString(rawSig), opts...)
+	require.NoError(t, err, "error creating OCI signature with certificate")
+
+	if _, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		SigVerifier:                 sv,
 		TSACertificate:              leaves[0],
 		TSAIntermediateCertificates: intermediates,
