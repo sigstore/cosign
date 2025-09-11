@@ -298,7 +298,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 			Data:        payload,
 			PayloadType: "application/vnd.in-toto+json",
 		}
-		bundle, err := cbundle.SignData(content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
+		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
 		if err != nil {
 			return fmt.Errorf("signing bundle: %w", err)
 		}
