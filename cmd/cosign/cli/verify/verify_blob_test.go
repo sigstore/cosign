@@ -37,7 +37,7 @@ import (
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v2/internal/test"
@@ -701,9 +701,9 @@ func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	}
 	e := models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(leaf),
-		IntegratedTime: swag.Int64(integratedTime.Unix()),
-		LogIndex:       swag.Int64(0),
-		LogID:          swag.String(logID),
+		IntegratedTime: conv.Pointer(integratedTime.Unix()),
+		LogIndex:       conv.Pointer(int64(0)),
+		LogID:          conv.Pointer(logID),
 	}
 	// Marshal payload, sign, and set SET in Bundle
 	jsonPayload, err := json.Marshal(e)
@@ -723,9 +723,9 @@ func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	e.Verification = &models.LogEntryAnonVerification{
 		SignedEntryTimestamp: bundleSig,
 		InclusionProof: &models.InclusionProof{
-			LogIndex: swag.Int64(0),
-			TreeSize: swag.Int64(1),
-			RootHash: swag.String(hex.EncodeToString(uuid)),
+			LogIndex: conv.Pointer(int64(0)),
+			TreeSize: conv.Pointer(int64(1)),
+			RootHash: conv.Pointer(hex.EncodeToString(uuid)),
 			Hashes:   []string{},
 		},
 	}

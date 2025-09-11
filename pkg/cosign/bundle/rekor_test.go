@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
@@ -34,24 +34,24 @@ func TestRekorBundle(t *testing.T) {
 		name: "tlog entry without verification - nil bundle",
 		logEntry: &models.LogEntryAnon{
 			Body:           base64.StdEncoding.EncodeToString([]byte("TEST")),
-			IntegratedTime: swag.Int64(time.Now().Unix()),
-			LogIndex:       swag.Int64(0),
-			LogID:          swag.String("c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"),
+			IntegratedTime: conv.Pointer(time.Now().Unix()),
+			LogIndex:       conv.Pointer(int64(0)),
+			LogID:          conv.Pointer("c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"),
 		},
 		expectedRekorBundle: nil,
 	}, {
 		name: "tlog entry with verification",
 		logEntry: &models.LogEntryAnon{
 			Body:           base64.StdEncoding.EncodeToString([]byte("TEST")),
-			IntegratedTime: swag.Int64(time.Now().Unix()),
-			LogIndex:       swag.Int64(0),
-			LogID:          swag.String("c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"),
+			IntegratedTime: conv.Pointer(time.Now().Unix()),
+			LogIndex:       conv.Pointer(int64(0)),
+			LogID:          conv.Pointer("c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d"),
 			Verification: &models.LogEntryAnonVerification{
 				SignedEntryTimestamp: strfmt.Base64([]byte("signature")),
 				InclusionProof: &models.InclusionProof{
-					LogIndex: swag.Int64(0),
-					TreeSize: swag.Int64(1),
-					RootHash: swag.String("TEST"),
+					LogIndex: conv.Pointer(int64(0)),
+					TreeSize: conv.Pointer(int64(1)),
+					RootHash: conv.Pointer("TEST"),
 					Hashes:   []string{},
 				},
 			},

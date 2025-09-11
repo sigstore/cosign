@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -52,7 +52,7 @@ func TestSigner(t *testing.T) {
 
 	mClient.Entries = &mock.EntriesClient{
 		Entries: []*models.LogEntry{{"123": models.LogEntryAnon{
-			LogIndex: swag.Int64(123),
+			LogIndex: conv.Pointer(int64(123)),
 		}}},
 	}
 

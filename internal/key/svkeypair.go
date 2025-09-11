@@ -17,6 +17,7 @@ package key
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -85,6 +86,10 @@ func (k *SignerVerifierKeypair) GetHashAlgorithm() protocommon.HashAlgorithm {
 	return k.sigAlg.GetProtoHashType()
 }
 
+func (k *SignerVerifierKeypair) GetSigningAlgorithm() protocommon.PublicKeyDetails {
+	return k.sigAlg.GetSignatureAlgorithm()
+}
+
 // GetHint returns a hint for the public key.
 func (k *SignerVerifierKeypair) GetHint() []byte {
 	return k.hint
@@ -93,6 +98,16 @@ func (k *SignerVerifierKeypair) GetHint() []byte {
 // GetKeyAlgorithm returns the key algorithm, to be used in requests to Fulcio.
 func (k *SignerVerifierKeypair) GetKeyAlgorithm() string {
 	return k.keyAlg
+}
+
+// GetPublicKey returns the public key.
+func (k *SignerVerifierKeypair) GetPublicKey() crypto.PublicKey {
+	pubKey, err := k.sv.PublicKey()
+	if err != nil {
+		// The interface does not allow returning an error
+		return nil
+	}
+	return pubKey
 }
 
 // GetPublicKeyPem returns the public key in PEM format.

@@ -158,6 +158,12 @@ func TestKMSKeypair_Methods(t *testing.T) {
 		}
 	})
 
+	t.Run("GetSigningAlgorithm", func(t *testing.T) {
+		if kp.GetSigningAlgorithm() != protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256 {
+			t.Errorf("expected ECDSA_P256_SHA256, got %v", kp.GetSigningAlgorithm())
+		}
+	})
+
 	t.Run("GetHint", func(t *testing.T) {
 		pubKeyBytes, err := x509.MarshalPKIXPublicKey(&ecdsaPriv.PublicKey)
 		if err != nil {
@@ -174,6 +180,13 @@ func TestKMSKeypair_Methods(t *testing.T) {
 	t.Run("GetKeyAlgorithm", func(t *testing.T) {
 		if kp.GetKeyAlgorithm() != "ECDSA" {
 			t.Errorf("expected ECDSA, got %s", kp.GetKeyAlgorithm())
+		}
+	})
+
+	t.Run("GetPublicKey", func(t *testing.T) {
+		pub := kp.GetPublicKey()
+		if !pub.(*ecdsa.PublicKey).Equal(&ecdsaPriv.PublicKey) {
+			t.Error("public keys do not match")
 		}
 	})
 
