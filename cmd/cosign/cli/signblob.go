@@ -100,6 +100,18 @@ func SignBlob() *cobra.Command {
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 			}
+			// If a signing config is used, then service URLs cannot be specified
+			if (o.UseSigningConfig || o.SigningConfigPath != "") &&
+				((o.Rekor.URL != "" && o.Rekor.URL != options.DefaultRekorURL) ||
+					(o.Fulcio.URL != "" && o.Fulcio.URL != options.DefaultFulcioURL) ||
+					(o.OIDC.Issuer != "" && o.OIDC.Issuer != options.DefaultOIDCIssuerURL) ||
+					o.TSAServerURL != "") {
+				return fmt.Errorf("cannot specify service URLs and use signing config")
+			}
+			// Signing config requires a bundle as output for verification materials since sigstore-go is used
+			if (o.UseSigningConfig || o.SigningConfigPath != "") && o.BundlePath == "" {
+				return fmt.Errorf("must provide --bundle with --signing-config or --use-signing-config")
+			}
 			// Fetch a trusted root when:
 			// * requesting a certificate and no CT log key is provided to verify an SCT
 			// * using a signing config and signing using sigstore-go
@@ -116,9 +128,6 @@ func SignBlob() *cobra.Command {
 						ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 					}
 				}
-			}
-			if (o.UseSigningConfig || o.SigningConfigPath != "") && o.BundlePath == "" {
-				return fmt.Errorf("must provide --bundle with --signing-config or --use-signing-config")
 			}
 			if o.UseSigningConfig {
 				ko.SigningConfig, err = cosign.SigningConfig()
