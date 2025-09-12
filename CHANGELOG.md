@@ -2,7 +2,7 @@
 
 v2.6.0 introduces a number of new features, including:
 
-* Signing an in-toto statement rather than Cosign constructing one from a predicate (#4306)
+* Signing an in-toto statement rather than Cosign constructing one from a predicate, along with verifying a statement's subject using a digest and digest algorithm rather than providing a file reference (#4306)
 * Uploading a signature and its verification material (a ["bundle"](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto)) as an OCI Image 1.1 referring artifact, completing [#3927](https://github.com/sigstore/cosign/issues/3927) (#4316)
 * Providing service URLs for signing and attesting using a [SigningConfig](https://github.com/sigstore/protobuf-specs/blob/4df5baadcdb582a70c2bc032e042c0a218eb3841/protos/sigstore_trustroot.proto#L185). Note that this is required when using a [Rekor v2](https://github.com/sigstore/rekor-tiles) instance (#4319)
 
