@@ -207,7 +207,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			Data:        payload,
 			PayloadType: "application/vnd.in-toto+json",
 		}
-		bundle, err := cbundle.SignData(content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
+		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
 		if err != nil {
 			return fmt.Errorf("signing bundle: %w", err)
 		}
