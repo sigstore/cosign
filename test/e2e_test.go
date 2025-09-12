@@ -124,6 +124,14 @@ func TestSignVerify(t *testing.T) {
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
 
+	// Ensure it verifies if you default to the new protobuf bundle format
+	cmd := cliverify.VerifyCommand{
+		KeyRef:          pubKeyPath,
+		RekorURL:        rekorURL,
+		NewBundleFormat: true,
+	}
+	must(cmd.Exec(ctx, []string{imgName}), t)
+
 	// Look for a specific annotation
 	mustErr(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, "", false), t)
 
@@ -1877,6 +1885,10 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		MaxWorkers:       10,
 	}
 
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
+	// Ensure it verifies if you default to the new protobuf bundle format
+	verifyAttestation.NewBundleFormat = true
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
 
