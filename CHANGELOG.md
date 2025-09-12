@@ -1,3 +1,59 @@
+# v2.6.0
+
+v2.6.0 introduces a number of new features, including:
+
+* Signing an in-toto statement rather than Cosign constructing one from a predicate, along with verifying a statement's subject using a digest and digest algorithm rather than providing a file reference (#4306)
+* Uploading a signature and its verification material (a ["bundle"](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto)) as an OCI Image 1.1 referring artifact, completing [#3927](https://github.com/sigstore/cosign/issues/3927) (#4316)
+* Providing service URLs for signing and attesting using a [SigningConfig](https://github.com/sigstore/protobuf-specs/blob/4df5baadcdb582a70c2bc032e042c0a218eb3841/protos/sigstore_trustroot.proto#L185). Note that this is required when using a [Rekor v2](https://github.com/sigstore/rekor-tiles) instance (#4319)
+
+Example generation and verification of a signed in-toto statement:
+
+```
+cosign attest-blob --new-bundle-format=true --bundle="digest-key-test.sigstore.json" --key="cosign.key" --statement="../sigstore-go/examples/sigstore-go-signing/intoto.txt"
+cosign verify-blob-attestation --bundle="digest-key-test.sigstore.json" --key=cosign.pub --type=unused --digest="b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9" --digestAlg="sha256"
+```
+
+Example container signing and verification using the new bundle format and referring artifacts:
+
+```
+cosign sign --new-bundle-format=true ghcr.io/user/alpine@sha256:a19367999603840546b8612572e338ec076c6d1f2fec61760a9e11410f546733
+cosign verify --new-bundle-format=true ghcr.io/user/alpine@sha256:a19367999603840546b8612572e338ec076c6d1f2fec61760a9e11410f546733
+```
+
+Example usage of a signing config provided by the public good instance's TUF repository:
+
+```
+cosign sign-blob --use-signing-config --bundle sigstore.json README.md
+cosign verify-blob --new-bundle-format --bundle sigstore.json --certificate-identity $EMAIL --certificate-oidc-issuer $ISSUER --use-signed-timestamps README.md
+```
+
+v2.6.0 leverages sigstore-go's signing and verification APIs gated behind these new flags. In an upcoming major release, we will be
+updating Cosign to default to producing and consuming bundles to align with all other Sigstore SDKs.
+
+## Features
+
+* Add to `attest-blob` the ability to supply a complete in-toto statement, and add to `verify-blob-attestation` the ability to verify with just a digest (#4306)
+* Have cosign sign support bundle format (#4316)
+* Add support for SigningConfig for sign-blob/attest-blob, support Rekor v2 (#4319)
+* Add support for SigningConfig in sign/attest (#4371)
+* Support self-managed keys when signing with sigstore-go (#4368)
+* Don't require timestamps when verifying with a key (#4337)
+* Don't load content from TUF if trusted root path is specified (#4347)
+* Add a terminal spinner while signing with sigstore-go (#4402)
+* Require exclusively a SigningConfig or service URLs when signing (#4403)
+* Remove SHA256 assumption in sign-blob/verify-blob (#4050)
+* Bump sigstore-go, support alternative hash algorithms with keys (#4386)
+
+## Breaking API Changes
+
+* `sign.SignerFromKeyOpts` no longer generates a key. Instead, it returns whether or not the client needs to generate a key, and if so, clients
+should call `sign.KeylessSigner`. This allows clients to more easily manage key generation.
+
+## Bug Fixes
+
+* Verify subject with bundle only when checking claims (#4320)
+* Fixes to cosign sign / verify for the new bundle format (#4346)
+
 # v2.5.3
 
 ## Features
