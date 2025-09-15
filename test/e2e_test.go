@@ -861,7 +861,7 @@ func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL str
 	return out
 }
 
-func TestSignVerifyWithSigningConfig(t *testing.T) {
+func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
@@ -966,6 +966,214 @@ func TestSignVerifyWithSigningConfig(t *testing.T) {
 		Digest:              "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
 		DigestAlg:           "alg",
 		CheckClaims:         true,
+	}
+	err = verifyBlobAttestationCmd.Exec(ctx, "")
+	must(err, t)
+}
+
+func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko := options.KeyOpts{
+		IDToken:          identityToken,
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign image with identity token in bundle format
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Verify Fulcio-signed image
+	cmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertIdentity:   certID,
+		},
+		NewBundleFormat:     true,
+		UseSignedTimestamps: true,
+	}
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+
+	// Attest image
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attestCmd := attest.AttestCommand{
+		KeyOpts:        ko,
+		PredicatePath:  predicatePath,
+		PredicateType:  "slsaprovenance",
+		Timeout:        30 * time.Second,
+		RekorEntryType: "dsse",
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
+
+	// Verify attestation
+	verifyAttestation := cliverify.VerifyAttestationCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertIdentity:   certID,
+		},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
+		PredicateType:       "slsaprovenance",
+		UseSignedTimestamps: true,
+		CheckClaims:         true,
+	}
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
+func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	_, privKeyPath, pubKeyPath := keypair(t, t.TempDir())
+
+	ko := options.KeyOpts{
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign a blob using a provided key
+	blob := "someblob"
+	blobDir := t.TempDir()
+	bp := filepath.Join(blobDir, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+	ko.KeyRef = privKeyPath
+
+	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", true)
+	must(err, t)
+
+	// Verify a blob with the key in the trusted root
+	ko.KeyRef = pubKeyPath
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko,
+	}
+	err = verifyBlobCmd.Exec(ctx, bp)
+	must(err, t)
+
+	// Sign an attestation with a provided key
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
+	attestDir := t.TempDir()
+	statementPath := filepath.Join(attestDir, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = attBundlePath
+	ko.KeyRef = privKeyPath
+
+	attestBlobCmd := attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		RekorEntryType: "dsse",
+		StatementPath:  statementPath,
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	// Verify an attestation with the key in the trusted root
+	ko.KeyRef = pubKeyPath
+	verifyBlobAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+		KeyOpts:     ko,
+		Digest:      "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+		DigestAlg:   "alg",
+		CheckClaims: true,
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
 	must(err, t)
@@ -2584,6 +2792,45 @@ func TestSignBlobNewBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
 }
 
+func TestSignBlobNewBundleNonSHA256(t *testing.T) {
+	td1 := t.TempDir()
+
+	blob := "someblob"
+	blobPath := filepath.Join(td1, blob)
+	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+	ctx := context.Background()
+
+	// Generate ecdsa-p521 key
+	_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512)
+
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+		t.Fatal(err)
+	}
+
+	ko1 := options.KeyOpts{
+		KeyRef:          pubKeyPath,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts:       ko1,
+		IgnoreTlog:    true,
+		HashAlgorithm: crypto.SHA512,
+	}
+	must(verifyBlobCmd.Exec(ctx, blobPath), t)
+}
+
 func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 	tts := []struct {
 		algo v1.PublicKeyDetails
@@ -2593,8 +2840,9 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
 		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
-		{v1.PublicKeyDetails_PKIX_ED25519},
-		{v1.PublicKeyDetails_PKIX_ED25519_PH},
+		// ed25519 and ed25519ph aren't supported for the default flow.
+		// By default, we sign using the prehash variant for a ed25519 key.
+		// Rekor supports ed25519ph for a hashedrekord, but Fulcio doesn't.
 	}
 
 	td := t.TempDir()

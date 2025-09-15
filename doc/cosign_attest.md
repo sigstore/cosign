@@ -58,6 +58,7 @@ cosign attest [flags]
   -h, --help                                                                                     help for attest
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
+      --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
       --new-bundle-format                                                                        attach a Sigstore bundle using OCI referrers API
@@ -80,6 +81,7 @@ cosign attest [flags]
       --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                                                                                  
+      --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --statement string                                                                         path to the statement file.
@@ -89,7 +91,9 @@ cosign attest [flags]
       --timestamp-server-name string                                                             SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                                                                              whether or not to upload to the tlog (default true)
+      --trusted-root string                                                                      optional path to a TrustedRoot JSON file to verify a signature after signing
       --type string                                                                              specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
+      --use-signing-config                                                                       whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format
   -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
 ```
 

@@ -26,6 +26,7 @@ type AttestOptions struct {
 	Key                     string
 	Cert                    string
 	CertChain               string
+	IssueCertificate        bool
 	NoUpload                bool
 	Replace                 bool
 	SkipConfirmation        bool
@@ -38,6 +39,9 @@ type AttestOptions struct {
 	RekorEntryType          string
 	RecordCreationTimestamp bool
 	NewBundleFormat         bool
+	UseSigningConfig        bool
+	SigningConfigPath       string
+	TrustedRootPath         string
 
 	Rekor       RekorOptions
 	Fulcio      FulcioOptions
@@ -107,5 +111,21 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false,
 		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
 
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"issue a code signing certificate from Fulcio, even if a key is provided")
+
+	// TODO: have this default to true as a breaking change
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false, "attach a Sigstore bundle using OCI referrers API")
+
+	// TODO: have this default to true as a breaking change
+	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", false,
+		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
+
+	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
+		"path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format")
+
+	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
+
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
+		"optional path to a TrustedRoot JSON file to verify a signature after signing")
 }

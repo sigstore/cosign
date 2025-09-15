@@ -36,7 +36,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -44,6 +44,6 @@ jobs:
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@a7ac671d8e55553de127c8b1ad96d8d416315e83 # v0.0.19
+      - uses: sigstore/sigstore-conformance@1d8b0cdd88fa7fb5a8510e51faf6ccad8c96f10a # v0.0.20
         with:
           entrypoint: ${{ github.workspace }}/conformance

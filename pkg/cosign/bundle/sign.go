@@ -15,19 +15,21 @@
 package bundle
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/sigstore/cosign/v2/internal/ui"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func SignData(content sign.Content, keypair sign.Keypair, idToken string, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
+func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
 	var opts sign.BundleOptions
 
 	if trustedMaterial != nil {
@@ -109,7 +111,11 @@ func SignData(content sign.Content, keypair sign.Keypair, idToken string, signin
 		}
 	}
 
+	spinner := ui.NewSpinner(ctx, "Signing artifact...")
+	defer spinner.Stop()
+
 	bundle, err := sign.Bundle(content, keypair, opts)
+
 	if err != nil {
 		return nil, fmt.Errorf("error signing bundle: %w", err)
 	}
