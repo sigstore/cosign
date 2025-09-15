@@ -57,7 +57,7 @@ require (
 	golang.org/x/oauth2 v0.31.0
 	golang.org/x/sync v0.17.0
 	golang.org/x/term v0.35.0
-	google.golang.org/api v0.248.0
+	google.golang.org/api v0.249.0
 	google.golang.org/protobuf v1.36.9
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
