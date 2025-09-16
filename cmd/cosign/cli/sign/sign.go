@@ -256,11 +256,14 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		var err error
 
 		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" || signOpts.Cert != "" {
+			// Set no load options so that Ed25519 is preferred over Ed25519ph, required for signing DSSEs
+			var signLoadOpts []signature.LoadOption
+			ko.DefaultLoadOptions = &signLoadOpts
 			sv, _, err = SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
 			if err != nil {
 				return fmt.Errorf("getting signer: %w", err)
 			}
-			keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+			keypair, err = key.NewSignerVerifierKeypair(sv, &signLoadOpts)
 			if err != nil {
 				return fmt.Errorf("creating signerverifier keypair: %w", err)
 			}

@@ -240,7 +240,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	var pubKey signature.Verifier
 	switch {
 	case keyRef != "":
-		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
+		// Set no load options so that Ed25519 is preferred over Ed25519ph, required for verifying DSSEs
+		var signOpts []signature.LoadOption
+		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm, &signOpts)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
