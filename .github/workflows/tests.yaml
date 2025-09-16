@@ -184,7 +184,7 @@ jobs:
 
       - name: Collect diagnostics
         if: ${{ failure() }}
-        uses: chainguard-dev/actions/kind-diag@f632aec66edeebe245ad686a33a0c0a2160cac31 # v1.4.14
+        uses: chainguard-dev/actions/kind-diag@cd899cc96227b82170571cad1c3d6378d8cba678 # v1.4.15
 
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
