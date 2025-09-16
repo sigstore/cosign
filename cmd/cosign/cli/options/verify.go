@@ -62,8 +62,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.")
 
-	// TODO: have this default to true as a breaking change
-	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", false,
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
 }
 

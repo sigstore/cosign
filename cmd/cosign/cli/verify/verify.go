@@ -141,6 +141,17 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		NewBundleFormat:              c.NewBundleFormat,
 	}
 
+	// Check to see if we are using the new bundle format or not
+	if !c.LocalImage {
+		ref, err := name.ParseReference(images[0], c.NameOptions...)
+		if err == nil && c.NewBundleFormat {
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co)
+			if len(newBundles) == 0 || err != nil {
+				co.NewBundleFormat = false
+			}
+		}
+	}
+
 	if c.TrustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
 		if err != nil {
@@ -158,7 +169,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	if c.NewBundleFormat {
+	if co.NewBundleFormat {
 		if c.CertRef != "" {
 			return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
 		}
@@ -181,7 +192,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	// If we are using signed timestamps and there is no trusted root, we need to load the TSA certificates
-	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !c.NewBundleFormat {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !co.NewBundleFormat {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -191,7 +202,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog && !c.NewBundleFormat {
+	if !c.IgnoreTlog && !co.NewBundleFormat {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -248,7 +259,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
-		if c.NewBundleFormat {
+		if co.NewBundleFormat {
 			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
 			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
 		}
@@ -319,7 +330,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		var bundleVerified bool
 
 		if c.LocalImage {
-			if c.NewBundleFormat {
+			if co.NewBundleFormat {
 				verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
 				if err != nil {
 					return err
@@ -338,7 +349,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return fmt.Errorf("parsing reference: %w", err)
 			}
 
-			if c.NewBundleFormat {
+			if co.NewBundleFormat {
 				// OCI bundle always contains attestation
 				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
 				if err != nil {
