@@ -47,6 +47,7 @@ import (
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 func isb64(data []byte) bool {
@@ -117,12 +118,19 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
 	}
 
+	if !c.IgnoreTlog {
+		// To maintain backwards compatibility with older cosign versions,
+		// we do not use ed25519ph for ed25519 keys when the signatures are not
+		// uploaded to the Tlog.
+		c.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
 	// Keys are optional!
 	var cert *x509.Certificate
 	opts := make([]static.Option, 0)
 	switch {
 	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm)
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm, c.DefaultLoadOptions)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
@@ -265,7 +273,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
 				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
+				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256, c.DefaultLoadOptions)
 				if err != nil {
 					return fmt.Errorf("loading verifier from bundle: %w", err)
 				}

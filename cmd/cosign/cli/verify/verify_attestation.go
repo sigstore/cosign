@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/policy"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -210,7 +211,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	// Keys are optional!
 	switch {
 	case keyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
+		// Set no load options so that Ed25519 is preferred over Ed25519ph, required for verifying DSSEs
+		var signOpts []signature.LoadOption
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm, &signOpts)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}

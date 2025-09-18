@@ -87,6 +87,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		var err error
 
 		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" {
+			// Default load options prefer Ed25519ph over Ed25519, required for blobs with hashedrekord
 			sv, _, err = SignerFromKeyOpts(ctx, "", "", ko)
 			if err != nil {
 				return nil, fmt.Errorf("getting signer: %w", err)
