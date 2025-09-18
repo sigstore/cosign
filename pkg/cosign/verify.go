@@ -54,7 +54,6 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/cosign/v2/pkg/types"
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rekor_types "github.com/sigstore/rekor/pkg/types"
@@ -72,6 +71,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
 )
@@ -1687,36 +1687,36 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 	t := throttler.New(workers, len(bundles))
 	for i, bundle := range bundles {
 		go func(bundle *sgbundle.Bundle, index int) {
-			var att oci.Signature
-			if err := func(bundle *sgbundle.Bundle) error {
-				_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
+			att, err := func(bundle *sgbundle.Bundle) (oci.Signature, error) {
+				verificationResult, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
-				if !ok {
-					return fmt.Errorf("bundle does not contain a DSSE envelope")
+				ss := payload.SimpleContainerImage{
+					Critical: payload.Critical{
+						Identity: payload.Identity{
+							DockerReference: signedImgRef.Name(),
+						},
+						Image: payload.Image{
+							DockerManifestDigest: hash.String(),
+						},
+						Type: verificationResult.Statement.PredicateType,
+					},
 				}
-				payload, err := json.Marshal(dsse.DsseEnvelope)
+				p, err := json.Marshal(ss)
 				if err != nil {
-					return fmt.Errorf("marshaling DSSE envelope: %w", err)
+					return nil, fmt.Errorf("unable to marshal verification result: %w", err)
 				}
 
-				// We will return a slice of `[]oci.Signature` from this function for compatibility
-				// with the rest of the codebase. To do that, we wrap the verification output in a
-				// `oci.Signature` using static.NewAttestation(). This type may contain additional
-				// data such as the certificate chain, and rekor/tsa data, but for now we only use
-				// the payload (DSSE). TODO: Add additional data to returned `oci.Signature`. This
-				// can be done by passing a list of static.Option to NewAttestation (e.g. static.WithCertChain()).
-				// Depends on https://github.com/sigstore/sigstore-go/issues/328
-				att, err = static.NewAttestation(payload)
+				att, err := static.NewAttestation(p)
 				if err != nil {
-					return err
+					return att, err
 				}
 				bundlesVerified[index] = true
 
-				return err
-			}(bundle); err != nil {
+				return att, err
+			}(bundle)
+			if err != nil {
 				t.Done(err)
 				return
 			}
