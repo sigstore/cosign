@@ -681,7 +681,6 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 			digest = k + ":" + v
 		}
 
-		fmt.Println(string(dsseEnvelope.Payload))
 		sci := payload.SimpleContainerImage{
 			Critical: payload.Critical{
 				Identity: payload.Identity{

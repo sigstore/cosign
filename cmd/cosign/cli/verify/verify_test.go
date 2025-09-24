@@ -346,3 +346,52 @@ func TestLoadCertsKeylessVerification(t *testing.T) {
 		})
 	}
 }
+func TestTransformOutputSuccess(t *testing.T) {
+	// Build minimal in-toto statement
+	stmt := `{
+	  "_type": "https://in-toto.io/Statement/v0.1",
+	  "subject": [
+		{ "name": "artifact", "digest": { "sha256": "deadbeef" } }
+	  ],
+	  "predicateType": "https://slsa.dev/provenance/v0.2"
+	}`
+	// DSSE payloadType for in-toto
+	payloadType := "application/vnd.in-toto+json"
+	encodedStmt := base64.StdEncoding.EncodeToString([]byte(stmt))
+	dsseEnv := fmt.Sprintf(`{
+	  "payloadType": "%s",
+	  "payload": "%s",
+	  "signatures": [
+		{ "keyid": "test", "sig": "MAo=" }
+	  ]
+	}`, payloadType, encodedStmt)
+
+	sig, err := static.NewSignature([]byte(dsseEnv), "")
+	if err != nil {
+		t.Fatalf("creating static signature: %v", err)
+	}
+	fmt.Println(dsseEnv)
+
+	name := "example.com/my/image"
+	out, err := transformOutput([]oci.Signature{sig}, name)
+	if err != nil {
+		t.Fatalf("transformOutput returned error: %v", err)
+	}
+	if len(out) != 1 {
+		t.Fatalf("expected 1 transformed signature, got %d", len(out))
+	}
+
+	payloadBytes, err := out[0].Payload()
+	if err != nil {
+		t.Fatalf("reading transformed payload: %v", err)
+	}
+
+	var sci payload.SimpleContainerImage
+	if err := json.Unmarshal(payloadBytes, &sci); err != nil {
+		t.Fatalf("unmarshal transformed payload: %v", err)
+	}
+
+	assert.Equal(t, name, sci.Critical.Identity.DockerReference, "docker reference mismatch")
+	assert.Equal(t, "sha256:deadbeef", sci.Critical.Image.DockerManifestDigest, "digest mismatch")
+	assert.Equal(t, "https://slsa.dev/provenance/v0.2", sci.Critical.Type, "type mismatch")
+}
