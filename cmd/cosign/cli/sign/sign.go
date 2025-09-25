@@ -47,6 +47,7 @@ import (
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v2/pkg/blob"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
@@ -619,7 +620,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	// Handle --cert flag
 	if certPath != "" {
 		// Allow both DER and PEM encoding
-		certBytes, err := os.ReadFile(certPath)
+		certBytes, err := blob.LoadFileOrURL(certPath)
 		if err != nil {
 			return nil, fmt.Errorf("read certificate: %w", err)
 		}
@@ -661,7 +662,7 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 
 	// Handle --cert-chain flag
 	// Accept only PEM encoded certificate chain
-	certChainBytes, err := os.ReadFile(certChainPath)
+	certChainBytes, err := blob.LoadFileOrURL(certChainPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading certificate chain from path: %w", err)
 	}
