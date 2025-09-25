@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
@@ -41,7 +42,9 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -355,6 +358,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				if err != nil {
 					return err
 				}
+
+				verifiedOutput, err := transformOutput(verified, ref.Name())
+				if err == nil {
+					verified = verifiedOutput
+				}
 			} else {
 				ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
 				if err != nil {
@@ -643,4 +651,57 @@ func loadCertsKeylessVerification(certChainFile string,
 	}
 
 	return nil
+}
+
+func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oci.Signature, err error) {
+	for _, v := range verified {
+		dssePayload, err := v.Payload()
+		if err != nil {
+			return nil, err
+		}
+		var dsseEnvelope dsse.Envelope
+		err = json.Unmarshal(dssePayload, &dsseEnvelope)
+		if err != nil {
+			return nil, err
+		}
+		if dsseEnvelope.PayloadType != in_toto.PayloadType {
+			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
+		}
+		var intotoStatement in_toto.StatementHeader
+		err = json.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
+		if err != nil {
+			return nil, err
+		}
+		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
+			return nil, fmt.Errorf("no intoto subject or digest found")
+		}
+
+		var digest string
+		for k, v := range intotoStatement.Subject[0].Digest {
+			digest = k + ":" + v
+		}
+
+		sci := payload.SimpleContainerImage{
+			Critical: payload.Critical{
+				Identity: payload.Identity{
+					DockerReference: name,
+				},
+				Image: payload.Image{
+					DockerManifestDigest: digest,
+				},
+				Type: intotoStatement.PredicateType,
+			},
+		}
+		p, err := json.Marshal(sci)
+		if err != nil {
+			return nil, err
+		}
+		att, err := static.NewAttestation(p)
+		if err != nil {
+			return nil, err
+		}
+		verifiedOutput = append(verifiedOutput, att)
+	}
+
+	return verifiedOutput, nil
 }
