@@ -67,7 +67,7 @@ cosign sign-blob [flags]
       --timestamp-server-url string      url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
       --tlog-upload                      whether or not to upload to the tlog (default true)
       --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
-      --use-signing-config               whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format
+      --use-signing-config               whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format (default true)
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
 
