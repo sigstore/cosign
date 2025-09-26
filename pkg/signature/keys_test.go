@@ -21,8 +21,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/sigstore/cosign/v2/pkg/blob"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/blob"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )

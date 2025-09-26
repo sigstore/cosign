@@ -27,9 +27,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	ctypes "github.com/sigstore/cosign/v2/pkg/types"
+	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 

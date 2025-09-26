@@ -24,11 +24,11 @@ import (
 	"strings"
 
 	"github.com/digitorus/timestamp"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
-	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )

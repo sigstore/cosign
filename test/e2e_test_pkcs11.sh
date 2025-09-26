@@ -36,7 +36,7 @@ apk add go@edge
 cd /root/cosign
 
 softhsm2-util --init-token --free --label "My Token" --pin 1234 --so-pin 1234
-go test -v -cover -coverprofile=./cover.out -tags=softhsm,pkcs11key -coverpkg github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key test/pkcs11_test.go
+go test -v -cover -coverprofile=./cover.out -tags=softhsm,pkcs11key -coverpkg github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key test/pkcs11_test.go
 
 EOF
 

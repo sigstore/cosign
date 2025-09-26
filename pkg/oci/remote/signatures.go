@@ -25,9 +25,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/empty"
-	"github.com/sigstore/cosign/v2/pkg/oci/internal/signature"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/empty"
+	"github.com/sigstore/cosign/v3/pkg/oci/internal/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 

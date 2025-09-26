@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/payload"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/mock"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

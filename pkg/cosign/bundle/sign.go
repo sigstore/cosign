@@ -22,7 +22,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"

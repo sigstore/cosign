@@ -18,9 +18,9 @@ package git
 import (
 	"context"
 
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git/github"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git/gitlab"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git/github"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git/gitlab"
 )
 
 var providerMap = map[string]Git{

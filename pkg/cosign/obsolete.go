@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 

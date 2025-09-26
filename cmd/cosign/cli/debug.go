@@ -15,7 +15,7 @@
 package cli
 
 import (
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/debug"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/debug"
 	"github.com/spf13/cobra"
 )
 

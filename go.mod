@@ -1,4 +1,4 @@
-module github.com/sigstore/cosign/v2
+module github.com/sigstore/cosign/v3
 
 go 1.24.6
 

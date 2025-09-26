@@ -22,10 +22,10 @@ import (
 	"io"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
-	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 

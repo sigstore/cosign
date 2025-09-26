@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 )

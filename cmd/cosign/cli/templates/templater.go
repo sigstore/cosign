@@ -21,7 +21,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates/term"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/templates/term"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
 )

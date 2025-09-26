@@ -16,7 +16,7 @@ package payload
 
 import (
 	"github.com/dustin/go-humanize"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 )
 
 const defaultMaxSize = uint64(134217728) // 128MiB

@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/stretchr/testify/assert"
 )
 

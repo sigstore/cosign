@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sigstore/cosign/v2/pkg/providers"
+	"github.com/sigstore/cosign/v3/pkg/providers"
 )
 
 func ProviderCmd(ctx context.Context, w io.Writer) error {
