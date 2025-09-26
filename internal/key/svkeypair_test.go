@@ -34,6 +34,7 @@ import (
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // mockSignerVerifier is a mock implementation of signature.SignerVerifier for testing.
@@ -61,7 +62,7 @@ func (m *mockSignerVerifier) VerifySignature(_, _ io.Reader, _ ...signature.Veri
 	return errors.New("not implemented")
 }
 
-func TestNewKMSKeypair(t *testing.T) {
+func TestNewSignerVerifierKeypair(t *testing.T) {
 	ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("failed to generate ecdsa key: %v", err)
@@ -78,6 +79,7 @@ func TestNewKMSKeypair(t *testing.T) {
 	testCases := []struct {
 		name      string
 		sv        signature.SignerVerifier
+		prehash   bool
 		expectErr bool
 		errMsg    string
 	}{
@@ -103,6 +105,14 @@ func TestNewKMSKeypair(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			name: "ED25519ph key",
+			sv: &mockSignerVerifier{
+				pubKey: ed25519Priv.Public(),
+			},
+			prehash:   true,
+			expectErr: false,
+		},
+		{
 			name: "Unsupported key type",
 			sv: &mockSignerVerifier{
 				pubKey: "not a key",
@@ -122,7 +132,11 @@ func TestNewKMSKeypair(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kp, err := NewSignerVerifierKeypair(tc.sv, nil)
+			var loadOpts []signature.LoadOption
+			if tc.prehash {
+				loadOpts = []signature.LoadOption{options.WithED25519ph()}
+			}
+			kp, err := NewSignerVerifierKeypair(tc.sv, &loadOpts)
 			if tc.expectErr {
 				if err == nil {
 					t.Errorf("expected an error, but got none")
@@ -135,6 +149,11 @@ func TestNewKMSKeypair(t *testing.T) {
 				}
 				if kp == nil {
 					t.Error("expected a keypair, but got nil")
+				}
+			}
+			if !tc.expectErr {
+				if _, _, err := kp.SignData(context.Background(), []byte("data")); err != nil {
+					t.Errorf("unexpected error: %v", err)
 				}
 			}
 		})
