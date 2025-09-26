@@ -144,8 +144,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "expect the signature/attestation to be packaged in a Sigstore bundle")
 
-	// TODO: have this default to true as a breaking change
-	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", false,
+	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
