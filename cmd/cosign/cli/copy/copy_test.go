@@ -19,8 +19,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 )
 
 func TestCopyAttachmentTagPrefix(t *testing.T) {

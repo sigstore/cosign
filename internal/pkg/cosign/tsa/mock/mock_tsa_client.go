@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign/tsa/client"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/timestamp-authority/pkg/signer"

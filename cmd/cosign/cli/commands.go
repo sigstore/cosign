@@ -21,8 +21,8 @@ import (
 
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/templates"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/templates"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"

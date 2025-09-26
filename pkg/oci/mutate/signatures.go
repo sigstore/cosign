@@ -18,9 +18,9 @@ package mutate
 import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/sigstore/cosign/v2/internal/pkg/now"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/empty"
+	"github.com/sigstore/cosign/v3/internal/pkg/now"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/empty"
 )
 
 const maxLayers = 1000

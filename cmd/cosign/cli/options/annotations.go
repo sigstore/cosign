@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/spf13/cobra"
 )
 

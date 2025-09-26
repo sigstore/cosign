@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sigstore/cosign/v2/pkg/blob"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git/gitlab"
-	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v3/pkg/blob"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git/gitlab"
+	"github.com/sigstore/cosign/v3/pkg/cosign/kubernetes"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 

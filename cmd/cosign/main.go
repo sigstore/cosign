@@ -22,9 +22,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli"
-	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
-	"github.com/sigstore/cosign/v2/internal/ui"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli"
+	cosignError "github.com/sigstore/cosign/v3/cmd/cosign/errors"
+	"github.com/sigstore/cosign/v3/internal/ui"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"

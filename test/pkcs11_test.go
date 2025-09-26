@@ -54,8 +54,8 @@ import (
 	// Import the functions directly for testing.
 
 	"github.com/miekg/pkcs11"
-	. "github.com/sigstore/cosign/v2/cmd/cosign/cli/pkcs11cli"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
+	. "github.com/sigstore/cosign/v3/cmd/cosign/cli/pkcs11cli"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/stretchr/testify/require"
 )
 

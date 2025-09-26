@@ -26,9 +26,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	payloadsize "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload/size"
-	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci"
+	payloadsize "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size"
+	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 )
 
 // These enable mocking for unit testing without faking an entire registry.

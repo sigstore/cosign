@@ -51,8 +51,8 @@ linters:
       settings:
         printf:
           funcs:
-            - github.com/sigstore/cosign/v2/internal/ui.Infof
-            - github.com/sigstore/cosign/v2/internal/ui.Warnf
+            - github.com/sigstore/cosign/v3/internal/ui.Infof
+            - github.com/sigstore/cosign/v3/internal/ui.Warnf
   exclusions:
     generated: lax
     presets:

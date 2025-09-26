@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	cremote "github.com/sigstore/cosign/v2/pkg/cosign/remote"
+	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
 	"github.com/spf13/cobra"
 )
 

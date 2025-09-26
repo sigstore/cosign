@@ -26,10 +26,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
-	"github.com/sigstore/cosign/v2/pkg/oci/signed"
-	cosignstatic "github.com/sigstore/cosign/v2/pkg/oci/static"
-	ctypes "github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v3/pkg/oci/signed"
+	cosignstatic "github.com/sigstore/cosign/v3/pkg/oci/static"
+	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 )
 
 func TestWriteSignatures(t *testing.T) {

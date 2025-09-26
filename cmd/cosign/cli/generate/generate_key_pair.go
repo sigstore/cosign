@@ -24,15 +24,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git/github"
-	"github.com/sigstore/cosign/v2/pkg/cosign/git/gitlab"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git/github"
+	"github.com/sigstore/cosign/v3/pkg/cosign/git/gitlab"
 
-	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/kubernetes"
+	icos "github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/kubernetes"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )

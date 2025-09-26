@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"

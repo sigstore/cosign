@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	icos "github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	icos "github.com/sigstore/cosign/v3/internal/pkg/cosign"
 )
 
 func TestReadPasswordFn_env(t *testing.T) {

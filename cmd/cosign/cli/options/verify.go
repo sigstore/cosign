@@ -18,7 +18,7 @@ package options
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
 )
 
 type CommonVerifyOptions struct {
