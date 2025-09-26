@@ -38,7 +38,7 @@ require (
 	github.com/sigstore/rekor v1.4.2
 	github.com/sigstore/rekor-tiles v0.1.11
 	github.com/sigstore/sigstore v1.9.6-0.20250729224751-181c5d3339b3
-	github.com/sigstore/sigstore-go v1.1.2
+	github.com/sigstore/sigstore-go v1.1.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3
@@ -49,7 +49,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/spiffe/go-spiffe/v2 v2.6.0
 	github.com/stretchr/testify v1.11.1
-	github.com/theupdateframework/go-tuf/v2 v2.1.1
+	github.com/theupdateframework/go-tuf/v2 v2.2.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v0.143.3
