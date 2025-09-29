@@ -46,7 +46,7 @@ jobs:
           persist-credentials: false
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # In order:
           # * Module download cache
@@ -147,7 +147,7 @@ jobs:
       - name: check disk space
         run: df -h
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # In order:
           # * Module download cache
@@ -184,7 +184,7 @@ jobs:
 
       - name: Collect diagnostics
         if: ${{ failure() }}
-        uses: chainguard-dev/actions/kind-diag@de56c2728beb0a0f371bff2ce2ee4b8afee4b5e8 # v1.5.1
+        uses: chainguard-dev/actions/kind-diag@8e97c1fc72515d627456cb0b92e9c9f299356375 # v1.5.2
 
   e2e-windows-powershell-tests:
     name: Run PowerShell E2E tests
@@ -206,7 +206,7 @@ jobs:
           cache: false
 
       # https://github.com/mvdan/github-actions-golang#how-do-i-set-up-caching-between-builds
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           # In order:
           # * Module download cache
