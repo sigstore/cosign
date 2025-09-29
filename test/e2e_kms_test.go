@@ -22,10 +22,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 

@@ -31,17 +31,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/blob"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/blob"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
@@ -114,7 +114,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.KeyOpts.NewBundleFormat || checkNewBundle(c.BundlePath),
+		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
 	}
 
 	// Keys are optional!

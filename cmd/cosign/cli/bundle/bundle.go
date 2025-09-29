@@ -29,14 +29,14 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 )
 
 type CreateCmd struct {

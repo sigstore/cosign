@@ -44,16 +44,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/nozzle/throttler"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
-	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/blob"
-	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/layout"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
-	"github.com/sigstore/cosign/v2/pkg/types"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/blob"
+	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/layout"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -1618,7 +1618,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
+func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
@@ -1665,7 +1665,7 @@ func getBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
 func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := getBundles(ctx, signedImgRef, co)
+	bundles, hash, err := GetBundles(ctx, signedImgRef, co)
 	if err != nil {
 		return nil, false, err
 	}

@@ -32,7 +32,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	alibabaacr "github.com/mozillazg/docker-credential-acr-helper/pkg/credhelper"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
 

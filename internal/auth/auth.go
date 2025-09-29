@@ -22,9 +22,9 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign/privacy"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/providers"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/providers"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
 	"golang.org/x/term"

@@ -29,19 +29,22 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	cosignError "github.com/sigstore/cosign/v2/cmd/cosign/errors"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/blob"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v2/pkg/cosign/pkcs11key"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	sigs "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
+	cosignError "github.com/sigstore/cosign/v3/cmd/cosign/errors"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/blob"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
+	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -141,6 +144,17 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		NewBundleFormat:              c.NewBundleFormat,
 	}
 
+	// Check to see if we are using the new bundle format or not
+	if !c.LocalImage {
+		ref, err := name.ParseReference(images[0], c.NameOptions...)
+		if err == nil && c.NewBundleFormat {
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co)
+			if len(newBundles) == 0 || err != nil {
+				co.NewBundleFormat = false
+			}
+		}
+	}
+
 	if c.TrustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
 		if err != nil {
@@ -158,7 +172,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	if c.NewBundleFormat {
+	if co.NewBundleFormat {
 		if c.CertRef != "" {
 			return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
 		}
@@ -181,7 +195,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	// If we are using signed timestamps and there is no trusted root, we need to load the TSA certificates
-	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !c.NewBundleFormat {
+	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !co.NewBundleFormat {
 		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
 		if err != nil {
 			return fmt.Errorf("unable to load TSA certificates: %w", err)
@@ -191,7 +205,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
 	}
 
-	if !c.IgnoreTlog && !c.NewBundleFormat {
+	if !c.IgnoreTlog && !co.NewBundleFormat {
 		if c.RekorURL != "" {
 			rekorClient, err := rekor.NewClient(c.RekorURL)
 			if err != nil {
@@ -248,7 +262,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
-		if c.NewBundleFormat {
+		if co.NewBundleFormat {
 			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
 			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
 		}
@@ -319,7 +333,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		var bundleVerified bool
 
 		if c.LocalImage {
-			if c.NewBundleFormat {
+			if co.NewBundleFormat {
 				verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
 				if err != nil {
 					return err
@@ -338,11 +352,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return fmt.Errorf("parsing reference: %w", err)
 			}
 
-			if c.NewBundleFormat {
+			if co.NewBundleFormat {
 				// OCI bundle always contains attestation
 				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
 				if err != nil {
 					return err
+				}
+
+				verifiedOutput, err := transformOutput(verified, ref.Name())
+				if err == nil {
+					verified = verifiedOutput
 				}
 			} else {
 				ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
@@ -632,4 +651,57 @@ func loadCertsKeylessVerification(certChainFile string,
 	}
 
 	return nil
+}
+
+func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oci.Signature, err error) {
+	for _, v := range verified {
+		dssePayload, err := v.Payload()
+		if err != nil {
+			return nil, err
+		}
+		var dsseEnvelope dsse.Envelope
+		err = json.Unmarshal(dssePayload, &dsseEnvelope)
+		if err != nil {
+			return nil, err
+		}
+		if dsseEnvelope.PayloadType != in_toto.PayloadType {
+			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
+		}
+		var intotoStatement in_toto.StatementHeader
+		err = json.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
+		if err != nil {
+			return nil, err
+		}
+		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
+			return nil, fmt.Errorf("no intoto subject or digest found")
+		}
+
+		var digest string
+		for k, v := range intotoStatement.Subject[0].Digest {
+			digest = k + ":" + v
+		}
+
+		sci := payload.SimpleContainerImage{
+			Critical: payload.Critical{
+				Identity: payload.Identity{
+					DockerReference: name,
+				},
+				Image: payload.Image{
+					DockerManifestDigest: digest,
+				},
+				Type: intotoStatement.PredicateType,
+			},
+		}
+		p, err := json.Marshal(sci)
+		if err != nil {
+			return nil, err
+		}
+		att, err := static.NewAttestation(p)
+		if err != nil {
+			return nil, err
+		}
+		verifiedOutput = append(verifiedOutput, att)
+	}
+
+	return verifiedOutput, nil
 }

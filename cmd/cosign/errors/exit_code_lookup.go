@@ -18,7 +18,7 @@ package errors
 import (
 	"errors"
 
-	cosignError "github.com/sigstore/cosign/v2/pkg/cosign"
+	cosignError "github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
 func LookupExitCodeForError(err interface{ error }) int {

@@ -171,7 +171,7 @@ ko-cosign:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION) --tags $(GIT_HASH)$(LATEST_TAG) \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignImagerefs \
-		github.com/sigstore/cosign/v2/cmd/cosign
+		github.com/sigstore/cosign/v3/cmd/cosign
 
 .PHONY: ko-cosign-dev
 ko-cosign-dev:
@@ -180,7 +180,7 @@ ko-cosign-dev:
 	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
 		--platform=all --tags $(GIT_VERSION)-dev --tags $(GIT_HASH)-dev$(LATEST_TAG)-dev \
 		$(ARTIFACT_HUB_LABELS) --image-refs cosignDevImagerefs \
-		github.com/sigstore/cosign/v2/cmd/cosign
+		github.com/sigstore/cosign/v3/cmd/cosign
 
 .PHONY: ko-local
 ko-local:
@@ -189,7 +189,7 @@ ko-local:
 	KOCACHE=$(KOCACHE_PATH) ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
-		github.com/sigstore/cosign/v2/cmd/cosign
+		github.com/sigstore/cosign/v3/cmd/cosign
 
 .PHONY: ko-local-dev
 ko-local-dev:
@@ -198,7 +198,7 @@ ko-local-dev:
 	KOCACHE=$(KOCACHE_PATH) KO_DEFAULTBASEIMAGE=gcr.io/distroless/static-debian12:debug-nonroot ko build --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) \
 		$(ARTIFACT_HUB_LABELS) \
-		github.com/sigstore/cosign/v2/cmd/cosign
+		github.com/sigstore/cosign/v3/cmd/cosign
 
 ##################
 # help

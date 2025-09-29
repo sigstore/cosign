@@ -33,11 +33,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	ocistatic "github.com/google/go-containerregistry/pkg/v1/static"
 	ocitypes "github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 )
 
 func SBOMCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts options.RegistryExperimentalOptions, sbomRef string, sbomType ocitypes.MediaType, imageRef string) error {

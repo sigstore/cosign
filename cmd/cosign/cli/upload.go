@@ -18,8 +18,8 @@ package cli
 import (
 	"flag"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/upload"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/upload"
 	"github.com/spf13/cobra"
 )
 

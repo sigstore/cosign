@@ -22,10 +22,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	payloadsize "github.com/sigstore/cosign/v2/internal/pkg/cosign/payload/size"
-	"github.com/sigstore/cosign/v2/internal/pkg/now"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/signed"
+	payloadsize "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size"
+	"github.com/sigstore/cosign/v3/internal/pkg/now"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 )
 
 // NewFile constructs a new v1.Image with the provided payload.

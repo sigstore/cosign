@@ -23,11 +23,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/sigstore/cosign/v2/internal/pkg/cosign"
-	cosignv1 "github.com/sigstore/cosign/v2/pkg/cosign"
-	cbundle "github.com/sigstore/cosign/v2/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	cosignv1 "github.com/sigstore/cosign/v3/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"

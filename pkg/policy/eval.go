@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/sigstore/cosign/v2/pkg/cosign/rego"
+	"github.com/sigstore/cosign/v3/pkg/cosign/rego"
 )
 
 // EvaluatePolicyAgainstJson is used to run a policy engine against JSON bytes.

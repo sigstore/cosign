@@ -18,8 +18,8 @@ package walk
 import (
 	"context"
 
-	"github.com/sigstore/cosign/v2/pkg/oci"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 )
 
 // Fn is the signature of the callback supplied to SignedEntity.

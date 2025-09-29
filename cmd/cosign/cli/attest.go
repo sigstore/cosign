@@ -19,12 +19,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/attest"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/internal/ui"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/cosign/env"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/attest"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/spf13/cobra"
 )
