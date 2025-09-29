@@ -58,7 +58,8 @@ var SupportedKeyDetails = []v1.PublicKeyDetails{
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256,
-	v1.PublicKeyDetails_PKIX_ED25519_PH,
+	// Ed25519ph is not supported by Fulcio, so we don't support it here for now.
+	// v1.PublicKeyDetails_PKIX_ED25519_PH,
 }
 
 // PassFunc is the function to be called to retrieve the signer password. If
