@@ -992,8 +992,8 @@ github.com/go-openapi/swag v0.24.1 h1:DPdYTZKo6AQCRqzwr/kGkxJzHhpKxZ9i/oX0zag+MF
 github.com/go-openapi/swag v0.24.1/go.mod h1:sm8I3lCPlspsBBwUm1t5oZeWZS0s7m/A+Psg0ooRU0A=
 github.com/go-openapi/swag/cmdutils v0.24.0 h1:KlRCffHwXFI6E5MV9n8o8zBRElpY4uK4yWyAMWETo9I=
 github.com/go-openapi/swag/cmdutils v0.24.0/go.mod h1:uxib2FAeQMByyHomTlsP8h1TtPd54Msu2ZDU/H5Vuf8=
-github.com/go-openapi/swag/conv v0.24.0 h1:ejB9+7yogkWly6pnruRX45D1/6J+ZxRu92YFivx54ik=
-github.com/go-openapi/swag/conv v0.24.0/go.mod h1:jbn140mZd7EW2g8a8Y5bwm8/Wy1slLySQQ0ND6DPc2c=
+github.com/go-openapi/swag/conv v0.25.1 h1:+9o8YUg6QuqqBM5X6rYL/p1dpWeZRhoIt9x7CCP+he0=
+github.com/go-openapi/swag/conv v0.25.1/go.mod h1:Z1mFEGPfyIKPu0806khI3zF+/EUXde+fdeksUl2NiDs=
 github.com/go-openapi/swag/fileutils v0.24.0 h1:U9pCpqp4RUytnD689Ek/N1d2N/a//XCeqoH508H5oak=
 github.com/go-openapi/swag/fileutils v0.24.0/go.mod h1:3SCrCSBHyP1/N+3oErQ1gP+OX1GV2QYFSnrTbzwli90=
 github.com/go-openapi/swag/jsonname v0.24.0 h1:2wKS9bgRV/xB8c62Qg16w4AUiIrqqiniJFtZGi3dg5k=
@@ -1008,8 +1008,8 @@ github.com/go-openapi/swag/netutils v0.24.0 h1:Bz02HRjYv8046Ycg/w80q3g9QCWeIqTvl
 github.com/go-openapi/swag/netutils v0.24.0/go.mod h1:WRgiHcYTnx+IqfMCtu0hy9oOaPR0HnPbmArSRN1SkZM=
 github.com/go-openapi/swag/stringutils v0.24.0 h1:i4Z/Jawf9EvXOLUbT97O0HbPUja18VdBxeadyAqS1FM=
 github.com/go-openapi/swag/stringutils v0.24.0/go.mod h1:5nUXB4xA0kw2df5PRipZDslPJgJut+NjL7D25zPZ/4w=
-github.com/go-openapi/swag/typeutils v0.24.0 h1:d3szEGzGDf4L2y1gYOSSLeK6h46F+zibnEas2Jm/wIw=
-github.com/go-openapi/swag/typeutils v0.24.0/go.mod h1:q8C3Kmk/vh2VhpCLaoR2MVWOGP8y7Jc8l82qCTd1DYI=
+github.com/go-openapi/swag/typeutils v0.25.1 h1:rD/9HsEQieewNt6/k+JBwkxuAHktFtH3I3ysiFZqukA=
+github.com/go-openapi/swag/typeutils v0.25.1/go.mod h1:9McMC/oCdS4BKwk2shEB7x17P6HmMmA6dQRtAkSnNb8=
 github.com/go-openapi/swag/yamlutils v0.24.0 h1:bhw4894A7Iw6ne+639hsBNRHg9iZg/ISrOVr+sJGp4c=
 github.com/go-openapi/swag/yamlutils v0.24.0/go.mod h1:DpKv5aYuaGm/sULePoeiG8uwMpZSfReo1HR3Ik0yaG8=
 github.com/go-openapi/validate v0.24.0 h1:LdfDKwNbpB6Vn40xhTdNZAnfLECL81w+VX3BumrGD58=

@@ -16,7 +16,7 @@ require (
 	github.com/go-openapi/runtime v0.28.0
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-openapi/swag v0.24.1
-	github.com/go-openapi/swag/conv v0.24.0
+	github.com/go-openapi/swag/conv v0.25.1
 	github.com/go-piv/piv-go/v2 v2.4.0
 	github.com/google/certificate-transparency-go v1.3.2
 	github.com/google/go-cmp v0.7.0
@@ -182,7 +182,7 @@ require (
 	github.com/go-openapi/swag/mangling v0.24.0 // indirect
 	github.com/go-openapi/swag/netutils v0.24.0 // indirect
 	github.com/go-openapi/swag/stringutils v0.24.0 // indirect
-	github.com/go-openapi/swag/typeutils v0.24.0 // indirect
+	github.com/go-openapi/swag/typeutils v0.25.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.24.0 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
