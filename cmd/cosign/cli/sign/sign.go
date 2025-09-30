@@ -18,7 +18,6 @@ package sign
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -58,7 +57,9 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
+
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -687,12 +688,34 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey() (*SignerVerifier, error) {
-	privKey, err := cosign.GeneratePrivateKey()
+func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDetails, error) {
+	if signingAlgorithm == "" {
+		var err error
+		signingAlgorithm, err = signature.FormatSignatureAlgorithmFlag(pb_go_v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
+		if err != nil {
+			return pb_go_v1.PublicKeyDetails_PUBLIC_KEY_DETAILS_UNSPECIFIED, fmt.Errorf("formatting signature algorithm: %w", err)
+		}
+	}
+	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
+}
+
+func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	keyDetails, err := ParseSignatureAlgorithmFlag(signingAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm details: %w", err)
+	}
+
+	privKey, err := cosign.GeneratePrivateKeyWithAlgorithm(&algo)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
-	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+
+	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
+	sv, err := signature.LoadSignerVerifierFromAlgorithmDetails(privKey, algo, *defaultLoadOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +764,7 @@ func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
-		sv, err = signerFromNewKey()
+		sv, err = signerFromNewKey(ko.SigningAlgorithm, ko.DefaultLoadOptions)
 	}
 	if err != nil {
 		return nil, false, err
