@@ -688,15 +688,19 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDetails, error) {
 	if signingAlgorithm == "" {
 		var err error
 		signingAlgorithm, err = signature.FormatSignatureAlgorithmFlag(pb_go_v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
 		if err != nil {
-			return nil, fmt.Errorf("formatting signature algorithm: %w", err)
+			return pb_go_v1.PublicKeyDetails_PUBLIC_KEY_DETAILS_UNSPECIFIED, fmt.Errorf("formatting signature algorithm: %w", err)
 		}
 	}
-	keyDetails, err := signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
+	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
+}
+
+func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	keyDetails, err := ParseSignatureAlgorithmFlag(signingAlgorithm)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
 	}

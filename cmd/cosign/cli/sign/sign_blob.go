@@ -387,7 +387,7 @@ func getHashFunction(sv *SignerVerifier, ko options.KeyOpts) (crypto.Hash, error
 	}
 
 	// New key was generated, using the signing	algorithm specified by the user
-	keyDetails, err := signature.ParseSignatureAlgorithmFlag(ko.SigningAlgorithm)
+	keyDetails, err := ParseSignatureAlgorithmFlag(ko.SigningAlgorithm)
 	if err != nil {
 		return crypto.Hash(0), fmt.Errorf("parsing signature algorithm: %w", err)
 	}
