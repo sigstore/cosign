@@ -31,8 +31,7 @@ import (
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
-	"github.com/sigstore/cosign/v3/internal/auth"
-	"github.com/sigstore/cosign/v3/internal/key"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
@@ -67,7 +66,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
-	shouldUpload, err := ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
+	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
 		return nil, fmt.Errorf("upload to tlog: %w", err)
 	}
@@ -80,49 +79,9 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 
 	if ko.SigningConfig != nil {
-		var keypair sign.Keypair
-		var ephemeralKeypair bool
-		var idToken string
-		var sv *SignerVerifier
-		var err error
-
-		if ko.Sk || ko.Slot != "" || ko.KeyRef != "" {
-			sv, _, err = SignerFromKeyOpts(ctx, "", "", ko)
-			if err != nil {
-				return nil, fmt.Errorf("getting signer: %w", err)
-			}
-			keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
-			if err != nil {
-				return nil, fmt.Errorf("creating signerverifier keypair: %w", err)
-			}
-		} else {
-			keypair, err = sign.NewEphemeralKeypair(nil)
-			if err != nil {
-				return nil, fmt.Errorf("generating keypair: %w", err)
-			}
-			ephemeralKeypair = true
-		}
-		defer func() {
-			if sv != nil {
-				sv.Close()
-			}
-		}()
-
-		if ephemeralKeypair || ko.IssueCertificateForExistingKey {
-			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
-				TokenOrPath:      ko.IDToken,
-				DisableProviders: ko.OIDCDisableProviders,
-				Provider:         ko.OIDCProvider,
-				AuthFlow:         ko.FulcioAuthFlow,
-				SkipConfirm:      ko.SkipConfirmation,
-				OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
-				ClientID:         ko.OIDCClientID,
-				ClientSecret:     ko.OIDCClientSecret,
-				RedirectURL:      ko.OIDCRedirectURL,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("retrieving ID token: %w", err)
-			}
+		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, "", "")
+		if err != nil {
+			return nil, fmt.Errorf("getting keypair and token: %w", err)
 		}
 
 		payload, closePayload, err := getPayload(ctx, payloadPath, protoHashAlgoToHash(keypair.GetHashAlgorithm()))
@@ -137,6 +96,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		content := &sign.PlainData{
 			Data: data,
 		}
+
 		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
 		if err != nil {
 			return nil, fmt.Errorf("signing bundle: %w", err)
@@ -148,12 +108,12 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return bundle, nil
 	}
 
-	sv, genKey, err := SignerFromKeyOpts(ctx, "", "", ko)
+	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, "", "", ko)
 	if err != nil {
 		return nil, err
 	}
 	if genKey || ko.IssueCertificateForExistingKey {
-		sv, err = KeylessSigner(ctx, ko, sv)
+		sv, err = signcommon.KeylessSigner(ctx, ko, sv)
 		if err != nil {
 			return nil, fmt.Errorf("getting Fulcio signer: %w", err)
 		}
@@ -356,7 +316,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 }
 
 // Extract an encoded certificate from the SignerVerifier. Returns (nil, nil) if verifier is not a certificate.
-func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error) {
+func extractCertificate(ctx context.Context, sv *signcommon.SignerVerifier) ([]byte, error) {
 	signer, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting signer: %w", err)
@@ -369,7 +329,7 @@ func extractCertificate(ctx context.Context, sv *SignerVerifier) ([]byte, error)
 	return nil, nil
 }
 
-func getHashFunction(sv *SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (crypto.Hash, error) {
+func getHashFunction(sv *signcommon.SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (crypto.Hash, error) {
 	pubKey, err := sv.PublicKey()
 	if err != nil {
 		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)

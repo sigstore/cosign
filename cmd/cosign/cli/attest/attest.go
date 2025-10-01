@@ -29,9 +29,7 @@ import (
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
-	cosign_sign "github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v3/internal/auth"
-	"github.com/sigstore/cosign/v3/internal/key"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	tsaclient "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -52,7 +50,7 @@ import (
 
 type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
 
-func uploadToTlog(ctx context.Context, sv *cosign_sign.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
+func uploadToTlog(ctx context.Context, sv *signcommon.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
 	rekorBytes, err := sv.Bytes(ctx)
 	if err != nil {
 		return nil, err
@@ -157,49 +155,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.SigningConfig != nil {
-		var keypair sign.Keypair
-		var ephemeralKeypair bool
-		var idToken string
-		var sv *cosign_sign.SignerVerifier
-		var err error
-
-		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
-			sv, _, err = cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
-			if err != nil {
-				return fmt.Errorf("getting signer: %w", err)
-			}
-			keypair, err = key.NewSignerVerifierKeypair(sv, c.DefaultLoadOptions)
-			if err != nil {
-				return fmt.Errorf("creating signerverifier keypair: %w", err)
-			}
-		} else {
-			keypair, err = sign.NewEphemeralKeypair(nil)
-			if err != nil {
-				return fmt.Errorf("generating keypair: %w", err)
-			}
-			ephemeralKeypair = true
-		}
-		defer func() {
-			if sv != nil {
-				sv.Close()
-			}
-		}()
-
-		if ephemeralKeypair || c.IssueCertificateForExistingKey {
-			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
-				TokenOrPath:      c.IDToken,
-				DisableProviders: c.OIDCDisableProviders,
-				Provider:         c.OIDCProvider,
-				AuthFlow:         c.FulcioAuthFlow,
-				SkipConfirm:      c.SkipConfirmation,
-				OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
-				ClientID:         c.OIDCClientID,
-				ClientSecret:     c.OIDCClientSecret,
-				RedirectURL:      c.OIDCRedirectURL,
-			})
-			if err != nil {
-				return fmt.Errorf("retrieving ID token: %w", err)
-			}
+		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, c.KeyOpts, c.CertPath, c.CertChainPath)
+		if err != nil {
+			return fmt.Errorf("getting keypair and token: %w", err)
 		}
 
 		content := &sign.DSSEData{
@@ -218,12 +176,12 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
 	}
 
-	sv, genKey, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
 	if genKey || c.IssueCertificateForExistingKey {
-		sv, err = cosign_sign.KeylessSigner(ctx, c.KeyOpts, sv)
+		sv, err = signcommon.KeylessSigner(ctx, c.KeyOpts, sv)
 		if err != nil {
 			return fmt.Errorf("getting Fulcio signer: %w", err)
 		}
@@ -293,7 +251,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
 
 	// Check whether we should be uploading to the transparency log
-	shouldUpload, err := cosign_sign.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
+	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}
