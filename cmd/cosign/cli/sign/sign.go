@@ -215,17 +215,11 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
 	}
 
-	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
-	if genKey || ko.IssueCertificateForExistingKey {
-		sv, err = signcommon.KeylessSigner(ctx, ko, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
+	defer closeSV()
 
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
@@ -308,17 +302,12 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		}
 	}
 
-	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
-	if genKey || ko.IssueCertificateForExistingKey {
-		sv, err = signcommon.KeylessSigner(ctx, ko, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
+	defer closeSV()
+
 	dd := cremote.NewDupeDetector(sv)
 
 	var s icos.Signer

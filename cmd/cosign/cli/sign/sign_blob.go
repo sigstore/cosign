@@ -108,17 +108,11 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 		return bundle, nil
 	}
 
-	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, "", "", ko)
+	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, "", "", ko)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting signer: %w", err)
 	}
-	if genKey || ko.IssueCertificateForExistingKey {
-		sv, err = signcommon.KeylessSigner(ctx, ko, sv)
-		if err != nil {
-			return nil, fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
+	defer closeSV()
 
 	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
 	if err != nil {

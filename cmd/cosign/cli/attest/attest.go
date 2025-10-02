@@ -176,17 +176,12 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
 	}
 
-	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
-	if genKey || c.IssueCertificateForExistingKey {
-		sv, err = signcommon.KeylessSigner(ctx, c.KeyOpts, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
+	defer closeSV()
+
 	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
 	dd := cremote.NewDupeDetector(sv)
 

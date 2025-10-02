@@ -176,17 +176,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return nil
 	}
 
-	sv, genKey, err := signcommon.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 	if err != nil {
 		return fmt.Errorf("getting signer: %w", err)
 	}
-	if genKey || c.IssueCertificateForExistingKey {
-		sv, err = signcommon.KeylessSigner(ctx, c.KeyOpts, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
+	defer closeSV()
+
 	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
 
 	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))

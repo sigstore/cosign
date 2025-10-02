@@ -81,7 +81,7 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 	var err error
 
 	if ko.Sk || ko.Slot != "" || ko.KeyRef != "" || cert != "" {
-		sv, _, err = SignerFromKeyOpts(ctx, cert, certChain, ko)
+		sv, _, err = signerFromKeyOpts(ctx, cert, certChain, ko)
 		if err != nil {
 			return nil, "", fmt.Errorf("getting signer: %w", err)
 		}
@@ -122,8 +122,7 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 	return keypair, idToken, nil
 }
 
-// KeylessSigner fetches an identity certificate from Fulcio and returns a SignerVerifier with the returned signing material.
-func KeylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
+func keylessSigner(ctx context.Context, ko options.KeyOpts, sv *SignerVerifier) (*SignerVerifier, error) {
 	var (
 		k   *fulcio.Signer
 		err error
@@ -194,8 +193,22 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	return true
 }
 
-// SignerFromKeyOpts generates a SignerVerifier from provided key flags.
-func SignerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
+// GetSignerVerifier generates a SignerVerifier from provided key flags.
+func GetSignerVerifier(ctx context.Context, cert, certChain string, ko options.KeyOpts) (*SignerVerifier, func(), error) {
+	sv, genKey, err := signerFromKeyOpts(ctx, cert, certChain, ko)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting signer from opts: %w", err)
+	}
+	if genKey || ko.IssueCertificateForExistingKey {
+		sv, err = keylessSigner(ctx, ko, sv)
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting Fulcio signer: %w", err)
+		}
+	}
+	return sv, sv.Close, nil
+}
+
+func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
 	var sv *SignerVerifier
 	var err error
 	genKey := false
