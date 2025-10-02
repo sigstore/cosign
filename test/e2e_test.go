@@ -847,7 +847,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 }
 
-func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
+func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string { //nolint: unparam
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
 	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
@@ -2804,7 +2804,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
 }
 
-func TestSignBlobNewBundleNonSHA256(t *testing.T) {
+func TestSignBlobNewBundleManagedKeyNonDefaultAlgorithm(t *testing.T) {
 	td1 := t.TempDir()
 
 	blob := "someblob"
@@ -2817,33 +2817,205 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Generate ecdsa-p521 key
-	_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512)
-
-	ko := options.KeyOpts{
-		KeyRef:          privKeyPath,
-		PassFunc:        passFunc,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
+	tts := []struct {
+		algo v1.PublicKeyDetails
+	}{
+		{v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384},
+		{v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
+		{v1.PublicKeyDetails_PKIX_ED25519}, // When Rekor isn't used, sign with the pure variant
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+	for _, tt := range tts {
+		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
+		tlogUpload := false
+
+		ko := options.KeyOpts{
+			KeyRef:          privKeyPath,
+			PassFunc:        passFunc,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+		if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", tlogUpload); err != nil {
+			t.Fatal(err)
+		}
+		algDetails, err := signature.GetAlgorithmDetails(tt.algo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ko1 := options.KeyOpts{
+			KeyRef:          pubKeyPath,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+		verifyBlobCmd := cliverify.VerifyBlobCmd{
+			KeyOpts:       ko1,
+			IgnoreTlog:    true,
+			HashAlgorithm: algDetails.GetHashType(),
+		}
+		must(verifyBlobCmd.Exec(ctx, blobPath), t)
+	}
+}
+
+func TestSignBlobNewBundleManagedKeyRekorNonDefaultAlgorithm(t *testing.T) {
+	td1 := t.TempDir()
+
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	blob := "someblob"
+	blobPath := filepath.Join(td1, blob)
+	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	ko1 := options.KeyOpts{
-		KeyRef:          pubKeyPath,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
+	bundlePath := filepath.Join(td1, "bundle.sigstore.json")
+
+	tts := []struct {
+		algo v1.PublicKeyDetails
+	}{
+		{v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384},
+		{v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
+		{v1.PublicKeyDetails_PKIX_ED25519_PH}, // Prehash variant used with Rekor
 	}
-	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:       ko1,
-		IgnoreTlog:    true,
-		HashAlgorithm: crypto.SHA512,
+	for _, tt := range tts {
+		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td1, tt.algo)
+		tlogUpload := true
+
+		ko := options.KeyOpts{
+			KeyRef:          privKeyPath,
+			PassFunc:        passFunc,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+
+		trustedMaterial, err := cosign.TrustedRoot()
+		must(err, t)
+		ko.TrustedMaterial = trustedMaterial
+		signingConfig, err := cosign.SigningConfig()
+		must(err, t)
+		ko.SigningConfig = signingConfig
+
+		if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", tlogUpload); err != nil {
+			t.Fatal(err)
+		}
+		algDetails, err := signature.GetAlgorithmDetails(tt.algo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ko1 := options.KeyOpts{
+			KeyRef:          pubKeyPath,
+			BundlePath:      bundlePath,
+			NewBundleFormat: true,
+		}
+		verifyBlobCmd := cliverify.VerifyBlobCmd{
+			KeyOpts:       ko1,
+			IgnoreTlog:    false,
+			HashAlgorithm: algDetails.GetHashType(),
+		}
+		must(verifyBlobCmd.Exec(ctx, blobPath), t)
 	}
-	must(verifyBlobCmd.Exec(ctx, blobPath), t)
 }
 
-func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
+func TestAttestBlobNewBundleManagedKeyNonDefaultAlgorithm(t *testing.T) {
+	td := t.TempDir()
+	blob := "someblob"
+	bp := filepath.Join(td, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Sign an attestation
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
+	attestDir := t.TempDir()
+	statementPath := filepath.Join(attestDir, "statement")
+	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
+
+	ctx := context.Background()
+
+	tts := []struct {
+		algo v1.PublicKeyDetails
+	}{
+		{v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384},
+		{v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256},
+		{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256},
+		{v1.PublicKeyDetails_PKIX_ED25519}, // Only pure variant is supported
+	}
+	for _, tt := range tts {
+		_, privKeyPath, pubKeyPath := keypairWithAlgorithm(t, td, tt.algo)
+
+		ko := options.KeyOpts{
+			KeyRef:          privKeyPath,
+			PassFunc:        passFunc,
+			BundlePath:      attBundlePath,
+			NewBundleFormat: true,
+		}
+
+		algDetails, err := signature.GetAlgorithmDetails(tt.algo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		attestBlobCmd := attest.AttestBlobCommand{
+			KeyOpts:        ko,
+			RekorEntryType: "dsse",
+			StatementPath:  statementPath,
+		}
+		must(attestBlobCmd.Exec(ctx, bp), t)
+
+		// Verify an attestation
+		ko.KeyRef = pubKeyPath
+		verifyBlobAttestationCmd := cliverify.VerifyBlobAttestationCommand{
+			KeyOpts:             ko,
+			UseSignedTimestamps: true,
+			Digest:              "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+			DigestAlg:           "alg",
+			CheckClaims:         true,
+			HashAlgorithm:       algDetails.GetHashType(),
+		}
+		must(verifyBlobAttestationCmd.Exec(ctx, ""), t)
+	}
+}
+
+func TestSignBlobNewBundleFulcioNonDefaultAlgorithm(t *testing.T) {
 	tts := []struct {
 		algo v1.PublicKeyDetails
 	}{
