@@ -1,3 +1,10 @@
+# v2.6.1
+
+## Bug Fixes
+
+* Partially populate the output of cosign verify when working with new bundles (#4416)
+* Bump sigstore-go, move conformance back to tagged release (#4426)
+
 # v2.6.0
 
 v2.6.0 introduces a number of new features, including:
