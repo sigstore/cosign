@@ -33,8 +33,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -143,48 +141,12 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 
 	signedPayload := cosign.LocalSignedPayload{}
 	var rekorEntry *models.LogEntryAnon
-	var rfc3161Timestamp *cbundle.RFC3161Timestamp
-	var timestampBytes []byte
 
-	if ko.TSAServerURL != "" {
-		if ko.RFC3161TimestampPath == "" && !ko.NewBundleFormat {
-			return nil, fmt.Errorf("must use protobuf bundle or set timestamp output path")
-		}
-		var err error
-		if ko.TSAClientCACert == "" && ko.TSAClientCert == "" { // no mTLS params or custom CA
-			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClient(ko.TSAServerURL))
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			timestampBytes, err = tsa.GetTimestampedSignature(sig, client.NewTSAClientMTLS(ko.TSAServerURL,
-				ko.TSAClientCACert,
-				ko.TSAClientCert,
-				ko.TSAClientKey,
-				ko.TSAServerName,
-			))
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
-
-		if rfc3161Timestamp == nil {
-			return nil, fmt.Errorf("rfc3161 timestamp is nil")
-		}
-
-		if ko.RFC3161TimestampPath != "" {
-			ts, err := json.Marshal(rfc3161Timestamp)
-			if err != nil {
-				return nil, err
-			}
-			if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
-				return nil, fmt.Errorf("create RFC3161 timestamp file: %w", err)
-			}
-			ui.Infof(ctx, "RFC3161 timestamp written to file %s\n", ko.RFC3161TimestampPath)
-		}
+	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(sig, ko)
+	if err != nil {
+		return nil, fmt.Errorf("getting timestamp: %w", err)
 	}
+
 	if shouldUpload {
 		rekorBytes, err := sv.Bytes(ctx)
 		if err != nil {

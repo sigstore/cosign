@@ -30,8 +30,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	tsaclient "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
@@ -199,39 +197,28 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
-	var timestampBytes []byte
 	var tsaPayload []byte
-	if c.KeyOpts.TSAServerURL != "" {
-		// We need to decide what signature to send to the timestamp authority.
-		//
-		// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
-		// Envelope. However, when sigstore clients are verifying a bundle they
-		// will use the DSSE Sig field, so we choose what signature to send to
-		// the timestamp authority based on our output format.
-		if c.KeyOpts.NewBundleFormat {
-			tsaPayload, err = cosign.GetDSSESigBytes(signedPayload)
-			if err != nil {
-				return err
-			}
-		} else {
-			tsaPayload = signedPayload
-		}
-		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
-		if c.KeyOpts.TSAClientCert != "" {
-			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
-				c.KeyOpts.TSAClientCACert,
-				c.KeyOpts.TSAClientCert,
-				c.KeyOpts.TSAClientKey,
-				c.KeyOpts.TSAServerName,
-			)
-		}
-		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
+	// We need to decide what signature to send to the timestamp authority.
+	//
+	// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
+	// Envelope. However, when sigstore clients are verifying a bundle they
+	// will use the DSSE Sig field, so we choose what signature to send to
+	// the timestamp authority based on our output format.
+	if c.KeyOpts.NewBundleFormat {
+		tsaPayload, err = cosign.GetDSSESigBytes(signedPayload)
 		if err != nil {
 			return err
 		}
-		bundle := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
+	} else {
+		tsaPayload = signedPayload
+	}
+	timestampBytes, rfc3161Timestamp, err := signcommon.GetRFC3161Timestamp(tsaPayload, c.KeyOpts)
+	if err != nil {
+		return fmt.Errorf("getting timestamp: %w", err)
+	}
 
-		opts = append(opts, static.WithRFC3161Timestamp(bundle))
+	if rfc3161Timestamp != nil {
+		opts = append(opts, static.WithRFC3161Timestamp(rfc3161Timestamp))
 	}
 
 	predicateType, err := options.ParsePredicateType(c.PredicateType)

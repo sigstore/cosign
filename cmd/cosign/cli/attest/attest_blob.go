@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,8 +33,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	tsaclient "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
@@ -90,10 +87,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		var cancelFn context.CancelFunc
 		ctx, cancelFn = context.WithTimeout(ctx, c.Timeout)
 		defer cancelFn()
-	}
-
-	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.NewBundleFormat {
-		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
 	base := path.Base(artifactPath)
@@ -189,57 +182,20 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return fmt.Errorf("signing: %w", err)
 	}
 
-	var rfc3161Timestamp *cbundle.RFC3161Timestamp
-	var timestampBytes []byte
-	var tsaPayload []byte
-	var rekorEntry *models.LogEntryAnon
-
-	if c.KeyOpts.TSAServerURL != "" {
-		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
-		if c.TSAClientCert != "" {
-			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
-				c.KeyOpts.TSAClientCACert,
-				c.KeyOpts.TSAClientCert,
-				c.KeyOpts.TSAClientKey,
-				c.KeyOpts.TSAServerName,
-			)
-		}
-		// We need to decide what signature to send to the timestamp authority.
-		//
-		// Historically, cosign sent `sig`, which is the entire JSON DSSE
-		// Envelope. However, when sigstore clients are verifying a bundle they
-		// will use the DSSE Sig field, so we choose what signature to send to
-		// the timestamp authority based on our output format.
-		if c.NewBundleFormat {
-			tsaPayload, err = cosign.GetDSSESigBytes(sig)
-			if err != nil {
-				return err
-			}
-		} else {
-			tsaPayload = sig
-		}
-		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
+	// We need to decide what signature to send to the timestamp authority.
+	//
+	// Historically, cosign sent `sig`, which is the entire JSON DSSE
+	// Envelope. However, when sigstore clients are verifying a bundle they
+	// will use the DSSE Sig field, so we choose what signature to send to
+	// the timestamp authority based on our output format.
+	tsaPayload := sig
+	if c.NewBundleFormat {
+		tsaPayload, err = cosign.GetDSSESigBytes(sig)
 		if err != nil {
 			return err
 		}
-		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
-		// TODO: Consider uploading RFC3161 TS to Rekor
-
-		if rfc3161Timestamp == nil {
-			return fmt.Errorf("rfc3161 timestamp is nil")
-		}
-
-		if c.RFC3161TimestampPath != "" {
-			ts, err := json.Marshal(rfc3161Timestamp)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
-				return fmt.Errorf("create RFC3161 timestamp file: %w", err)
-			}
-			fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
-		}
 	}
+	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(tsaPayload, c.KeyOpts)
 
 	signer, err := sv.Bytes(ctx)
 	if err != nil {
@@ -250,6 +206,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return fmt.Errorf("upload to tlog: %w", err)
 	}
 	signedPayload := cosign.LocalSignedPayload{}
+
+	var rekorEntry *models.LogEntryAnon
 	if shouldUpload {
 		rekorClient, err := rekor.NewClient(c.RekorURL)
 		if err != nil {

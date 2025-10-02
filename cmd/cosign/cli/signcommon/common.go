@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -32,8 +33,11 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v3/internal/auth"
 	"github.com/sigstore/cosign/v3/internal/key"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
@@ -388,4 +392,46 @@ func signerFromNewKey() (*SignerVerifier, error) {
 	return &SignerVerifier{
 		SignerVerifier: sv,
 	}, nil
+}
+
+// GetRFC3161Timestamp fetches an RFC3161 timestamp as raw bytes and as a RFC3161Timestamp object.
+// It either returns both objects to be assembled into a bundle by the calling function,
+// or writes the formatted timestamp to the provided file path if not using the new bundle format.
+func GetRFC3161Timestamp(payload []byte, ko options.KeyOpts) ([]byte, *cbundle.RFC3161Timestamp, error) {
+	if ko.TSAServerURL == "" {
+		return nil, nil, nil
+	}
+	if ko.RFC3161TimestampPath == "" && !ko.NewBundleFormat {
+		return nil, nil, fmt.Errorf("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
+	}
+	tc := client.NewTSAClient(ko.TSAServerURL)
+	if ko.TSAClientCert != "" {
+		tc = client.NewTSAClientMTLS(
+			ko.TSAServerURL,
+			ko.TSAClientCACert,
+			ko.TSAClientCert,
+			ko.TSAClientKey,
+			ko.TSAServerName,
+		)
+	}
+	timestampBytes, err := tsa.GetTimestampedSignature(payload, tc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting timestamped signature: %w", err)
+	}
+	rfc3161Timestamp := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
+	if rfc3161Timestamp == nil {
+		return nil, nil, fmt.Errorf("rfc3161 timestamp is nil")
+	}
+	if ko.NewBundleFormat || ko.RFC3161TimestampPath == "" {
+		return timestampBytes, rfc3161Timestamp, nil
+	}
+	ts, err := json.Marshal(rfc3161Timestamp)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshalling timestamp: %w", err)
+	}
+	if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+		return nil, nil, fmt.Errorf("creating RFC3161 timestamp file: %w", err)
+	}
+	fmt.Fprintln(os.Stderr, "RFC3161 timestamp written to file ", ko.RFC3161TimestampPath)
+	return timestampBytes, rfc3161Timestamp, nil
 }

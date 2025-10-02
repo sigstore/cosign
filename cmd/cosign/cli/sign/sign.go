@@ -227,25 +227,13 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return fmt.Errorf("signing: %w", err)
 	}
 
-	var timestampBytes []byte
-	if ko.TSAServerURL != "" {
-		tsaPayload, err := cosign.GetDSSESigBytes(signedPayload)
-		if err != nil {
-			return err
-		}
-		tc := client.NewTSAClient(ko.TSAServerURL)
-		if ko.TSAClientCert != "" {
-			tc = client.NewTSAClientMTLS(ko.TSAServerURL,
-				ko.TSAClientCACert,
-				ko.TSAClientCert,
-				ko.TSAClientKey,
-				ko.TSAServerName,
-			)
-		}
-		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
-		if err != nil {
-			return err
-		}
+	tsaPayload, err := cosign.GetDSSESigBytes(signedPayload)
+	if err != nil {
+		return err
+	}
+	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(tsaPayload, ko)
+	if err != nil {
+		return fmt.Errorf("getting timestamp: %w", err)
 	}
 
 	signerBytes, err := sv.Bytes(ctx)
