@@ -30,6 +30,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio/fulcioverifier"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v3/internal/auth"
 	"github.com/sigstore/cosign/v3/internal/key"
@@ -41,6 +42,8 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -434,4 +437,27 @@ func GetRFC3161Timestamp(payload []byte, ko options.KeyOpts) ([]byte, *cbundle.R
 	}
 	fmt.Fprintln(os.Stderr, "RFC3161 timestamp written to file ", ko.RFC3161TimestampPath)
 	return timestampBytes, rfc3161Timestamp, nil
+}
+
+type tlogUploadFn func(*rekorclient.Rekor, []byte) (*models.LogEntryAnon, error)
+
+// UploadToTlog uploads an entry to rekor v1 and returns the response from rekor.
+func UploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool, rekorBytes []byte, upload tlogUploadFn) (*models.LogEntryAnon, error) {
+	shouldUpload, err := ShouldUploadToTlog(ctx, ko, ref, tlogUpload)
+	if err != nil {
+		return nil, fmt.Errorf("checking upload to tlog: %w", err)
+	}
+	if !shouldUpload {
+		return nil, nil
+	}
+	rekorClient, err := rekor.NewClient(ko.RekorURL)
+	if err != nil {
+		return nil, fmt.Errorf("creating rekor client: %w", err)
+	}
+	entry, err := upload(rekorClient, rekorBytes)
+	if err != nil {
+		return nil, fmt.Errorf("uploading to rekor: %w", err)
+	}
+	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
+	return entry, nil
 }

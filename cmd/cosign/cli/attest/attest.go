@@ -21,14 +21,12 @@ import (
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -45,26 +43,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
-
-type tlogUploadFn func(*client.Rekor, []byte) (*models.LogEntryAnon, error)
-
-func uploadToTlog(ctx context.Context, sv *signcommon.SignerVerifier, rekorURL string, upload tlogUploadFn) (*models.LogEntryAnon, error) {
-	rekorBytes, err := sv.Bytes(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	rekorClient, err := rekor.NewClient(rekorURL)
-	if err != nil {
-		return nil, err
-	}
-	entry, err := upload(rekorClient, rekorBytes)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return entry, nil
-}
 
 // nolint
 type AttestCommand struct {
@@ -232,24 +210,21 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// Add predicateType as manifest annotation
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
 
-	// Check whether we should be uploading to the transparency log
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
+	signerBytes, err := sv.Bytes(ctx)
 	if err != nil {
-		return fmt.Errorf("should upload to tlog: %w", err)
+		return fmt.Errorf("converting signer to bytes: %w", err)
 	}
-	var rekorEntry *models.LogEntryAnon
-	if shouldUpload {
-		rekorEntry, err = uploadToTlog(ctx, sv, c.RekorURL, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-			if c.RekorEntryType == "intoto" {
-				return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
-			} else {
-				return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
-			}
-
-		})
-		if err != nil {
-			return err
+	rekorEntry, err := signcommon.UploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload, signerBytes, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		if c.RekorEntryType == "intoto" {
+			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
+		} else {
+			return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
 		}
+	})
+	if err != nil {
+		return err
+	}
+	if rekorEntry != nil {
 		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
 	}
 
@@ -259,10 +234,6 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.KeyOpts.NewBundleFormat {
-		signerBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return err
-		}
 		pubKey, err := sv.PublicKey()
 		if err != nil {
 			return err

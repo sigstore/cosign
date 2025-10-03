@@ -30,7 +30,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -38,6 +37,7 @@ import (
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -140,27 +140,23 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	digest := payload.Sum(nil)
 
 	signedPayload := cosign.LocalSignedPayload{}
-	var rekorEntry *models.LogEntryAnon
 
 	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(sig, ko)
 	if err != nil {
 		return nil, fmt.Errorf("getting timestamp: %w", err)
 	}
 
-	if shouldUpload {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return nil, err
-		}
-		rekorClient, err := rekor.NewClient(ko.RekorURL)
-		if err != nil {
-			return nil, err
-		}
-		rekorEntry, err = cosign.TLogUploadWithCustomHash(ctx, rekorClient, sig, &payload, rekorBytes)
-		if err != nil {
-			return nil, err
-		}
-		ui.Infof(ctx, "tlog entry created with index: %d", *rekorEntry.LogIndex)
+	signer, err := sv.Bytes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rekorEntry, err := signcommon.UploadToTlog(ctx, ko, nil, shouldUpload, signer, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		return cosign.TLogUploadWithCustomHash(ctx, r, sig, &payload, b)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if rekorEntry != nil {
 		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
 	}
 
@@ -172,10 +168,6 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			var hint string
 			var rawCert []byte
 
-			signer, err := sv.Bytes(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("error getting signer: %w", err)
-			}
 			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 			if err != nil || len(cert) == 0 {
 				pubKey, err := sv.PublicKey()

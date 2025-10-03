@@ -46,6 +46,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
@@ -241,20 +242,11 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return err
 	}
 
-	var rekorEntry *models.LogEntryAnon
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
+	rekorEntry, err := signcommon.UploadToTlog(ctx, ko, digest, signOpts.TlogUpload, signerBytes, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
+	})
 	if err != nil {
-		return fmt.Errorf("should upload to tlog: %w", err)
-	}
-	if shouldUpload {
-		rClient, err := rekor.NewClient(ko.RekorURL)
-		if err != nil {
-			return err
-		}
-		rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rClient, signedPayload, signerBytes)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	regOpts := signOpts.Registry

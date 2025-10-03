@@ -31,13 +31,13 @@ import (
 
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -201,28 +201,19 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	if err != nil {
 		return err
 	}
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
-	if err != nil {
-		return fmt.Errorf("upload to tlog: %w", err)
-	}
 	signedPayload := cosign.LocalSignedPayload{}
 
-	var rekorEntry *models.LogEntryAnon
-	if shouldUpload {
-		rekorClient, err := rekor.NewClient(c.RekorURL)
-		if err != nil {
-			return err
-		}
+	rekorEntry, err := signcommon.UploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload, signer, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		if c.RekorEntryType == "intoto" {
-			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, signer)
+			return cosign.TLogUploadInTotoAttestation(ctx, r, sig, b)
 		} else {
-			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, signer)
+			return cosign.TLogUploadDSSEEnvelope(ctx, r, sig, b)
 		}
-
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *rekorEntry.LogIndex)
+	})
+	if err != nil {
+		return err
+	}
+	if rekorEntry != nil {
 		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
 	}
 
