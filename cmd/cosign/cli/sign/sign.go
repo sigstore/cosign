@@ -39,18 +39,12 @@ import (
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 	"github.com/sigstore/cosign/v3/pkg/types"
-	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/sign"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -192,79 +186,23 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return err
 	}
 
-	if ko.SigningConfig != nil {
-		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
-		if err != nil {
-			return fmt.Errorf("getting keypair and token: %w", err)
-		}
-
-		content := &sign.DSSEData{
-			Data:        payload,
-			PayloadType: "application/vnd.in-toto+json",
-		}
-
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
-		if err != nil {
-			return fmt.Errorf("signing bundle: %w", err)
-		}
-
-		regOpts := signOpts.Registry
-		ociremoteOpts, err := regOpts.ClientOpts(ctx)
-		if err != nil {
-			return fmt.Errorf("constructing client options: %w", err)
-		}
-		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
-	}
-
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer closeSV()
-
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
-	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-	if err != nil {
-		return fmt.Errorf("signing: %w", err)
-	}
-
-	tsaPayload, err := cosign.GetDSSESigBytes(signedPayload)
-	if err != nil {
-		return err
-	}
-	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(tsaPayload, ko)
-	if err != nil {
-		return fmt.Errorf("getting timestamp: %w", err)
-	}
-
-	signerBytes, err := sv.Bytes(ctx)
-	if err != nil {
-		return err
-	}
-
-	rekorEntry, err := signcommon.UploadToTlog(ctx, ko, digest, signOpts.TlogUpload, signerBytes, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
-	})
-	if err != nil {
-		return err
-	}
-
 	regOpts := signOpts.Registry
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
-	pubKey, err := sv.PublicKey()
-	if err != nil {
-		return err
+	if ko.SigningConfig != nil {
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, payload, digest, types.CosignSignPredicateType, "", ko.SigningConfig, ko.TrustedMaterial, ociremoteOpts...)
 	}
 
-	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, signOpts.Cert, signOpts.CertChain, ko, false, signOpts.TlogUpload, payload, digest, "dsse")
 	if err != nil {
-		return err
+		return fmt.Errorf("getting bundle components: %w", err)
 	}
-	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, types.CosignSignPredicateType, ociremoteOpts...)
+	defer closeSV()
+
+	return signcommon.WriteBundle(bundleComponents.SV, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, types.CosignSignPredicateType, ociremoteOpts...)
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,

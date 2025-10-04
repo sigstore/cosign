@@ -41,12 +41,16 @@ import (
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -460,4 +464,108 @@ func UploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, t
 	}
 	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
 	return entry, nil
+}
+
+// WriteBundle compiles a protobuf bundle from components and writes the bundle to the OCI remote layer.
+func WriteBundle(sv *SignerVerifier, rekorEntry *models.LogEntryAnon, payload, signedPayload, signerBytes, timestampBytes []byte, digest name.Digest, predicateType string, ociremoteOpts ...ociremote.Option) error {
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return err
+	}
+	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+	if err != nil {
+		return err
+	}
+	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
+}
+
+// WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
+func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, payload []byte, digest name.Digest, predicateType, bundlePath string, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, ociremoteOpts ...ociremote.Option) error {
+	keypair, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+	if err != nil {
+		return fmt.Errorf("getting keypair and token: %w", err)
+	}
+
+	content := &sign.DSSEData{
+		Data:        payload,
+		PayloadType: "application/vnd.in-toto+json",
+	}
+	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, signingConfig, trustedMaterial)
+	if err != nil {
+		return fmt.Errorf("signing bundle: %w", err)
+	}
+
+	if bundlePath != "" {
+		if err := os.WriteFile(bundlePath, bundle, 0600); err != nil {
+			return fmt.Errorf("creating bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", bundlePath)
+		return nil
+	}
+	return ociremote.WriteAttestationNewBundleFormat(digest, bundle, predicateType, ociremoteOpts...)
+}
+
+type bundleComponents struct {
+	SV               *SignerVerifier
+	SignedPayload    []byte
+	TimestampBytes   []byte
+	RFC3161Timestamp *cbundle.RFC3161Timestamp
+	SignerBytes      []byte
+	RekorEntry       *models.LogEntryAnon
+}
+
+// GetBundleComponents fetches data needed to compose the bundle or disparate verification material for any signing command.
+func GetBundleComponents(ctx context.Context, cert, certChain string, ko options.KeyOpts, noupload, tlogUpload bool, payload []byte, digest name.Reference, rekorEntryType string) (*bundleComponents, func(), error) { //nolint:revive
+	bc := &bundleComponents{}
+	var err error
+	var closeSV func()
+	bc.SV, closeSV, err = GetSignerVerifier(ctx, cert, certChain, ko)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting signer: %w", err)
+	}
+	wrapped := dsse.WrapSigner(bc.SV, types.IntotoPayloadType)
+
+	bc.SignedPayload, err = wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
+	if err != nil {
+		closeSV()
+		return nil, nil, fmt.Errorf("signing: %w", err)
+	}
+	if noupload {
+		return bc, closeSV, nil
+	}
+	// We need to decide what signature to send to the timestamp authority.
+	//
+	// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
+	// Envelope. However, when sigstore clients are verifying a bundle they
+	// will use the DSSE Sig field, so we choose what signature to send to
+	// the timestamp authority based on our output format.
+	tsaPayload := bc.SignedPayload
+	if ko.NewBundleFormat {
+		tsaPayload, err = cosign.GetDSSESigBytes(bc.SignedPayload)
+		if err != nil {
+			closeSV()
+			return nil, nil, fmt.Errorf("getting DSSE signature: %w", err)
+		}
+	}
+	bc.TimestampBytes, bc.RFC3161Timestamp, err = GetRFC3161Timestamp(tsaPayload, ko)
+	if err != nil {
+		closeSV()
+		return nil, nil, fmt.Errorf("getting timestamp: %w", err)
+	}
+	bc.SignerBytes, err = bc.SV.Bytes(ctx)
+	if err != nil {
+		closeSV()
+		return nil, nil, fmt.Errorf("converting signer to bytes: %w", err)
+	}
+	bc.RekorEntry, err = UploadToTlog(ctx, ko, digest, tlogUpload, bc.SignerBytes, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
+		if rekorEntryType == "intoto" {
+			return cosign.TLogUploadInTotoAttestation(ctx, r, bc.SignedPayload, b)
+		}
+		return cosign.TLogUploadDSSEEnvelope(ctx, r, bc.SignedPayload, b)
+	})
+	if err != nil {
+		closeSV()
+		return nil, nil, fmt.Errorf("uploading to tlog: %w", err)
+	}
+	return bc, closeSV, nil
 }

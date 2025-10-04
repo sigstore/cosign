@@ -16,7 +16,6 @@
 package attest
 
 import (
-	"bytes"
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"encoding/json"
@@ -29,7 +28,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
@@ -37,11 +35,6 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
-	"github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/sign"
-	"github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // nolint
@@ -131,43 +124,19 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.SigningConfig != nil {
-		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, c.KeyOpts, c.CertPath, c.CertChainPath)
-		if err != nil {
-			return fmt.Errorf("getting keypair and token: %w", err)
-		}
-
-		content := &sign.DSSEData{
-			Data:        payload,
-			PayloadType: "application/vnd.in-toto+json",
-		}
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
-		if err != nil {
-			return fmt.Errorf("signing bundle: %w", err)
-		}
-
-		ociremoteOpts, err := c.RegistryOptions.ClientOpts(ctx)
-		if err != nil {
-			return err
-		}
-		return ociremote.WriteAttestationNewBundleFormat(digest, bundle, types.CosignSignPredicateType, ociremoteOpts...)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, digest, types.CosignSignPredicateType, "", c.SigningConfig, c.TrustedMaterial, ociremoteOpts...)
 	}
 
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, c.NoUpload, c.TlogUpload, payload, digest, c.RekorEntryType)
 	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
+		return fmt.Errorf("getting bundle components: %w", err)
 	}
 	defer closeSV()
 
-	wrapped := dsse.WrapSigner(sv, types.IntotoPayloadType)
-	dd := cremote.NewDupeDetector(sv)
-
-	signedPayload, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-	if err != nil {
-		return fmt.Errorf("signing: %w", err)
-	}
+	sv := bundleComponents.SV
 
 	if c.NoUpload {
-		fmt.Println(string(signedPayload))
+		fmt.Println(string(bundleComponents.SignedPayload))
 		return nil
 	}
 
@@ -175,28 +144,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if sv.Cert != nil {
 		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
 	}
-	var tsaPayload []byte
-	// We need to decide what signature to send to the timestamp authority.
-	//
-	// Historically, cosign sent `signedPayload`, which is the entire JSON DSSE
-	// Envelope. However, when sigstore clients are verifying a bundle they
-	// will use the DSSE Sig field, so we choose what signature to send to
-	// the timestamp authority based on our output format.
-	if c.KeyOpts.NewBundleFormat {
-		tsaPayload, err = cosign.GetDSSESigBytes(signedPayload)
-		if err != nil {
-			return err
-		}
-	} else {
-		tsaPayload = signedPayload
-	}
-	timestampBytes, rfc3161Timestamp, err := signcommon.GetRFC3161Timestamp(tsaPayload, c.KeyOpts)
-	if err != nil {
-		return fmt.Errorf("getting timestamp: %w", err)
-	}
 
-	if rfc3161Timestamp != nil {
-		opts = append(opts, static.WithRFC3161Timestamp(rfc3161Timestamp))
+	if bundleComponents.RFC3161Timestamp != nil {
+		opts = append(opts, static.WithRFC3161Timestamp(bundleComponents.RFC3161Timestamp))
 	}
 
 	predicateType, err := options.ParsePredicateType(c.PredicateType)
@@ -210,45 +160,19 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	// Add predicateType as manifest annotation
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
 
-	signerBytes, err := sv.Bytes(ctx)
-	if err != nil {
-		return fmt.Errorf("converting signer to bytes: %w", err)
-	}
-	rekorEntry, err := signcommon.UploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload, signerBytes, func(r *client.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		if c.RekorEntryType == "intoto" {
-			return cosign.TLogUploadInTotoAttestation(ctx, r, signedPayload, b)
-		} else {
-			return cosign.TLogUploadDSSEEnvelope(ctx, r, signedPayload, b)
-		}
-	})
-	if err != nil {
-		return err
-	}
-	if rekorEntry != nil {
-		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(rekorEntry)))
-	}
-
-	sig, err := static.NewAttestation(signedPayload, opts...)
-	if err != nil {
-		return err
+	if bundleComponents.RekorEntry != nil {
+		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(bundleComponents.RekorEntry)))
 	}
 
 	if c.KeyOpts.NewBundleFormat {
-		pubKey, err := sv.PublicKey()
-		if err != nil {
-			return err
-		}
-		bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
-		if err != nil {
-			return err
-		}
-		return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
+		return signcommon.WriteBundle(sv, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, predicateType, ociremoteOpts...)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it
 	// so we use a placeholder here.
 	se := ociremote.SignedUnknown(digest, ociremoteOpts...)
 
+	dd := cremote.NewDupeDetector(sv)
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
 		mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
@@ -257,6 +181,11 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if c.Replace {
 		ro := cremote.NewReplaceOp(predicateURI)
 		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
+	}
+
+	sig, err := static.NewAttestation(bundleComponents.SignedPayload, opts...)
+	if err != nil {
+		return err
 	}
 
 	// Attach the attestation to the entity.

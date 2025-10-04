@@ -29,21 +29,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v3/pkg/types"
-	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // nolint
@@ -149,72 +143,21 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, c.KeyOpts, c.CertPath, c.CertChainPath)
-		if err != nil {
-			return fmt.Errorf("getting keypair and token: %w", err)
-		}
-
-		content := &sign.DSSEData{
-			Data:        payload,
-			PayloadType: "application/vnd.in-toto+json",
-		}
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
-		if err != nil {
-			return fmt.Errorf("signing bundle: %w", err)
-		}
-		if err := os.WriteFile(c.BundlePath, bundle, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
-		return nil
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, name.Digest{}, "", c.BundlePath, c.SigningConfig, c.TrustedMaterial, nil)
 	}
 
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, false, c.TlogUpload, payload, nil, c.RekorEntryType)
 	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
+		return fmt.Errorf("getting bundle components: %w", err)
 	}
 	defer closeSV()
 
-	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
+	sv := bundleComponents.SV
 
-	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-	if err != nil {
-		return fmt.Errorf("signing: %w", err)
-	}
-
-	// We need to decide what signature to send to the timestamp authority.
-	//
-	// Historically, cosign sent `sig`, which is the entire JSON DSSE
-	// Envelope. However, when sigstore clients are verifying a bundle they
-	// will use the DSSE Sig field, so we choose what signature to send to
-	// the timestamp authority based on our output format.
-	tsaPayload := sig
-	if c.NewBundleFormat {
-		tsaPayload, err = cosign.GetDSSESigBytes(sig)
-		if err != nil {
-			return err
-		}
-	}
-	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(tsaPayload, c.KeyOpts)
-
-	signer, err := sv.Bytes(ctx)
-	if err != nil {
-		return err
-	}
 	signedPayload := cosign.LocalSignedPayload{}
 
-	rekorEntry, err := signcommon.UploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload, signer, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		if c.RekorEntryType == "intoto" {
-			return cosign.TLogUploadInTotoAttestation(ctx, r, sig, b)
-		} else {
-			return cosign.TLogUploadDSSEEnvelope(ctx, r, sig, b)
-		}
-	})
-	if err != nil {
-		return err
-	}
-	if rekorEntry != nil {
-		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
+	if bundleComponents.RekorEntry != nil {
+		signedPayload.Bundle = cbundle.EntryToBundle(bundleComponents.RekorEntry)
 	}
 
 	if c.BundlePath != "" {
@@ -225,13 +168,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 				return err
 			}
 
-			contents, err = cbundle.MakeNewBundle(pubKey, rekorEntry, payload, sig, signer, timestampBytes)
+			contents, err = cbundle.MakeNewBundle(pubKey, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes)
 			if err != nil {
 				return err
 			}
 		} else {
-			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-			signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
+			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(bundleComponents.SignedPayload)
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(bundleComponents.SignerBytes)
 
 			contents, err = json.Marshal(signedPayload)
 			if err != nil {
@@ -246,12 +189,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.OutputSignature != "" {
-		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
+		if err := os.WriteFile(c.OutputSignature, bundleComponents.SignedPayload, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Signature written in %s\n", c.OutputSignature)
 	} else {
-		fmt.Fprintln(os.Stdout, string(sig))
+		fmt.Fprintln(os.Stdout, string(bundleComponents.SignedPayload))
 	}
 
 	if c.OutputAttestation != "" {
@@ -262,11 +205,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.OutputCertificate != "" {
-		signer, err := sv.Bytes(ctx)
-		if err != nil {
-			return fmt.Errorf("error getting signer: %w", err)
-		}
-		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(bundleComponents.SignerBytes)
 		// signer is a certificate
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Was a certificate used? ", err)
@@ -277,7 +216,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Expected a single certificate")
 			return nil
 		}
-		bts := signer
+		bts := bundleComponents.SignerBytes
 		if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
