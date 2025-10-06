@@ -39,8 +39,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
@@ -222,57 +220,19 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	// Keys are optional!
-	switch {
-	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm)
-		if err != nil {
-			return fmt.Errorf("loading public key: %w", err)
-		}
-		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
-		if ok {
-			defer pkcs11Key.Close()
-		}
-	case c.Sk:
-		sk, err := pivkey.GetKeyWithSlot(c.Slot)
-		if err != nil {
-			return fmt.Errorf("opening piv token: %w", err)
-		}
-		defer sk.Close()
-		co.SigVerifier, err = sk.Verifier()
-		if err != nil {
-			return fmt.Errorf("initializing piv token verifier: %w", err)
-		}
-	case c.CertRef != "":
-		cert, err := loadCertFromFileOrURL(c.CertRef)
-		if err != nil {
-			return err
-		}
-		if c.CertChain == "" {
-			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				return err
-			}
-		} else {
-			chain, err := loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-			if err != nil {
-				return err
-			}
-		}
+	var closeSV func()
+	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	if err != nil {
+		return fmt.Errorf("loading verifier from key opts: %w", err)
+	}
+	defer closeSV()
 
-		if c.SCTRef != "" {
-			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-			if err != nil {
-				return fmt.Errorf("reading sct from file: %w", err)
-			}
-			co.SCT = sct
+	if c.CertRef != "" && c.SCTRef != "" {
+		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+		if err != nil {
+			return fmt.Errorf("reading sct from file: %w", err)
 		}
-	default:
-		// Do nothing. Neither c.KeyRef, c.Sk, nor c.CertRef were set - can happen for example when using Fulcio and TSA.
-		// For an example see the TestAttachWithRFC3161Timestamp test in test/e2e_test.go.
+		co.SCT = sct
 	}
 
 	// NB: There are only 2 kinds of verification right now:

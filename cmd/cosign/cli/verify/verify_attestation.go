@@ -32,12 +32,9 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/cue"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v3/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/policy"
-	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
@@ -137,6 +134,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	if c.TrustedRootPath != "" {
+		if !co.NewBundleFormat {
+			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
+		}
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
 		if err != nil {
 			return fmt.Errorf("loading trusted root: %w", err)
@@ -199,69 +199,20 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		}
 	}
 
-	keyRef := c.KeyRef
-
 	// Keys are optional!
-	switch {
-	case keyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
-		if err != nil {
-			return fmt.Errorf("loading public key: %w", err)
-		}
-		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
-		if ok {
-			defer pkcs11Key.Close()
-		}
-	case c.Sk:
-		sk, err := pivkey.GetKeyWithSlot(c.Slot)
-		if err != nil {
-			return fmt.Errorf("opening piv token: %w", err)
-		}
-		defer sk.Close()
-		co.SigVerifier, err = sk.Verifier()
-		if err != nil {
-			return fmt.Errorf("initializing piv token verifier: %w", err)
-		}
-	case c.CertRef != "":
-		cert, err := loadCertFromFileOrURL(c.CertRef)
-		if err != nil {
-			return fmt.Errorf("loading certificate from reference: %w", err)
-		}
-		if c.CertChain == "" {
-			// If no certChain is passed, the Fulcio root certificate will be used
-			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				return fmt.Errorf("creating certificate verifier: %w", err)
-			}
-		} else {
-			// Verify certificate with chain
-			chain, err := loadCertChainFromFileOrURL(c.CertChain)
-			if err != nil {
-				return err
-			}
-			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-			if err != nil {
-				return fmt.Errorf("creating certificate verifier: %w", err)
-			}
-		}
-		if c.SCTRef != "" {
-			sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-			if err != nil {
-				return fmt.Errorf("reading sct from file: %w", err)
-			}
-			co.SCT = sct
-		}
-	case c.TrustedRootPath != "":
-		if !co.NewBundleFormat {
-			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
-		}
+	var closeSV func()
+	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	if err != nil {
+		return fmt.Errorf("loading verifierfrom key opts: %w", err)
+	}
+	defer closeSV()
 
-		// If a trusted root path is provided, we will use it to verify the bundle.
-		// Otherwise, the verifier will default to the public good instance.
-		// co.TrustedMaterial is already loaded from c.TrustedRootPath above,
-	case c.CARoots != "":
-		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
-		// loadCertsKeylessVerification above.
+	if c.CertRef != "" && c.SCTRef != "" {
+		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
+		if err != nil {
+			return fmt.Errorf("reading sct from file: %w", err)
+		}
+		co.SCT = sct
 	}
 
 	// NB: There are only 2 kinds of verification right now:

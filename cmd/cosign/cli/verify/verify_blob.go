@@ -38,8 +38,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
-	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
@@ -118,34 +116,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	// Keys are optional!
+	var closeSV func()
 	var cert *x509.Certificate
-	opts := make([]static.Option, 0)
-	switch {
-	case c.KeyRef != "":
-		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm)
-		if err != nil {
-			return fmt.Errorf("loading public key: %w", err)
-		}
-		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
-		if ok {
-			defer pkcs11Key.Close()
-		}
-	case c.Sk:
-		sk, err := pivkey.GetKeyWithSlot(c.Slot)
-		if err != nil {
-			return fmt.Errorf("opening piv token: %w", err)
-		}
-		defer sk.Close()
-		co.SigVerifier, err = sk.Verifier()
-		if err != nil {
-			return fmt.Errorf("loading public key from token: %w", err)
-		}
-	case c.CertRef != "":
-		cert, err = loadCertFromFileOrURL(c.CertRef)
-		if err != nil {
-			return err
-		}
+	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
+	if err != nil {
+		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
+	defer closeSV()
 
 	if c.TrustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
@@ -240,6 +217,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 	}
+	opts := make([]static.Option, 0)
 	if c.BundlePath != "" {
 		b, err := cosign.FetchLocalSignedPayloadFromPath(c.BundlePath)
 		if err != nil {
