@@ -163,15 +163,11 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		}
 	}
 
+	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
+		return err
+	}
+
 	if co.NewBundleFormat {
-		if options.NOf(c.RFC3161TimestampPath, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, c.CertRef, c.SigRef, c.SCTRef) > 0 {
-			return fmt.Errorf("when using --new-bundle-format, please supply signed content with --bundle and verification content with --trusted-root")
-		}
-
-		if co.TrustedMaterial == nil {
-			return fmt.Errorf("trusted root is required when using new bundle format")
-		}
-
 		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
 		if err != nil {
 			return err

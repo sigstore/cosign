@@ -172,22 +172,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	if co.NewBundleFormat {
-		if c.CertRef != "" {
-			return fmt.Errorf("unsupported: certificate may not be provided using --certificate when using --new-bundle-format (cert must be in bundle)")
-		}
-		if c.CertChain != "" {
-			return fmt.Errorf("unsupported: certificate chain may not be provided using --certificate-chain when using --new-bundle-format (cert must be in bundle)")
-		}
-		if c.CARoots != "" || c.CAIntermediates != "" {
-			return fmt.Errorf("unsupported: CA roots/intermediates must be provided using --trusted-root when using --new-bundle-format")
-		}
-		if c.TSACertChainPath != "" {
-			return fmt.Errorf("unsupported: TSA certificate chain path may only be provided using --trusted-root when using --new-bundle-format")
-		}
-		if co.TrustedMaterial == nil {
-			return fmt.Errorf("trusted root is required when using new bundle format")
-		}
+	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
+		return err
 	}
 
 	if c.CheckClaims {
@@ -262,10 +248,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
 	case certRef != "":
-		if co.NewBundleFormat {
-			// This shouldn't happen because we already checked for this above in checkSigstoreBundleUnsupportedOptions
-			return fmt.Errorf("unsupported: certificate reference currently not supported with --new-bundle-format")
-		}
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
