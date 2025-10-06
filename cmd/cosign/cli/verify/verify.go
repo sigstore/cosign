@@ -47,7 +47,6 @@ import (
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -214,9 +213,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	keyRef := c.KeyRef
-	certRef := c.CertRef
-
 	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
 	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
 		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
@@ -226,14 +222,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	// Keys are optional!
-	var pubKey signature.Verifier
 	switch {
-	case keyRef != "":
-		pubKey, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, c.HashAlgorithm)
+	case c.KeyRef != "":
+		co.SigVerifier, err = sigs.PublicKeyFromKeyRefWithHashAlgo(ctx, c.KeyRef, c.HashAlgorithm)
 		if err != nil {
 			return fmt.Errorf("loading public key: %w", err)
 		}
-		pkcs11Key, ok := pubKey.(*pkcs11key.Key)
+		pkcs11Key, ok := co.SigVerifier.(*pkcs11key.Key)
 		if ok {
 			defer pkcs11Key.Close()
 		}
@@ -243,50 +238,29 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			return fmt.Errorf("opening piv token: %w", err)
 		}
 		defer sk.Close()
-		pubKey, err = sk.Verifier()
+		co.SigVerifier, err = sk.Verifier()
 		if err != nil {
 			return fmt.Errorf("initializing piv token verifier: %w", err)
 		}
-	case certRef != "":
+	case c.CertRef != "":
 		cert, err := loadCertFromFileOrURL(c.CertRef)
 		if err != nil {
 			return err
 		}
-		switch {
-		case c.CertChain == "" && co.RootCerts == nil:
-			// If no certChain and no CARoots are passed, the Fulcio root certificate will be used
-			if co.TrustedMaterial == nil {
-				co.RootCerts, err = fulcio.GetRoots()
-				if err != nil {
-					return fmt.Errorf("getting Fulcio roots: %w", err)
-				}
-				co.IntermediateCerts, err = fulcio.GetIntermediates()
-				if err != nil {
-					return fmt.Errorf("getting Fulcio intermediates: %w", err)
-				}
-			}
-			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
+		if c.CertChain == "" {
+			co.SigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
 			if err != nil {
 				return err
 			}
-		case c.CertChain != "":
-			// Verify certificate with chain
+		} else {
 			chain, err := loadCertChainFromFileOrURL(c.CertChain)
 			if err != nil {
 				return err
 			}
-			pubKey, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
+			co.SigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
 			if err != nil {
 				return err
 			}
-		case co.RootCerts != nil:
-			// Verify certificate with root (and if given, intermediate) certificate
-			pubKey, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.New("no certificate chain provided to verify certificate")
 		}
 
 		if c.SCTRef != "" {
@@ -297,10 +271,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			co.SCT = sct
 		}
 	default:
-		// Do nothing. Neither keyRef, c.Sk, nor certRef were set - can happen for example when using Fulcio and TSA.
+		// Do nothing. Neither c.KeyRef, c.Sk, nor c.CertRef were set - can happen for example when using Fulcio and TSA.
 		// For an example see the TestAttachWithRFC3161Timestamp test in test/e2e_test.go.
 	}
-	co.SigVerifier = pubKey
 
 	// NB: There are only 2 kinds of verification right now:
 	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
