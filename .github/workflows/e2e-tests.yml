@@ -104,7 +104,7 @@ jobs:
           persist-credentials: false
 
       - name: setup vault
-        uses: cpanato/vault-installer@e7c1d664fa15219e89e43739e39a9df11ba00849 # v1.2.0
+        uses: cpanato/vault-installer@f7e2ad9737b49f351f233eba2df1bdfede939a21 # v1.3.0
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
@@ -149,7 +149,7 @@ jobs:
         cache: false
 
     - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@8e97c1fc72515d627456cb0b92e9c9f299356375 # v1.5.2
+      uses: chainguard-dev/actions/setup-mirror@6f4f4de7549514e7b659741b30f6476f245600dd # v1.5.3
       with:
         mirror: mirror.gcr.io
 
@@ -239,4 +239,4 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@8e97c1fc72515d627456cb0b92e9c9f299356375 # v1.5.2
+      uses: chainguard-dev/actions/kind-diag@6f4f4de7549514e7b659741b30f6476f245600dd # v1.5.3
