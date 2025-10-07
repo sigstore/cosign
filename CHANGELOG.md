@@ -1,3 +1,13 @@
+# v3.0.1
+
+v3.0.1 is an equivalent release to v3.0.0, which was never published due to a failure in our CI workflows.
+
+* Note that the `--bundle` flag specifying an output file to write the Sigstore bundle (which contains all relevant verification material) has moved from optional to required in v3.
+
+## Changes
+
+* update goreleaser config for v3.0.0 release (#4446)
+
 # v3.0.0
 
 Announcing the next major release of Cosign!
