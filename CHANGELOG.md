@@ -1,3 +1,25 @@
+# v3.0.0
+
+Announcing the next major release of Cosign!
+
+Cosign v3 is a minor change from Cosign v2.6.x, with all of the new capabilities of recent
+releases **on by default**, but will still allow you to disable them if you need the older functionality.
+These new features include support for the standardized bundle format (`--new-bundle-fomat`), providing roots
+of trust for verification and service URLs for signing via one file (`--trusted-root`, `--signing-config`),
+and container signatures stored as an OCI Image 1.1 referring artifact.
+
+Learn more on our [v3 announcement blog post](https://blog.sigstore.dev/cosign-3-0-available/)! See
+the changelogs for [v2.6.0](#v260), [v2.5.0](#v250), and [v2.4.0](#v240) for more information on recent
+changes.
+
+If you have any feedback, please reach out on Slack or file an issue on GitHub.
+
+## Changes
+
+* Default to using the new protobuf format (#4318)
+* Fetch service URLs from the TUF PGI signing config by default (#4428)
+* Bump module version to v3 for Cosign v3.0 (#4427)
+
 # v2.6.1
 
 ## Bug Fixes
