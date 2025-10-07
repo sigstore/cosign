@@ -30,11 +30,9 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/cue"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/policy"
-	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -132,23 +130,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	if c.TrustedRootPath != "" {
-		if !co.NewBundleFormat {
-			return fmt.Errorf("unsupported: trusted root path currently only supported with --new-bundle-format")
-		}
-		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
-		if err != nil {
-			return fmt.Errorf("loading trusted root: %w", err)
-		}
-	} else if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) == 0 &&
-		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
-		env.Getenv(env.VariableSigstoreRootFile) == "" &&
-		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
-		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
-		co.TrustedMaterial, err = cosign.TrustedRoot()
-		if err != nil {
-			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-		}
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, co)
+	if err != nil {
+		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
 	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {

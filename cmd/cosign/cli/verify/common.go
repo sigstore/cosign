@@ -20,11 +20,15 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	csignature "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -150,6 +154,30 @@ func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, k
 	if keylessVerification {
 		if err := loadCertsKeylessVerification(certChain, caRoots, caIntermediates, co); err != nil {
 			return fmt.Errorf("loading certs for keyless verification: %w", err)
+		}
+	}
+	return nil
+}
+
+// SetTrustedMaterial sets TrustedMaterial on CheckOpts, either from the provided trusted root path or from TUF.
+// It does not set TrustedMaterial if the user provided trusted material via other flags or environment variables.
+func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots, caIntermediates, tsaCertChainPath string, co *cosign.CheckOpts) error {
+	var err error
+	if trustedRootPath != "" {
+		co.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+		return nil
+	}
+	if options.NOf(certChain, caRoots, caIntermediates, tsaCertChainPath) == 0 &&
+		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
+		env.Getenv(env.VariableSigstoreRootFile) == "" &&
+		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
+		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
+		co.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 		}
 	}
 	return nil

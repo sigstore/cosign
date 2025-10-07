@@ -37,12 +37,10 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
@@ -151,21 +149,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	if c.TrustedRootPath != "" {
-		co.TrustedMaterial, err = root.NewTrustedRootFromPath(c.TrustedRootPath)
-		if err != nil {
-			return fmt.Errorf("loading trusted root: %w", err)
-		}
-	} else if options.NOf(c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath) == 0 &&
-		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
-		env.Getenv(env.VariableSigstoreRootFile) == "" &&
-		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
-		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
-		// don't overrule the user's intentions if they provided their own keys
-		co.TrustedMaterial, err = cosign.TrustedRoot()
-		if err != nil {
-			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-		}
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, co)
+	if err != nil {
+		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
 	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
