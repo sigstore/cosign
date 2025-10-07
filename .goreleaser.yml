@@ -153,28 +153,21 @@ builds:
 
 signs:
   - id: cosign
-    signature: "${artifact}.sig"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}.sig", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${artifact}.sigstore.json", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
     artifacts: binary
   # Keyless
   - id: cosign-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${artifact}.sigstore.json", "${artifact}"]
     artifacts: binary
   - id: checksum-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${artifact}.sigstore.json", "${artifact}"]
     artifacts: checksum
   - id: packages-keyless
-    signature: "${artifact}-keyless.sig"
-    certificate: "${artifact}-keyless.pem"
     cmd: ./dist/cosign-linux-amd64
-    args: ["sign-blob", "--output-signature", "${artifact}-keyless.sig", "--output-certificate", "${artifact}-keyless.pem", "${artifact}"]
+    args: ["sign-blob", "--bundle", "${artifact}.sigstore.json", "${artifact}"]
     artifacts: package
 
 nfpms:
