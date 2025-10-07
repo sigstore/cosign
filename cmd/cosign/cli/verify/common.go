@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
@@ -108,4 +109,48 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 		return sigVerifier, nil, func() {}, nil
 	}
 	return nil, nil, func() {}, nil
+}
+
+// SetLegacyClientsAndKeys sets up TSA and rekor clients and keys for TSA, rekor, and CT log.
+// It may perform an online fetch of keys, so using trusted root instead of these TUF v1 methos is recommended.
+// It takes a CheckOpts as input and modifies it.
+func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, keylessVerification bool, rekorURL, tsaCertChain, certChain, caRoots, caIntermediates string, co *cosign.CheckOpts) error {
+	var err error
+	if !ignoreTlog && !co.NewBundleFormat && rekorURL != "" {
+		co.RekorClient, err = rekor.NewClient(rekorURL)
+		if err != nil {
+			return fmt.Errorf("creating rekor client: %w", err)
+		}
+	}
+	// If trusted material is set, we don't need to fetch disparate keys.
+	if co.TrustedMaterial != nil {
+		return nil
+	}
+	if co.UseSignedTimestamps {
+		tsaCertificates, err := cosign.GetTSACerts(ctx, tsaCertChain, cosign.GetTufTargets)
+		if err != nil {
+			return fmt.Errorf("loading TSA certificates: %w", err)
+		}
+		co.TSACertificate = tsaCertificates.LeafCert
+		co.TSARootCertificates = tsaCertificates.RootCert
+		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
+	}
+	if !ignoreTlog {
+		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting rekor public keys: %w", err)
+		}
+	}
+	if shouldVerifySCT {
+		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ctlog public keys: %w", err)
+		}
+	}
+	if keylessVerification {
+		if err := loadCertsKeylessVerification(certChain, caRoots, caIntermediates, co); err != nil {
+			return fmt.Errorf("loading certs for keyless verification: %w", err)
+		}
+	}
+	return nil
 }

@@ -32,7 +32,6 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	cosignError "github.com/sigstore/cosign/v3/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -177,46 +176,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.ClaimVerifier = cosign.SimpleClaimVerifier
 	}
 
-	// If we are using signed timestamps and there is no trusted root, we need to load the TSA certificates
-	if co.UseSignedTimestamps && co.TrustedMaterial == nil && !co.NewBundleFormat {
-		tsaCertificates, err := cosign.GetTSACerts(ctx, c.TSACertChainPath, cosign.GetTufTargets)
-		if err != nil {
-			return fmt.Errorf("unable to load TSA certificates: %w", err)
-		}
-		co.TSACertificate = tsaCertificates.LeafCert
-		co.TSARootCertificates = tsaCertificates.RootCert
-		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
-	}
-
-	if !c.IgnoreTlog && !co.NewBundleFormat {
-		if c.RekorURL != "" {
-			rekorClient, err := rekor.NewClient(c.RekorURL)
-			if err != nil {
-				return fmt.Errorf("creating Rekor client: %w", err)
-			}
-			co.RekorClient = rekorClient
-		}
-		if co.TrustedMaterial == nil {
-			// This performs an online fetch of the Rekor public keys, but this is needed
-			// for verifying tlog entries (both online and offline).
-			co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-			if err != nil {
-				return fmt.Errorf("getting Rekor public keys: %w", err)
-			}
-		}
-	}
-	if co.TrustedMaterial == nil && keylessVerification(c.KeyRef, c.Sk) {
-		if err := loadCertsKeylessVerification(c.CertChain, c.CARoots, c.CAIntermediates, co); err != nil {
-			return err
-		}
-	}
-
-	// Ignore Signed Certificate Timestamp if the flag is set or a key is provided
-	if co.TrustedMaterial == nil && shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk) {
-		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting ctlog public keys: %w", err)
-		}
+	err = SetLegacyClientsAndKeys(ctx, c.IgnoreTlog, shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk), keylessVerification(c.KeyRef, c.Sk), c.RekorURL, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, co)
+	if err != nil {
+		return fmt.Errorf("setting up clients and keys: %w", err)
 	}
 
 	// Keys are optional!
