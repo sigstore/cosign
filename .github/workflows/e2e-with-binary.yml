@@ -66,23 +66,7 @@ jobs:
         run: |
           set -e
           make cosign
-          ./cosign sign-blob --output-certificate certificate.pem --output-signature README.md.sig README.md
-
-          if [ -s certificate.pem ]
-          then
-            echo "all good for key.pem"
-          else
-            echo "file does not exist, or is empty"
-            exit 1
-          fi
-
-          if [ -s README.md.sig ]
-          then
-            exit 0
-          else
-            echo "file does not exist, or is empty"
-            exit 1
-          fi
+          ./cosign sign-blob --bundle sigstore.json --yes README.md
 
           # Verify with sign-blob
-          ./cosign verify-blob README.md --certificate certificate.pem --signature README.md.sig
+          ./cosign verify-blob --bundle sigstore.json --certificate-identity-regexp ".*" --certificate-oidc-issuer-regexp ".*" README.md

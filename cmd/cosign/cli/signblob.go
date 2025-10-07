@@ -129,15 +129,15 @@ func SignBlob() *cobra.Command {
 					}
 				}
 			}
-			if o.UseSigningConfig {
-				ko.SigningConfig, err = cosign.SigningConfig()
-				if err != nil {
-					return fmt.Errorf("error getting signing config from TUF: %w", err)
-				}
-			} else if o.SigningConfigPath != "" {
+			if o.SigningConfigPath != "" {
 				ko.SigningConfig, err = root.NewSigningConfigFromPath(o.SigningConfigPath)
 				if err != nil {
 					return fmt.Errorf("error reading signing config from file: %w", err)
+				}
+			} else if o.UseSigningConfig {
+				ko.SigningConfig, err = cosign.SigningConfig()
+				if err != nil {
+					return fmt.Errorf("error getting signing config from TUF: %w", err)
 				}
 			}
 
