@@ -16,15 +16,11 @@
 package sign
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/internal/ui"
 )
 
 // TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
@@ -44,27 +40,6 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 		err := SignCmd(ro, ko, so, nil)
 		if (errors.Is(err, &options.KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
-		}
-	}
-}
-
-func Test_ParseOCIReference(t *testing.T) {
-	var tests = []struct {
-		ref             string
-		expectedWarning string
-	}{
-		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
-		{"image:bytag@sha256:abcdef", ""},
-		{"image:@sha256:abcdef", ""},
-	}
-	for _, tt := range tests {
-		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-			ParseOCIReference(ctx, tt.ref)
-		})
-		if len(tt.expectedWarning) > 0 {
-			assert.Contains(t, stderr, tt.expectedWarning, stderr, "bad warning message")
-		} else {
-			assert.Empty(t, stderr, "expected no warning")
 		}
 	}
 }

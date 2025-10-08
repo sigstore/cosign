@@ -62,18 +62,6 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 	return nil, fmt.Errorf("unknown attachment type %s", attachment)
 }
 
-// ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
-func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) (name.Reference, error) {
-	ref, err := name.ParseReference(refStr, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("parsing reference: %w", err)
-	}
-	if _, ok := ref.(name.Digest); !ok {
-		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
-	}
-	return ref, nil
-}
-
 // nolint
 func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
 	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
@@ -109,7 +97,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	}
 	annotations := am.Annotations
 	for _, inputImg := range imgs {
-		ref, err := ParseOCIReference(ctx, inputImg, regOpts.NameOptions()...)
+		ref, err := signcommon.ParseOCIReference(ctx, inputImg, regOpts.NameOptions()...)
 		if err != nil {
 			return err
 		}

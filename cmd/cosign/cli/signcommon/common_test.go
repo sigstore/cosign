@@ -26,8 +26,10 @@ import (
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/internal/test"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/stretchr/testify/assert"
 )
 
 func pass(s string) cosign.PassFunc {
@@ -178,5 +180,26 @@ func Test_signerFromKeyRefFailureEmptyChainFile(t *testing.T) {
 	_, err = signerFromKeyRef(ctx, certFile, tmpChainFile.Name(), keyFile, pass("foo"), nil)
 	if err == nil || err.Error() != "no certificates in certificate chain" {
 		t.Fatalf("expected empty chain error, got %v", err)
+	}
+}
+
+func Test_ParseOCIReference(t *testing.T) {
+	var tests = []struct {
+		ref             string
+		expectedWarning string
+	}{
+		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
+		{"image:bytag@sha256:abcdef", ""},
+		{"image:@sha256:abcdef", ""},
+	}
+	for _, tt := range tests {
+		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+			ParseOCIReference(ctx, tt.ref)
+		})
+		if len(tt.expectedWarning) > 0 {
+			assert.Contains(t, stderr, tt.expectedWarning, stderr, "bad warning message")
+		} else {
+			assert.Empty(t, stderr, "expected no warning")
+		}
 	}
 }

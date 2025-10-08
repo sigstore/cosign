@@ -22,12 +22,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
@@ -73,13 +71,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return err
 	}
-	ref, err := name.ParseReference(imageRef, c.NameOptions()...)
+	ref, err := signcommon.ParseOCIReference(ctx, imageRef, c.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing reference: %w", err)
-	}
-	if _, ok := ref.(name.Digest); !ok {
-		msg := fmt.Sprintf(ui.TagReferenceMessage, imageRef)
-		ui.Warnf(ctx, msg)
 	}
 
 	if c.Timeout != 0 {

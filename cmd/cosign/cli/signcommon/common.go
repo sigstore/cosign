@@ -569,3 +569,15 @@ func GetBundleComponents(ctx context.Context, cert, certChain string, ko options
 	}
 	return bc, closeSV, nil
 }
+
+// ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
+func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) (name.Reference, error) {
+	ref, err := name.ParseReference(refStr, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("parsing reference: %w", err)
+	}
+	if _, ok := ref.(name.Digest); !ok {
+		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
+	}
+	return ref, nil
+}
