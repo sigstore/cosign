@@ -161,17 +161,17 @@ signs:
   - id: cosign-keyless
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
-    signature: "${artifact}.sigstore.json"
+    signature: "${artifact}-keyless.sigstore.json"
     artifacts: binary
   - id: checksum-keyless
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
-    signature: "${artifact}.sigstore.json"
+    signature: "${artifact}-keyless.sigstore.json"
     artifacts: checksum
   - id: packages-keyless
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--bundle", "${signature}", "${artifact}"]
-    signature: "${artifact}.sigstore.json"
+    signature: "${artifact}-keyless.sigstore.json"
     artifacts: package
 
 nfpms:
