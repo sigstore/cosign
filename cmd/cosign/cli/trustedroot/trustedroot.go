@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/rekor-tiles/pkg/note"
+	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
