@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,25 +29,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
-	cosign_sign "github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v3/internal/auth"
-	"github.com/sigstore/cosign/v3/internal/key"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	tsaclient "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
-	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v3/pkg/types"
-	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	sigstoredsse "github.com/sigstore/sigstore/pkg/signature/dsse"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // nolint
@@ -92,10 +81,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		var cancelFn context.CancelFunc
 		ctx, cancelFn = context.WithTimeout(ctx, c.Timeout)
 		defer cancelFn()
-	}
-
-	if c.TSAServerURL != "" && c.RFC3161TimestampPath == "" && !c.NewBundleFormat {
-		return errors.New("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
 	}
 
 	base := path.Base(artifactPath)
@@ -158,161 +143,21 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		var keypair sign.Keypair
-		var ephemeralKeypair bool
-		var idToken string
-		var sv *cosign_sign.SignerVerifier
-		var err error
-
-		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
-			sv, _, err = cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
-			if err != nil {
-				return fmt.Errorf("getting signer: %w", err)
-			}
-			keypair, err = key.NewSignerVerifierKeypair(sv, c.DefaultLoadOptions)
-			if err != nil {
-				return fmt.Errorf("creating signerverifier keypair: %w", err)
-			}
-		} else {
-			keypair, err = sign.NewEphemeralKeypair(nil)
-			if err != nil {
-				return fmt.Errorf("generating keypair: %w", err)
-			}
-			ephemeralKeypair = true
-		}
-		defer func() {
-			if sv != nil {
-				sv.Close()
-			}
-		}()
-
-		if ephemeralKeypair || c.IssueCertificateForExistingKey {
-			idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
-				TokenOrPath:      c.IDToken,
-				DisableProviders: c.OIDCDisableProviders,
-				Provider:         c.OIDCProvider,
-				AuthFlow:         c.FulcioAuthFlow,
-				SkipConfirm:      c.SkipConfirmation,
-				OIDCServices:     c.SigningConfig.OIDCProviderURLs(),
-				ClientID:         c.OIDCClientID,
-				ClientSecret:     c.OIDCClientSecret,
-				RedirectURL:      c.OIDCRedirectURL,
-			})
-			if err != nil {
-				return fmt.Errorf("retrieving ID token: %w", err)
-			}
-		}
-
-		content := &sign.DSSEData{
-			Data:        payload,
-			PayloadType: "application/vnd.in-toto+json",
-		}
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, c.SigningConfig, c.TrustedMaterial)
-		if err != nil {
-			return fmt.Errorf("signing bundle: %w", err)
-		}
-		if err := os.WriteFile(c.BundlePath, bundle, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
-		return nil
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, name.Digest{}, "", c.BundlePath, c.SigningConfig, c.TrustedMaterial, nil)
 	}
 
-	sv, genKey, err := cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
+	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, false, c.TlogUpload, payload, nil, c.RekorEntryType)
 	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
+		return fmt.Errorf("getting bundle components: %w", err)
 	}
-	if genKey || c.IssueCertificateForExistingKey {
-		sv, err = cosign_sign.KeylessSigner(ctx, c.KeyOpts, sv)
-		if err != nil {
-			return fmt.Errorf("getting Fulcio signer: %w", err)
-		}
-	}
-	defer sv.Close()
-	wrapped := sigstoredsse.WrapSigner(sv, types.IntotoPayloadType)
+	defer closeSV()
 
-	sig, err := wrapped.SignMessage(bytes.NewReader(payload), signatureoptions.WithContext(ctx))
-	if err != nil {
-		return fmt.Errorf("signing: %w", err)
-	}
+	sv := bundleComponents.SV
 
-	var rfc3161Timestamp *cbundle.RFC3161Timestamp
-	var timestampBytes []byte
-	var tsaPayload []byte
-	var rekorEntry *models.LogEntryAnon
-
-	if c.KeyOpts.TSAServerURL != "" {
-		tc := tsaclient.NewTSAClient(c.KeyOpts.TSAServerURL)
-		if c.TSAClientCert != "" {
-			tc = tsaclient.NewTSAClientMTLS(c.KeyOpts.TSAServerURL,
-				c.KeyOpts.TSAClientCACert,
-				c.KeyOpts.TSAClientCert,
-				c.KeyOpts.TSAClientKey,
-				c.KeyOpts.TSAServerName,
-			)
-		}
-		// We need to decide what signature to send to the timestamp authority.
-		//
-		// Historically, cosign sent `sig`, which is the entire JSON DSSE
-		// Envelope. However, when sigstore clients are verifying a bundle they
-		// will use the DSSE Sig field, so we choose what signature to send to
-		// the timestamp authority based on our output format.
-		if c.NewBundleFormat {
-			tsaPayload, err = cosign.GetDSSESigBytes(sig)
-			if err != nil {
-				return err
-			}
-		} else {
-			tsaPayload = sig
-		}
-		timestampBytes, err = tsa.GetTimestampedSignature(tsaPayload, tc)
-		if err != nil {
-			return err
-		}
-		rfc3161Timestamp = cbundle.TimestampToRFC3161Timestamp(timestampBytes)
-		// TODO: Consider uploading RFC3161 TS to Rekor
-
-		if rfc3161Timestamp == nil {
-			return fmt.Errorf("rfc3161 timestamp is nil")
-		}
-
-		if c.RFC3161TimestampPath != "" {
-			ts, err := json.Marshal(rfc3161Timestamp)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
-				return fmt.Errorf("create RFC3161 timestamp file: %w", err)
-			}
-			fmt.Fprintln(os.Stderr, "RFC3161 timestamp bundle written to file ", c.RFC3161TimestampPath)
-		}
-	}
-
-	signer, err := sv.Bytes(ctx)
-	if err != nil {
-		return err
-	}
-	shouldUpload, err := cosign_sign.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
-	if err != nil {
-		return fmt.Errorf("upload to tlog: %w", err)
-	}
 	signedPayload := cosign.LocalSignedPayload{}
-	if shouldUpload {
-		rekorClient, err := rekor.NewClient(c.RekorURL)
-		if err != nil {
-			return err
-		}
-		if c.RekorEntryType == "intoto" {
-			rekorEntry, err = cosign.TLogUploadInTotoAttestation(ctx, rekorClient, sig, signer)
-		} else {
-			rekorEntry, err = cosign.TLogUploadDSSEEnvelope(ctx, rekorClient, sig, signer)
-		}
 
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(os.Stderr, "tlog entry created with index:", *rekorEntry.LogIndex)
-		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
+	if bundleComponents.RekorEntry != nil {
+		signedPayload.Bundle = cbundle.EntryToBundle(bundleComponents.RekorEntry)
 	}
 
 	if c.BundlePath != "" {
@@ -323,13 +168,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 				return err
 			}
 
-			contents, err = cbundle.MakeNewBundle(pubKey, rekorEntry, payload, sig, signer, timestampBytes)
+			contents, err = cbundle.MakeNewBundle(pubKey, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes)
 			if err != nil {
 				return err
 			}
 		} else {
-			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-			signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
+			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(bundleComponents.SignedPayload)
+			signedPayload.Cert = base64.StdEncoding.EncodeToString(bundleComponents.SignerBytes)
 
 			contents, err = json.Marshal(signedPayload)
 			if err != nil {
@@ -344,12 +189,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.OutputSignature != "" {
-		if err := os.WriteFile(c.OutputSignature, sig, 0600); err != nil {
+		if err := os.WriteFile(c.OutputSignature, bundleComponents.SignedPayload, 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Signature written in %s\n", c.OutputSignature)
 	} else {
-		fmt.Fprintln(os.Stdout, string(sig))
+		fmt.Fprintln(os.Stdout, string(bundleComponents.SignedPayload))
 	}
 
 	if c.OutputAttestation != "" {
@@ -360,11 +205,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.OutputCertificate != "" {
-		signer, err := sv.Bytes(ctx)
-		if err != nil {
-			return fmt.Errorf("error getting signer: %w", err)
-		}
-		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+		cert, err := cryptoutils.UnmarshalCertificatesFromPEM(bundleComponents.SignerBytes)
 		// signer is a certificate
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Was a certificate used? ", err)
@@ -375,7 +216,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			fmt.Fprintln(os.Stderr, "Could not output signer certificate. Expected a single certificate")
 			return nil
 		}
-		bts := signer
+		bts := bundleComponents.SignerBytes
 		if err := os.WriteFile(c.OutputCertificate, bts, 0600); err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
