@@ -28,6 +28,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -141,7 +142,9 @@ type CheckOpts struct {
 
 	// SignatureRef is the reference to the signature file. PayloadRef should always be specified as well (though it’s possible for a _some_ signatures to be verified without it, with a warning).
 	SignatureRef string
-	// PayloadRef is a reference to the payload file. Applicable only if SignatureRef is set.
+	// AttestationRef is the reference to the attestation file for experimental OCI 1.1 verification. PayloadRef should always be specified as well.
+	AttestationRef string
+	// PayloadRef is a reference to the payload file. Applicable only if SignatureRef or AttestationRef is set.
 	PayloadRef string
 
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
@@ -610,6 +613,96 @@ func (fos *fakeOCISignatures) Get() ([]oci.Signature, error) {
 	return fos.signatures, nil
 }
 
+// processOCI11AttestationRef processes a single OCI 1.1 attestation reference
+// and returns the oci.Signature objects contained within it.
+func processOCI11AttestationRef(result v1.Descriptor, repository name.Repository, registryOpts []ociremote.Option) ([]oci.Signature, error) {
+	// Get the attestation manifest
+	attRef, err := name.ParseReference(fmt.Sprintf("%s@%s", repository, result.Digest.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the signed image to access layers containing DSSE envelope
+	signedImg, err := ociremote.SignedImage(attRef, registryOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the layers (should contain the DSSE envelope)
+	layers, err := signedImg.Layers()
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the DSSE envelope from the first layer
+	if len(layers) == 0 {
+		return nil, errors.New("no layers found")
+	}
+
+	layer := layers[0] // Attestations typically have one layer with the DSSE envelope
+	rc, err := layer.Uncompressed()
+	if err != nil {
+		return nil, err
+	}
+
+	dsseEnvelope, err := io.ReadAll(rc)
+	rc.Close() // Close immediately after reading
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the DSSE envelope to extract payload and signature
+	var envelope struct {
+		Payload     string `json:"payload"`
+		PayloadType string `json:"payloadType"`
+		Signatures  []struct {
+			Keyid string `json:"keyid"`
+			Sig   string `json:"sig"`
+		} `json:"signatures"`
+	}
+
+	if err := json.Unmarshal(dsseEnvelope, &envelope); err != nil {
+		return nil, err
+	}
+
+	// Fix the payloadType if it's empty - this is required for verification
+	if envelope.PayloadType == "" {
+		envelope.PayloadType = types.IntotoPayloadType
+
+		// Re-marshal the envelope with the correct payloadType
+		dsseEnvelope, err = json.Marshal(envelope)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(envelope.Signatures) == 0 {
+		return nil, errors.New("no signatures found")
+	}
+
+	// Follow cosign's existing pattern: reject multiple signatures
+	// This is consistent with how cosign handles DSSE envelopes elsewhere
+	if len(envelope.Signatures) > 1 {
+		return nil, errors.New("multiple signatures not supported")
+	}
+
+	// Use the single signature
+	signature := envelope.Signatures[0]
+
+	// Create annotations with the required signature annotation
+	annotations := map[string]string{
+		"dev.cosignproject.cosign/signature": signature.Sig,
+	}
+
+	// Create a signature with the DSSE envelope as-is
+	sig, err := static.NewSignature(dsseEnvelope, signature.Sig, static.WithAnnotations(annotations))
+	if err != nil {
+		return nil, err
+	}
+
+	return []oci.Signature{sig}, nil
+}
+
 // VerifyImageSignatures does all the main cosign checks in a loop, returning the verified signatures.
 // If there were no valid signatures, we return an error.
 // Note that if co.ExperimentlOCI11 is set, we will attempt to verify
@@ -1011,6 +1104,52 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 	}, nil
 }
 
+// loadAttestationFromFile loads an attestation from a file or URL, similar to loadSignatureFromFile.
+// This is used when AttestationRef is specified in CheckOpts for experimental OCI 1.1 verification.
+func loadAttestationFromFile(ctx context.Context, attRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
+	var b64att string
+	targetAtt, err := blob.LoadFileOrURL(attRef)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		targetAtt = []byte(attRef)
+	}
+
+	_, err = base64.StdEncoding.DecodeString(string(targetAtt))
+
+	if err == nil {
+		b64att = string(targetAtt)
+	} else {
+		b64att = base64.StdEncoding.EncodeToString(targetAtt)
+	}
+
+	var payload []byte
+	if co.PayloadRef != "" {
+		payload, err = blob.LoadFileOrURL(co.PayloadRef)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, err
+		}
+		payload, err = ObsoletePayload(ctx, digest)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	att, err := static.NewSignature(payload, b64att)
+	if err != nil {
+		return nil, err
+	}
+	return &fakeOCISignatures{
+		signatures: []oci.Signature{att},
+	}, nil
+}
+
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
@@ -1018,6 +1157,15 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
 		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
 	}
+
+	// Try first using OCI 1.1 behavior if experimental flag is set.
+	if co.ExperimentalOCI11 {
+		verified, bundleVerified, err := verifyImageAttestationsExperimentalOCI(ctx, signedImgRef, co)
+		if err == nil {
+			return verified, bundleVerified, nil
+		}
+	}
+
 	if co.NewBundleFormat {
 		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co)
 	}
@@ -1616,6 +1764,78 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	}
 
 	return verifySignatures(ctx, sigs, h, co)
+}
+
+// verifyImageAttestationsExperimentalOCI verifies attestations using OCI 1.1+ Referrers API for discovery.
+// This function discovers attestations using the OCI 1.1 Referrers API instead of legacy tag-based discovery,
+// then uses the existing verification pipeline.
+func verifyImageAttestationsExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	// This is a carefully optimized sequence for fetching the attestations of the
+	// entity that minimizes registry requests when supplied with a digest input
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+
+	var atts oci.Signatures
+
+	if co.AttestationRef == "" {
+		// Use OCI 1.1 Referrers API to find attestations instead of legacy .att tags
+		index, err := ociremote.Referrers(digest, "", co.RegistryClientOpts...)
+		if err != nil {
+			return nil, false, err
+		}
+
+		// Filter for attestation artifact types (in-toto related)
+		var attestationResults []v1.Descriptor
+		for _, manifest := range index.Manifests {
+			if strings.Contains(manifest.ArtifactType, "in-toto") {
+				attestationResults = append(attestationResults, manifest)
+			}
+		}
+
+		numResults := len(attestationResults)
+		if numResults == 0 {
+			return nil, false, fmt.Errorf("unable to locate attestation references")
+		} else if numResults > 1 {
+			// TODO: if there is more than 1 result.. what does that even mean?
+			// Note: Multiple attestation references found, processing all of them
+		}
+
+		// Process all OCI 1.1 attestation references and collect signatures
+		var allSigs []oci.Signature
+		for _, result := range attestationResults {
+			sigs, err := processOCI11AttestationRef(result, digest.Repository, co.RegistryClientOpts)
+			if err != nil {
+				continue
+			}
+			allSigs = append(allSigs, sigs...)
+		}
+
+		if len(allSigs) == 0 {
+			return nil, false, fmt.Errorf("no signatures found in OCI 1.1 attestation references")
+		}
+
+		// Use the existing fakeOCISignatures wrapper
+		atts = &fakeOCISignatures{signatures: allSigs}
+	} else {
+		if co.PayloadRef == "" {
+			return nil, false, errors.New("payload is required with a manually-provided attestation")
+		}
+		// For file-based attestations, use the existing logic
+		atts, err = loadAttestationFromFile(ctx, co.AttestationRef, signedImgRef, co)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	// Use the existing verification pipeline - this handles all the DSSE parsing,
+	// signature verification, error handling, etc.
+	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
 func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
