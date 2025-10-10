@@ -98,6 +98,9 @@ func AttestBlob() *cobra.Command {
 					o.TSAServerURL != "") {
 				return fmt.Errorf("cannot specify service URLs and use signing config")
 			}
+			if (o.UseSigningConfig || o.SigningConfigPath != "") && !o.TlogUpload {
+				return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config without a transparency log service")
+			}
 			// Signing config requires a bundle as output for verification materials since sigstore-go is used
 			if (o.UseSigningConfig || o.SigningConfigPath != "") && o.BundlePath == "" {
 				return fmt.Errorf("must provide --bundle with --signing-config or --use-signing-config")
