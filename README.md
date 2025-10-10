@@ -141,6 +141,14 @@ The following checks were performed on these signatures:
 
 ### Verify a container in an air-gapped environment
 
+**Note:** This section is out of date.
+
+**Note:** Most verification workflows require periodically requesting service keys from a TUF repository.
+For airgapped verification of signatures using the public-good instance, you will need to retrieve the
+[trusted root](https://github.com/sigstore/root-signing/blob/main/targets/trusted_root.json) file from the production
+TUF repository. The contents of this file will change without notification. By not using TUF, you will need
+to build your own mechanism to keep your airgapped copy of this file up-to-date.
+
 Cosign can do completely offline verification by verifying a [bundle](./specs/SIGNATURE_SPEC.md#properties) which is typically distributed as an annotation on the image manifest.
 As long as this annotation is present, then offline verification can be done.
 This bundle annotation is always included by default for keyless signing, so the default `cosign sign` functionality will include all materials needed for offline verification.
