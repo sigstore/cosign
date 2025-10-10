@@ -85,7 +85,6 @@ cosign verify-blob [flags]
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
       --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle (default true)
-      --offline                                         only allow offline verification
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string                        path to RFC3161 timestamp FILE
