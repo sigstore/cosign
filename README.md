@@ -763,4 +763,4 @@ process](https://github.com/sigstore/.github/blob/main/SECURITY.md)
 
 ## Bundle files in GitHub Release Assets
 
-The GitHub release assets for cosign contain Sigstore bundle files produced by [GoReleaser](https://github.com/sigstore/cosign/blob/ac999344eb381ae91455b0a9c5c267e747608d76/.goreleaser.yml#L166) while signing the cosign blob that is used to verify the integrity of the release binaries. This file is not used by cosign itself, but is provided for users who wish to verify the integrity of the release binaries.
+The GitHub release assets for `cosign` contain Sigstore bundle files produced by [GoReleaser](https://github.com/sigstore/cosign/blob/ac999344eb381ae91455b0a9c5c267e747608d76/.goreleaser.yml#L166) while signing the cosign blob that is used to verify the integrity of the release binaries. This file is not used by cosign itself, but is provided for users who wish to [verify the integrity of the release binaries](https://docs.sigstore.dev/cosign/system_config/installation/#verifying-cosign-with-artifact-key).
