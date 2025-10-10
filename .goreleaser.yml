@@ -155,7 +155,7 @@ signs:
   - id: cosign
     cmd: ./dist/cosign-linux-amd64
     args: ["sign-blob", "--bundle", "${signature}", "--key", "gcpkms://projects/{{ .Env.PROJECT_ID }}/locations/{{ .Env.KEY_LOCATION }}/keyRings/{{ .Env.KEY_RING }}/cryptoKeys/{{ .Env.KEY_NAME }}/versions/{{ .Env.KEY_VERSION }}", "${artifact}"]
-    signature: "${artifact}.sigstore.json"
+    signature: "${artifact}-kms.sigstore.json"
     artifacts: binary
   # Keyless
   - id: cosign-keyless
