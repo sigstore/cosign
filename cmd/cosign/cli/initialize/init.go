@@ -86,6 +86,12 @@ func doInitialize(ctx context.Context, root, mirror, rootChecksum string, forceS
 		return fmt.Errorf("storing remote: %w", err)
 	}
 
+	// Cache the signing config from the TUF repository
+	_, err = tufroot.FetchSigningConfigWithOptions(opts)
+	if err != nil {
+		ui.Warnf(ctx, "Could not fetch signing_config.json from the TUF mirror (encountered error: %v). It is recommended to use a signing config file rather than provide service URLs when signing.", err)
+	}
+	// Cache the trusted root from the TUF repository
 	trustedRoot, err := tufroot.NewLiveTrustedRoot(opts)
 	if err != nil {
 		ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF mirror (encountered error: %v), falling back to individual targets. It is recommended to update your TUF metadata repository to include trusted_root.json.", err)
