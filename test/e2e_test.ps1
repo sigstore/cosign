@@ -35,7 +35,7 @@ $signing_key = "cosign.key"
 $verification_key = "cosign.pub"
 
 Write-Output "hello world" | Out-File -FilePath "hello_world.txt"
-Write-Output $pass | .\cosign.exe sign-blob --key $signing_key --bundle test.sigstore.json --tlog-upload=false hello_world.txt
+Write-Output $pass | .\cosign.exe sign-blob --key $signing_key --bundle test.sigstore.json --use-signing-config=false --tlog-upload=false hello_world.txt
 .\cosign.exe verify-blob --key $verification_key --bundle test.sigstore.json --insecure-ignore-tlog=true hello_world.txt
 
 Pop-Location

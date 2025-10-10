@@ -91,7 +91,6 @@ cosign attest [flags]
       --timestamp-client-key string                                                              path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
       --timestamp-server-name string                                                             SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
-      --tlog-upload                                                                              whether or not to upload to the tlog (default true)
       --trusted-root string                                                                      optional path to a TrustedRoot JSON file to verify a signature after signing
       --type string                                                                              specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
       --use-signing-config                                                                       whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format (default true)
