@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -164,11 +165,14 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		var err error
 
 		if c.Sk || c.Slot != "" || c.KeyRef != "" || c.CertPath != "" {
+			// Set no load options so that Ed25519 is preferred over Ed25519ph, required for signing DSSEs
+			var signOpts []signature.LoadOption
+			c.KeyOpts.DefaultLoadOptions = &signOpts
 			sv, _, err = cosign_sign.SignerFromKeyOpts(ctx, c.CertPath, c.CertChainPath, c.KeyOpts)
 			if err != nil {
 				return fmt.Errorf("getting signer: %w", err)
 			}
-			keypair, err = key.NewSignerVerifierKeypair(sv, c.DefaultLoadOptions)
+			keypair, err = key.NewSignerVerifierKeypair(sv, &signOpts)
 			if err != nil {
 				return fmt.Errorf("creating signerverifier keypair: %w", err)
 			}

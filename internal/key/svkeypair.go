@@ -125,13 +125,20 @@ func (k *SignerVerifierKeypair) GetPublicKeyPem() (string, error) {
 
 // SignData signs the given data with the SignerVerifier.
 func (k *SignerVerifierKeypair) SignData(ctx context.Context, data []byte) ([]byte, []byte, error) {
-	h := k.sigAlg.GetHashType().New()
-	h.Write(data)
-	digest := h.Sum(nil)
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx), signatureoptions.WithDigest(digest)}
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+
+	hf := k.sigAlg.GetHashType()
+	dataToSign := data
+	// RSA, ECDSA, and Ed25519ph sign a digest, while pure Ed25519's interface takes data and hashes during signing
+	if hf != crypto.Hash(0) {
+		hasher := hf.New()
+		hasher.Write(data)
+		dataToSign = hasher.Sum(nil)
+		sOpts = append(sOpts, signatureoptions.WithDigest(dataToSign))
+	}
 	sig, err := k.sv.SignMessage(bytes.NewReader(data), sOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
-	return sig, digest, nil
+	return sig, dataToSign, nil
 }

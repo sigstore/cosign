@@ -26,6 +26,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -63,7 +64,11 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		if err != nil {
 			log.Fatal(err)
 		}
-		verifier, err := signature.LoadDefaultVerifier(pubKey)
+		var verifierOpts []signature.LoadOption
+		if _, ok := content.(*sign.PlainData); ok {
+			verifierOpts = append(verifierOpts, options.WithED25519ph())
+		}
+		verifier, err := signature.LoadDefaultVerifier(pubKey, verifierOpts...)
 		if err != nil {
 			log.Fatal(err)
 		}
