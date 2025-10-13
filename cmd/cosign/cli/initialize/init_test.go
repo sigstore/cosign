@@ -155,13 +155,16 @@ func TestDoInitialize(t *testing.T) {
 		expectV2   bool
 	}{
 		{
-			name:       "tuf v2 with trusted root",
-			targets:    map[string][]byte{"trusted_root.json": []byte(`{"mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1"}`)},
+			name: "tuf v2 with trusted root and signing config",
+			targets: map[string][]byte{
+				"trusted_root.json":        []byte(`{"mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1"}`),
+				"signing_config.v0.2.json": []byte(`{"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json"}`),
+			},
 			root:       "1.root.json",
 			wantStdOut: "",
 			wantStdErr: "",
 			wantErr:    false,
-			wantFiles:  []string{filepath.Join("targets", "trusted_root.json")},
+			wantFiles:  []string{filepath.Join("targets", "trusted_root.json"), filepath.Join("targets", "signing_config.v0.2.json")},
 			expectV2:   true,
 		},
 		{
