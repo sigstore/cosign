@@ -78,7 +78,6 @@ cosign dockerfile verify [flags]
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
       --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle (default true)
-      --offline                                                                                  only allow offline verification
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --payload string                                                                           payload path or remote URL
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
