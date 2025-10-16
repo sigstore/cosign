@@ -1041,6 +1041,9 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if err != nil {
 		return nil, false, err
 	}
+	if atts == nil {
+		return nil, false, errors.New("unable to find attestations")
+	}
 
 	return VerifyImageAttestation(ctx, atts, h, co)
 }
@@ -1087,6 +1090,9 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	atts, err := se.Attestations()
 	if err != nil {
 		return nil, false, err
+	}
+	if atts == nil {
+		return nil, false, errors.New("unable to find attestations")
 	}
 	return VerifyImageAttestation(ctx, atts, h, co)
 }
