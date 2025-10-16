@@ -82,7 +82,7 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	return pemBytes, nil
 }
 
-func getEphemeralKeypairOptions(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*sign.EphemeralKeypairOptions, error) {
+func getEphemeralKeypairOptions(signingAlgorithm string) (*sign.EphemeralKeypairOptions, error) {
 	keyDetails, err := ParseSignatureAlgorithmFlag(signingAlgorithm)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
@@ -112,7 +112,7 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 			return nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
 		}
 	} else {
-		ephemeralKeypairOptions, err := getEphemeralKeypairOptions(ko.SigningAlgorithm, ko.DefaultLoadOptions)
+		ephemeralKeypairOptions, err := getEphemeralKeypairOptions(ko.SigningAlgorithm)
 		if err != nil {
 			return nil, "", fmt.Errorf("getting ephemeral keypair options: %w", err)
 		}
