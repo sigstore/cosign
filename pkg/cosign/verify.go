@@ -1041,9 +1041,6 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	if err != nil {
 		return nil, false, err
 	}
-	if atts == nil {
-		return nil, false, errors.New("unable to find attestations")
-	}
 
 	return VerifyImageAttestation(ctx, atts, h, co)
 }
@@ -1091,9 +1088,6 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	if err != nil {
 		return nil, false, err
 	}
-	if atts == nil {
-		return nil, false, errors.New("unable to find attestations")
-	}
 	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
@@ -1103,6 +1097,9 @@ func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co
 }
 
 func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	if atts == nil {
+		return nil, false, errors.New("no attestations provided")
+	}
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
