@@ -196,16 +196,26 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
 	annotations map[string]interface{}, se oci.SignedEntity) error {
 	var err error
+	var payloads [][]byte
 	// The payload can be passed to skip generation.
 	if len(payload) == 0 {
-		payload, err = (&sigPayload.Cosign{
-			Image:           digest,
-			ClaimedIdentity: signOpts.SignContainerIdentity,
-			Annotations:     annotations,
-		}).MarshalJSON()
-		if err != nil {
-			return fmt.Errorf("payload: %w", err)
+		identities := signOpts.SignContainerIdentities
+		if len(identities) == 0 {
+			identities = append(identities, "")
 		}
+		for _, identity := range identities {
+			payload, err = (&sigPayload.Cosign{
+				Image:           digest,
+				ClaimedIdentity: identity,
+				Annotations:     annotations,
+			}).MarshalJSON()
+			if err != nil {
+				return fmt.Errorf("payload: %w", err)
+			}
+			payloads = append(payloads, payload)
+		}
+	} else {
+		payloads = append(payloads, payload)
 	}
 
 	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
@@ -246,14 +256,21 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		s = irekor.NewSigner(s, rClient)
 	}
 
-	ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
+	ociSigs := make([]oci.Signature, len(payloads))
+	b64sigs := make([]string, len(payloads))
 
-	b64sig, err := ociSig.Base64Signature()
-	if err != nil {
-		return err
+	for i, payload := range payloads {
+		ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))
+		if err != nil {
+			return err
+		}
+		ociSigs[i] = ociSig
+
+		b64sig, err := ociSig.Base64Signature()
+		if err != nil {
+			return err
+		}
+		b64sigs[i] = b64sig
 	}
 
 	outputSignature := signOpts.OutputSignature
@@ -262,7 +279,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		if signOpts.Recursive {
 			outputSignature = fmt.Sprintf("%s-%s", outputSignature, strings.Replace(digest.DigestStr(), ":", "-", 1))
 		}
-		if err := os.WriteFile(outputSignature, []byte(b64sig), 0600); err != nil {
+		if err := os.WriteFile(outputSignature, []byte(strings.Join(b64sigs, "\n")), 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
 	}
@@ -272,7 +289,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		if signOpts.Recursive {
 			outputPayload = fmt.Sprintf("%s-%s", outputPayload, strings.Replace(digest.DigestStr(), ":", "-", 1))
 		}
-		if err := os.WriteFile(outputPayload, payload, 0600); err != nil {
+		if err := os.WriteFile(outputPayload, bytes.Join(payloads, []byte("\n")), 0600); err != nil {
 			return fmt.Errorf("create payload file: %w", err)
 		}
 	}
@@ -291,16 +308,20 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if ko.BundlePath != "" {
-		signedPayload, err := fetchLocalSignedPayload(ociSig)
-		if err != nil {
-			return fmt.Errorf("failed to fetch signed payload: %w", err)
-		}
+		var contents [][]byte
+		for _, ociSig := range ociSigs {
+			signedPayload, err := fetchLocalSignedPayload(ociSig)
+			if err != nil {
+				return fmt.Errorf("failed to fetch signed payload: %w", err)
+			}
 
-		contents, err := json.Marshal(signedPayload)
-		if err != nil {
-			return fmt.Errorf("failed to marshal signed payload: %w", err)
+			content, err := json.Marshal(signedPayload)
+			if err != nil {
+				return fmt.Errorf("failed to marshal signed payload: %w", err)
+			}
+			contents = append(contents, content)
 		}
-		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
+		if err := os.WriteFile(ko.BundlePath, bytes.Join(contents, []byte("\n")), 0600); err != nil {
 			return fmt.Errorf("create bundle file: %w", err)
 		}
 		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
@@ -311,9 +332,13 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Attach the signature to the entity.
-	newSE, err := mutate.AttachSignatureToEntity(se, ociSig, mutate.WithDupeDetector(dd), mutate.WithRecordCreationTimestamp(signOpts.RecordCreationTimestamp))
-	if err != nil {
-		return err
+	var newSE oci.SignedEntity
+	for _, ociSig := range ociSigs {
+		newSE, err = mutate.AttachSignatureToEntity(se, ociSig, mutate.WithDupeDetector(dd), mutate.WithRecordCreationTimestamp(signOpts.RecordCreationTimestamp))
+		if err != nil {
+			return err
+		}
+		se = newSE
 	}
 
 	// Publish the signatures associated with this entity

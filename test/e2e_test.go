@@ -3883,3 +3883,41 @@ func getOIDCToken() (string, error) {
 	}
 	return string(body), nil
 }
+
+func TestSignVerifyMultipleIdentities(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
+
+	// Now sign the image with multiple container identities
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:                  true,
+		TlogUpload:              true,
+		SignContainerIdentities: []string{"registry/cosign-e2e:tag1", "registry/cosign-e2e:tag2"},
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Now verify should work
+	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
+}
