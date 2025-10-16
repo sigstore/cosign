@@ -39,10 +39,10 @@ This will enable you to point cosign to a separate TUF root.
 Any updated TUF repository will be written to $HOME/.sigstore/root/.
 
 Trusted keys and certificate used in cosign verification (e.g. verifying Fulcio issued certificates
-with Fulcio root CA) are pulled form the trusted metadata.`,
-		Example: `cosign initialize --mirror <url> --out <file>
+with Fulcio root CA) are pulled from the trusted metadata.`,
+		Example: `cosign initialize --mirror <url>
 
-# initialize root with distributed root keys, default mirror, and default out path.
+# initialize root with distributed root keys, using the default mirror.
 cosign initialize
 
 # initialize with an out-of-band root key file, using the default mirror.
