@@ -1,3 +1,53 @@
+# v3.0.2
+
+v3.0.2 is a functionally equivalent release to v3.0.0 and v3.0.1, with a fix for CI to publish signed releases in the new bundle format.
+
+* Note that the `--bundle` flag specifying an output file to write the Sigstore bundle (which contains all relevant verification material) has moved from optional to required in v3.
+
+## Changes
+
+* choose different signature filename for KMS-signed release signatures (#4448)
+* Update rekor-tiles version path (#4450)
+
+# v3.0.1
+
+v3.0.1 is an equivalent release to v3.0.0, which was never published due to a failure in our CI workflows.
+
+* Note that the `--bundle` flag specifying an output file to write the Sigstore bundle (which contains all relevant verification material) has moved from optional to required in v3.
+
+## Changes
+
+* update goreleaser config for v3.0.0 release (#4446)
+
+# v3.0.0
+
+Announcing the next major release of Cosign!
+
+Cosign v3 is a minor change from Cosign v2.6.x, with all of the new capabilities of recent
+releases **on by default**, but will still allow you to disable them if you need the older functionality.
+These new features include support for the standardized bundle format (`--new-bundle-fomat`), providing roots
+of trust for verification and service URLs for signing via one file (`--trusted-root`, `--signing-config`),
+and container signatures stored as an OCI Image 1.1 referring artifact.
+
+Learn more on our [v3 announcement blog post](https://blog.sigstore.dev/cosign-3-0-available/)! See
+the changelogs for [v2.6.0](#v260), [v2.5.0](#v250), and [v2.4.0](#v240) for more information on recent
+changes.
+
+If you have any feedback, please reach out on Slack or file an issue on GitHub.
+
+## Changes
+
+* Default to using the new protobuf format (#4318)
+* Fetch service URLs from the TUF PGI signing config by default (#4428)
+* Bump module version to v3 for Cosign v3.0 (#4427)
+
+# v2.6.1
+
+## Bug Fixes
+
+* Partially populate the output of cosign verify when working with new bundles (#4416)
+* Bump sigstore-go, move conformance back to tagged release (#4426)
+
 # v2.6.0
 
 v2.6.0 introduces a number of new features, including:
