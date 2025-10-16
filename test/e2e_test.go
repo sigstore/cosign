@@ -41,8 +41,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/stretchr/testify/assert"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -3882,4 +3884,99 @@ func getOIDCToken() (string, error) {
 		return "", err
 	}
 	return string(body), nil
+}
+
+func TestSignVerifyWithRepoOverride(t *testing.T) {
+	cosignRepo := env.Getenv(env.VariableRepository)
+	if cosignRepo == "" {
+		t.Skip("Skipping COSIGN_REPOSITORY test because a second repository and COSIGN_REPOSITORY must be set up")
+	}
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	name, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	digest, err := crane.Digest(name.String())
+	must(err, t)
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	// Verify should fail at first
+	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
+
+	// No artifacts yet in the second registry
+	_, err = crane.ListTags(cosignRepo)
+	mustErr(err, t)
+
+	// Only one tag in the first registry
+	tags, err := crane.ListTags(name.String())
+	must(err, t)
+	assert.Len(t, tags, 1, "expected 1 tag in the first repo")
+	assert.Equal(t, tags[0], "latest", "expected tag name to be 'latest'")
+
+	// Now sign the image
+
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+
+	so := options.SignOptions{
+		Upload:     true,
+		TlogUpload: true,
+	}
+
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Bundle should appear in the second repo
+	tags, err = crane.ListTags(cosignRepo)
+	must(err, t)
+	assert.Len(t, tags, 1, "expected 1 signature tag in the second repo")
+	expectedTagName := fmt.Sprintf("%s.sig", strings.ReplaceAll(digest, ":", "-"))
+	assert.Equal(t, tags[0], expectedTagName, "expected signature tag to match sha256-<digest>.sig")
+	// but not in the first repo
+	tags, err = crane.ListTags(name.String())
+	must(err, t)
+	assert.Len(t, tags, 1, "expected no extra tags in the first repo")
+	assert.Equal(t, tags[0], "latest", "expected tag name to be 'latest'")
+
+	// Now verify and download should work!
+	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
+
+	// Sign another image with the new protobuf bundle format
+	so.NewBundleFormat = true
+	must(sign.SignCmd(ro, ko, so, []string{name.String()}), t)
+
+	// The new bundle should appear under a new tag for the second repo
+	tags, err = crane.ListTags(cosignRepo)
+	must(err, t)
+	assert.Len(t, tags, 2, "expected new tag in the second repo")
+	expectedTagName = strings.ReplaceAll(digest, ":", "-")
+	assert.Equal(t, tags[0], expectedTagName, "expected new tag to match referrers format")
+	// but not in the first repo
+	tags, err = crane.ListTags(name.String())
+	must(err, t)
+	assert.Len(t, tags, 1, "expected no extra tags in the first repo")
+	assert.Equal(t, tags[0], "latest", "expected tag name to be 'latest'")
+
+	// Verify should work with new bundle format
+	cmd := cliverify.VerifyCommand{
+		KeyRef:          pubKeyPath,
+		RekorURL:        rekorURL,
+		NewBundleFormat: true,
+	}
+
+	ctx := context.Background()
+	must(cmd.Exec(ctx, []string{imgName}), t)
 }

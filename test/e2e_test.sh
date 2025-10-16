@@ -111,14 +111,24 @@ go test -tags=e2e -v -race ./test/...
 
 # Test on a private registry
 echo "testing sign/verify/clean on private registry"
-cleanup() {
+cleanup_registry() {
     cleanup_services
     docker rm -f registry
 }
-trap cleanup EXIT
+trap cleanup_registry EXIT
 docker run -d -p 5000:5000 --restart always -e REGISTRY_STORAGE_DELETE_ENABLED=true --name registry registry:latest
 export COSIGN_TEST_REPO=localhost:5000
 go test -tags=e2e -v ./test/... -run TestSignVerifyClean
+
+# Test with signature in separate registry
+cleanup() {
+    cleanup_registry
+    docker rm -f registry-2
+}
+trap cleanup EXIT
+docker run -d -p 5001:5000 --restart always -e REGISTRY_STORAGE_DELETE_ENABLED=true --name registry-2 registry:latest
+export COSIGN_REPOSITORY=localhost:5001/hello
+go test -tags=e2e -v ./test/... -run TestSignVerifyWithRepoOverride
 
 # Run the built container to make sure it doesn't crash
 make ko-local

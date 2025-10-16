@@ -249,7 +249,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 	if err != nil {
 		return fmt.Errorf("failed to calculate size: %w", err)
 	}
-	err = remoteWriteLayer(d.Repository, configLayer, o.ROpt...)
+	err = remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...)
 	if err != nil {
 		return fmt.Errorf("failed to upload layer: %w", err)
 	}
@@ -269,7 +269,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			return fmt.Errorf("failed to calculate size: %w", err)
 		}
 
-		err = remoteWriteLayer(d.Repository, layer, o.ROpt...)
+		err = remoteWriteLayer(o.TargetRepository, layer, o.ROpt...)
 		if err != nil {
 			return fmt.Errorf("failed to upload layer: %w", err)
 		}
@@ -299,7 +299,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 		Annotations: annotations,
 	}, artifactType}
 
-	targetRef, err := manifest.targetRef(d.Repository)
+	targetRef, err := manifest.targetRef(o.TargetRepository)
 	if err != nil {
 		return fmt.Errorf("failed to create target reference: %w", err)
 	}
