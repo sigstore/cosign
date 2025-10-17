@@ -1507,7 +1507,7 @@ func TestAttestationDownload(t *testing.T) {
 
 	// Call download.AttestationCmd() to ensure success
 	attOpts := options.AttestationDownloadOptions{}
-	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
 
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
 	if err != nil {
@@ -1603,7 +1603,7 @@ func TestAttestationDownloadWithPredicateType(t *testing.T) {
 	attOpts := options.AttestationDownloadOptions{
 		PredicateType: "vuln",
 	}
-	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
 
 	predicateType, _ := options.ParsePredicateType(attOpts.PredicateType)
 	attestations, err := cosign.FetchAttestationsForReference(ctx, ref, predicateType, ociremoteOpts...)
@@ -1653,7 +1653,7 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 	attOpts := options.AttestationDownloadOptions{
 		PredicateType: "vuln",
 	}
-	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName), t)
+	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
 }
 
 func TestAttestationReplaceCreate(t *testing.T) {
@@ -3215,6 +3215,60 @@ func TestSaveLoadAttestation(t *testing.T) {
 	// Success case (local)
 	verifyAttestation.LocalImage = true
 	must(verifyAttestation.Exec(ctx, []string{imageDir}), t)
+}
+
+func TestDownloadAttachNewBundle(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "attach-download-new-bundle")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// Download should fail before attesting
+	ctx := context.Background()
+	regOpts := options.RegistryOptions{}
+	attOpts := options.AttestationDownloadOptions{}
+	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
+
+	// Attest first image
+	td := t.TempDir()
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, NewBundleFormat: true}
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	attestCommand := attest.AttestCommand{
+		KeyOpts:        ko,
+		PredicatePath:  slsaAttestationPath,
+		PredicateType:  "slsaprovenance",
+		RekorEntryType: "dsse",
+	}
+
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	// Download should now succeed - redirect stdout to use with attach
+	out := bytes.Buffer{}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, &out), t)
+
+	// Create a new image to attach to
+	img2Name := path.Join(repo, "attach-download-new-bundle-2")
+	_, _, cleanup = mkimage(t, img2Name)
+	defer cleanup()
+
+	bundlePath := filepath.Join(td, "downloaded-bundle.sigstore.json")
+	if err := os.WriteFile(bundlePath, out.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	must(attach.AttestationCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
+
+	// Download should succeed on second image
+	must(download.AttestationCmd(ctx, regOpts, attOpts, img2Name, os.Stdout), t)
 }
 
 func TestAttachSBOM(t *testing.T) {

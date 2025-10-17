@@ -34,6 +34,20 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 	if err != nil {
 		return err
 	}
+
+	// Try bundles first
+	newBundles, _, err := cosign.GetBundles(ctx, ref, ociremoteOpts)
+	if err == nil && len(newBundles) > 0 {
+		for _, eachBundle := range newBundles {
+			b, err := json.Marshal(eachBundle)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(b))
+		}
+		return nil
+	}
+
 	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremoteOpts...)
 	if err != nil {
 		return err
