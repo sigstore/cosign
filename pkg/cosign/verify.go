@@ -1097,6 +1097,9 @@ func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co
 }
 
 func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	if atts == nil {
+		return nil, false, errors.New("no attestations provided")
+	}
 	sl, err := atts.Get()
 	if err != nil {
 		return nil, false, err
