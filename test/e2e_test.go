@@ -109,7 +109,7 @@ func TestSignVerify(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
 	// So should download
-	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Now sign the image
 	ko := options.KeyOpts{
@@ -126,7 +126,7 @@ func TestSignVerify(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
-	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Ensure it verifies if you default to the new protobuf bundle format
 	cmd := cliverify.VerifyCommand{
@@ -175,7 +175,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", true), t)
 	// So should download
-	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Now sign the image
 	ko := options.KeyOpts{
@@ -195,7 +195,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, nil, "", ignoreTlog), t)
 	// verification with certificate chain instead of root/intermediate files should work as well
 	must(verifyCertChain(pubKeyPath, certChainFile, certFile, imgName, true, nil, "", ignoreTlog), t)
-	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Look for a specific annotation
 	mustErr(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
@@ -246,7 +246,7 @@ func TestSignVerifyClean(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
-	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Now clean signature from the given image
 	must(cli.CleanCmd(ctx, options.RegistryOptions{}, "all", imgName, true), t)
@@ -288,7 +288,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
-	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Now clean signature from the given image
 	must(cli.CleanCmd(ctx, options.RegistryOptions{}, "all", imgName, true), t)
@@ -2505,7 +2505,7 @@ func TestDuplicateSign(t *testing.T) {
 	// Verify should fail at first
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", true), t)
 	// So should download
-	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	mustErr(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Now sign the image
 	ko := options.KeyOpts{
@@ -2520,7 +2520,7 @@ func TestDuplicateSign(t *testing.T) {
 	// Now verify and download should work!
 	// Ignore the tlog, because uploading to the tlog causes new signatures with new timestamp entries to be appended.
 	must(verify(pubKeyPath, imgName, true, nil, "", true), t)
-	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName), t)
+	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Signing again should work just fine...
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
@@ -3217,11 +3217,11 @@ func TestSaveLoadAttestation(t *testing.T) {
 	must(verifyAttestation.Exec(ctx, []string{imageDir}), t)
 }
 
-func TestDownloadAttachNewBundle(t *testing.T) {
+func TestAttestDownloadAttachNewBundle(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
 
-	imgName := path.Join(repo, "attach-download-new-bundle")
+	imgName := path.Join(repo, "attest-new-bundle")
 	_, _, cleanup := mkimage(t, imgName)
 	defer cleanup()
 
@@ -3256,7 +3256,7 @@ func TestDownloadAttachNewBundle(t *testing.T) {
 	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, &out), t)
 
 	// Create a new image to attach to
-	img2Name := path.Join(repo, "attach-download-new-bundle-2")
+	img2Name := path.Join(repo, "attest-new-bundle-2")
 	_, _, cleanup = mkimage(t, img2Name)
 	defer cleanup()
 
@@ -3269,6 +3269,49 @@ func TestDownloadAttachNewBundle(t *testing.T) {
 
 	// Download should succeed on second image
 	must(download.AttestationCmd(ctx, regOpts, attOpts, img2Name, os.Stdout), t)
+}
+
+func TestSignDownloadAttachNewBundle(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "sign-new-bundle")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// Download should fail before attesting
+	ctx := context.Background()
+	regOpts := options.RegistryOptions{}
+	mustErr(download.SignatureCmd(ctx, regOpts, imgName, os.Stdout), t)
+
+	// Sign first image
+	td := t.TempDir()
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	so := options.SignOptions{
+		NewBundleFormat: true,
+	}
+
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Download should now succeed - redirect stdout to use with attach
+	out := bytes.Buffer{}
+	must(download.SignatureCmd(ctx, regOpts, imgName, &out), t)
+
+	// Create a new image to attach to
+	img2Name := path.Join(repo, "sign-new-bundle-2")
+	_, _, cleanup = mkimage(t, img2Name)
+	defer cleanup()
+
+	bundlePath := filepath.Join(td, "downloaded-bundle.sigstore.json")
+	if err := os.WriteFile(bundlePath, out.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	must(attach.SignatureCmd(ctx, regOpts, "", bundlePath, "", "", "", "", img2Name), t)
+
+	// Download should succeed on second image
+	must(download.SignatureCmd(ctx, regOpts, img2Name, os.Stdout), t)
 }
 
 func TestAttachSBOM(t *testing.T) {

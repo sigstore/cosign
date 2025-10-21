@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -106,7 +105,10 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(b))
+		_, err = out.Write(append(b, byte('\n')))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

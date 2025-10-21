@@ -30,16 +30,10 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, payloadRef, certRef, certChainRef, timeStampedSigRef, rekorBundleRef, imageRef string) error {
-	b64SigBytes, err := signatureBytes(sigRef)
-	if err != nil {
-		return err
-	} else if len(b64SigBytes) == 0 {
-		return errors.New("empty signature")
-	}
-
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
@@ -52,10 +46,12 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	if err != nil {
 		return err
 	}
-	// Overwrite "ref" with a digest to avoid a race where we use a tag
-	// multiple times, and it potentially points to different things at
-	// each access.
-	ref = digest // nolint
+
+	// Detect if we are using new bundle format
+	b, err := sgbundle.LoadJSONFromPath(payloadRef)
+	if err == nil {
+		return attachAttestationNewBundle(ociremoteOpts, b, digest)
+	}
 
 	var payload []byte
 	if payloadRef == "" {
@@ -65,6 +61,13 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 	}
 	if err != nil {
 		return err
+	}
+
+	b64SigBytes, err := signatureBytes(sigRef)
+	if err != nil {
+		return err
+	} else if len(b64SigBytes) == 0 {
+		return errors.New("empty signature")
 	}
 
 	sig, err := static.NewSignature(payload, string(b64SigBytes))
