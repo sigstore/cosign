@@ -18,14 +18,14 @@ package download
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) error {
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
@@ -43,7 +43,10 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 			if err != nil {
 				return err
 			}
-			fmt.Println(string(b))
+			_, err = out.Write(append(b, byte('\n')))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -57,7 +60,10 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(b))
+		_, err = out.Write(append(b, byte('\n')))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
