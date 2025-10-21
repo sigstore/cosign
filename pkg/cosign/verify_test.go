@@ -1648,6 +1648,12 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 }
 
+func TestVerifyImageAttestation(t *testing.T) {
+	if _, _, err := VerifyImageAttestation(context.TODO(), nil, v1.Hash{}, nil); err == nil {
+		t.Error("VerifyImageAttestation() should error when given nil attestations")
+	}
+}
+
 // Mock Rekor client
 type mockEntriesClient struct {
 	entries.ClientService
