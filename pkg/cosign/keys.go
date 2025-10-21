@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
@@ -49,6 +50,17 @@ const (
 	BundleKey           = static.BundleAnnotationKey
 	RFC3161TimestampKey = static.RFC3161TimestampAnnotationKey
 )
+
+var SupportedKeyDetails = []v1.PublicKeyDetails{
+	v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+	v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256,
+	// Ed25519ph is not supported by Fulcio, so we don't support it here for now.
+	// v1.PublicKeyDetails_PKIX_ED25519_PH,
+}
 
 // PassFunc is the function to be called to retrieve the signer password. If
 // nil, then it assumes that no password is provided.
@@ -296,4 +308,18 @@ func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signat
 		return &[]signature.LoadOption{options.WithED25519ph()}
 	}
 	return defaultLoadOptions
+}
+
+// GetSupportedAlgorithms returns a list of supported algorithms sorted alphabetically.
+func GetSupportedAlgorithms() []string {
+	algorithms := make([]string, 0, len(SupportedKeyDetails))
+	for _, algorithm := range SupportedKeyDetails {
+		signatureFlag, err := signature.FormatSignatureAlgorithmFlag(algorithm)
+		if err != nil {
+			continue
+		}
+		algorithms = append(algorithms, signatureFlag)
+	}
+	sort.Strings(algorithms)
+	return algorithms
 }
