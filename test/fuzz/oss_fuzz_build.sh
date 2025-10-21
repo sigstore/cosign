@@ -14,15 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go get github.com/AdamKorcz/go-118-fuzz-build/testing
-
 mv ./pkg/cosign/keys_test.go ./pkg/cosign/keys_test_keep_in_fuzz_scope.go
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/cosign/attestation FuzzGenerateStatement FuzzGenerateStatement
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/cosign/cue FuzzValidateJSON FuzzValidateJSON_cue
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/cosign/rego FuzzValidateJSON FuzzValidateJSON_rego
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/cosign FuzzImportKeyPairLoadPrivateKey FuzzImportKeyPairLoadPrivateKey
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/cosign FuzzSigVerify FuzzSigVerify
-compile_native_go_fuzzer github.com/sigstore/cosign/v3/pkg/policy FuzzEvaluatePolicyAgainstJSON FuzzEvaluatePolicyAgainstJSON
+rm ./pkg/cosign/verify_bundle_test.go
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/attestation FuzzGenerateStatement FuzzGenerateStatement
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/cue FuzzValidateJSON FuzzValidateJSON_cue
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/rego FuzzValidateJSON FuzzValidateJSON_rego
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzImportKeyPairLoadPrivateKey FuzzImportKeyPairLoadPrivateKey
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzSigVerify FuzzSigVerify
+compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/policy FuzzEvaluatePolicyAgainstJSON FuzzEvaluatePolicyAgainstJSON
 
 zip -j $OUT/FuzzEvaluatePolicyAgainstJSON_seed_corpus.zip test/fuzz/seeds/FuzzEvaluatePolicyAgainstJSON_seed*
 zip -j $OUT/FuzzEvaluatePolicyAgainstJSON_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
