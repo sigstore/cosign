@@ -33,6 +33,8 @@ import (
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
+const BundlePredicateType string = "dev.sigstore.bundle.predicateType"
+
 // WriteSignedImageIndexImages writes the images within the image index
 // This includes the signed image and associated signatures in the image index
 // TODO (priyawadhwa@): write the `index.json` itself to the repo as well
@@ -322,9 +324,9 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 	layer := static.NewLayer(bundleBytes, types.MediaType(bundleMediaType))
 
 	annotations := map[string]string{
-		"org.opencontainers.image.created":  time.Now().UTC().Format(time.RFC3339),
-		"dev.sigstore.bundle.content":       "dsse-envelope",
-		"dev.sigstore.bundle.predicateType": predicateType,
+		"org.opencontainers.image.created": time.Now().UTC().Format(time.RFC3339),
+		"dev.sigstore.bundle.content":      "dsse-envelope",
+		BundlePredicateType:                predicateType,
 	}
 
 	return WriteReferrer(d, bundleMediaType, []v1.Layer{layer}, annotations, opts...)
