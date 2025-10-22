@@ -36,7 +36,7 @@ require (
 	github.com/sigstore/fulcio v1.7.1
 	github.com/sigstore/protobuf-specs v0.5.0
 	github.com/sigstore/rekor v1.4.2
-	github.com/sigstore/rekor-tiles/v2 v2.0.0-rc2
+	github.com/sigstore/rekor-tiles/v2 v2.0.0
 	github.com/sigstore/sigstore v1.9.6-0.20250729224751-181c5d3339b3
 	github.com/sigstore/sigstore-go v1.1.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
