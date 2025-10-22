@@ -179,6 +179,9 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+	if regOpts.AllowHTTPRegistry || regOpts.AllowInsecure {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithNameOptions(name.Insecure))
+	}
 
 	if ko.SigningConfig != nil {
 		return signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, payload, digest, types.CosignSignPredicateType, "", ko.SigningConfig, ko.TrustedMaterial, ociremoteOpts...)

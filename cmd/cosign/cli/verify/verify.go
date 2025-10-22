@@ -109,6 +109,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+	if c.AllowHTTPRegistry || c.AllowInsecure {
+		c.NameOptions = append(c.NameOptions, name.Insecure)
+	}
 
 	co := &cosign.CheckOpts{
 		Annotations:                  c.Annotations.Annotations,
@@ -134,7 +137,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if !c.LocalImage {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co)
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co, c.NameOptions...)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false
 			}
@@ -209,7 +212,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 			if co.NewBundleFormat {
 				// OCI bundle always contains attestation
-				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co)
+				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co, c.NameOptions...)
 				if err != nil {
 					return err
 				}

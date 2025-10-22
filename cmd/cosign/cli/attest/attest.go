@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -85,6 +86,9 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	ociremoteOpts, err := c.RegistryOptions.ClientOpts(ctx)
 	if err != nil {
 		return err
+	}
+	if c.RegistryOptions.AllowHTTPRegistry || c.RegistryOptions.AllowInsecure {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithNameOptions(name.Insecure))
 	}
 	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
 	if err != nil {
