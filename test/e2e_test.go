@@ -4034,7 +4034,7 @@ func TestTree(t *testing.T) {
 	out := bytes.Buffer{}
 
 	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
-	assert.False(t, strings.Contains(string(out.Bytes()), "https://sigstore.dev/cosign/sign/v1"))
+	assert.False(t, strings.Contains(out.String(), "https://sigstore.dev/cosign/sign/v1"))
 
 	// Sign the image
 	td := t.TempDir()
@@ -4049,5 +4049,5 @@ func TestTree(t *testing.T) {
 	// Test out tree command after sign
 	out.Reset()
 	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
-	assert.True(t, strings.Contains(string(out.Bytes()), "https://sigstore.dev/cosign/sign/v1"))
+	assert.True(t, strings.Contains(out.String(), "https://sigstore.dev/cosign/sign/v1"))
 }
