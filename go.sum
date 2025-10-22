@@ -622,8 +622,8 @@ cloud.google.com/go/workflows v1.9.0/go.mod h1:ZGkj1aFIOd9c8Gerkjjq7OW7I5+l6cSvT
 cloud.google.com/go/workflows v1.10.0/go.mod h1:fZ8LmRmZQWacon9UCX1r/g/DfAXx5VcPALq2CxzdePw=
 cuelabs.dev/go/oci/ociregistry v0.0.0-20250715075730-49cab49c8e9d h1:lX0EawyoAu4kgMJJfy7MmNkIHioBcdBGFRSKDZ+CWo0=
 cuelabs.dev/go/oci/ociregistry v0.0.0-20250715075730-49cab49c8e9d/go.mod h1:4WWeZNxUO1vRoZWAHIG0KZOd6dA25ypyWuwD3ti0Tdc=
-cuelang.org/go v0.14.1 h1:kxFAHr7bvrCikbtVps2chPIARazVdnRmlz65dAzKyWg=
-cuelang.org/go v0.14.1/go.mod h1:aSP9UZUM5m2izHAHUvqtq0wTlWn5oLjuv2iBMQZBLLs=
+cuelang.org/go v0.14.2 h1:LDlMXbfp0/AHjNbmuDYSGBbHDekaXei/RhAOCihpSgg=
+cuelang.org/go v0.14.2/go.mod h1:53oOiowh5oAlniD+ynbHPaHxHFO5qc3QkzlUiB/9kps=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
