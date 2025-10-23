@@ -17,7 +17,6 @@ package initialize
 
 import (
 	"context"
-	_ "embed" // To enable the `go:embed` directive.
 	"encoding/json"
 	"fmt"
 	"os"
