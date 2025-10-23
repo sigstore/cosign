@@ -95,7 +95,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("key", certificateExts...)
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
-		"write everything required to verify the blob to a FILE")
+		"write everything required to verify the blob to a FILE (use \"-\" for stdout)")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,

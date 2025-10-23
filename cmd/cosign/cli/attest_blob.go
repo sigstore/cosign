@@ -52,7 +52,11 @@ func AttestBlob() *cobra.Command {
   cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
 
   # supply attestation via stdin
-  echo <PAYLOAD> | cosign attest-blob --predicate - --yes`,
+  echo <PAYLOAD> | cosign attest-blob --predicate - --yes
+
+  # create a JSONL file with multiple attestations by outputting bundles to stdout
+  cosign attest-blob --key cosign.key --predicate <FILE1> --type <TYPE> --bundle=- <BLOB> >> attestations.jsonl
+  cosign attest-blob --key cosign.key --predicate <FILE2> --type <TYPE> --bundle=- <BLOB> >> attestations.jsonl`,
 
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {

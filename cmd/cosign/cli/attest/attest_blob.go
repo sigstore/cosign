@@ -186,10 +186,15 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			}
 		}
 
-		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
+		// If BundlePath is "-", write to stdout with trailing newline
+		if c.BundlePath == "-" {
+			fmt.Fprintln(os.Stdout, string(contents))
+		} else {
+			if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
+				return fmt.Errorf("create bundle file: %w", err)
+			}
+			fmt.Fprintln(os.Stderr, "Bundle wrote in the file ", c.BundlePath)
 		}
-		fmt.Fprintln(os.Stderr, "Bundle wrote in the file ", c.BundlePath)
 	}
 
 	if c.OutputSignature != "" {
@@ -197,7 +202,8 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			return fmt.Errorf("create signature file: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Signature written in %s\n", c.OutputSignature)
-	} else {
+	} else if c.BundlePath != "-" {
+		// Only output signature to stdout if bundle is not going to stdout
 		fmt.Fprintln(os.Stdout, string(bundleComponents.SignedPayload))
 	}
 

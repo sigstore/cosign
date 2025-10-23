@@ -28,12 +28,16 @@ cosign attest-blob [flags]
 
   # supply attestation via stdin
   echo <PAYLOAD> | cosign attest-blob --predicate - --yes
+
+  # create a JSONL file with multiple attestations by outputting bundles to stdout
+  cosign attest-blob --key cosign.key --predicate <FILE1> --type <TYPE> --bundle=- <BLOB> >> attestations.jsonl
+  cosign attest-blob --key cosign.key --predicate <FILE2> --type <TYPE> --bundle=- <BLOB> >> attestations.jsonl
 ```
 
 ### Options
 
 ```
-      --bundle string                     write everything required to verify the blob to a FILE
+      --bundle string                     write everything required to verify the blob to a FILE (use "-" for stdout)
       --certificate string                path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string          path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-auth-flow string           fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
