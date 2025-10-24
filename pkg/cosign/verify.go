@@ -1013,13 +1013,13 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
-func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
 		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
 	}
 	if co.NewBundleFormat {
-		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co)
+		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co, nameOpts...)
 	}
 
 	// This is a carefully optimized sequence for fetching the attestations of
@@ -1621,7 +1621,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) ([]*sgbundle.Bundle, *v1.Hash, error) {
+func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
@@ -1644,7 +1644,7 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 	}
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()))
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()), nameOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1667,8 +1667,8 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts) (
 }
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
-func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := GetBundles(ctx, signedImgRef, co)
+func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
+	bundles, hash, err := GetBundles(ctx, signedImgRef, co, nameOpts...)
 	if err != nil {
 		return nil, false, err
 	}

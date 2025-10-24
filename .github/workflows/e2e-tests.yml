@@ -186,6 +186,7 @@ jobs:
       run: go test -tags=e2e,registry -v ./test/...
       env:
         COSIGN_TEST_REPO: insecure-registry.notlocal:5001
+        TUF_ROOT_JSON: ${{ github.workspace }}/root.json
 
     - name: Setup local insecure OCI 1.1 registry
       run: |
@@ -236,6 +237,23 @@ jobs:
       env:
         OCI11: yes
         COSIGN_TEST_REPO: insecure-oci-registry.notlocal:5002
+        TUF_ROOT_JSON: ${{ github.workspace }}/root.json
+
+    - name: Set up local HTTP registry
+      run: |
+        docker run -d --restart=always \
+          --name $HTTP_REGISTRY_NAME \
+          -p $HTTP_REGISTRY_PORT:5000 registry:2.8.1
+        sudo echo "127.0.0.1 $HTTP_REGISTRY_NAME" | sudo tee -a /etc/hosts
+      env:
+        HTTP_REGISTRY_NAME: http-registry.notlocal
+        HTTP_REGISTRY_PORT: 5003
+
+    - name: Run HTTP registry tests
+      run: go test -tags=e2e,registry -v ./test/...
+      env:
+        COSIGN_TEST_REPO: http-registry.notlocal:5003
+        TUF_ROOT_JSON: ${{ github.workspace }}/root.json
 
     - name: Collect diagnostics
       if: ${{ failure() }}

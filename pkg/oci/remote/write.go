@@ -301,7 +301,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 		Annotations: annotations,
 	}, artifactType}
 
-	targetRef, err := manifest.targetRef(o.TargetRepository)
+	targetRef, err := manifest.targetRef(o.TargetRepository, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to create target reference: %w", err)
 	}
@@ -372,7 +372,8 @@ func (r referrerManifest) RawManifest() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (r referrerManifest) targetRef(repo name.Repository) (name.Reference, error) {
+func (r referrerManifest) targetRef(repo name.Repository, opts ...Option) (name.Reference, error) {
+	o := makeOptions(repo, opts...)
 	manifestBytes, err := r.RawManifest()
 	if err != nil {
 		return nil, err
@@ -381,7 +382,7 @@ func (r referrerManifest) targetRef(repo name.Repository) (name.Reference, error
 	if err != nil {
 		return nil, err
 	}
-	return name.ParseReference(fmt.Sprintf("%s/%s@%s", repo.RegistryStr(), repo.RepositoryStr(), digest.String()))
+	return name.ParseReference(fmt.Sprintf("%s/%s@%s", repo.RegistryStr(), repo.RepositoryStr(), digest.String()), o.NameOpts...)
 }
 
 func (r referrerManifest) MediaType() (types.MediaType, error) {
