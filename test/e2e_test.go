@@ -4018,3 +4018,36 @@ func TestSignVerifyMultipleIdentities(t *testing.T) {
 	// Now verify should work
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 }
+
+func TestTree(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "tree")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// Test out tree command before
+	ctx := context.Background()
+	regOpts := options.RegistryOptions{}
+	regExpOpts := options.RegistryExperimentalOptions{}
+	out := bytes.Buffer{}
+
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.False(t, strings.Contains(out.String(), "https://sigstore.dev/cosign/sign/v1"))
+
+	// Sign the image
+	td := t.TempDir()
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	so := options.SignOptions{
+		NewBundleFormat: true,
+	}
+
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Test out tree command after sign
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.True(t, strings.Contains(out.String(), "https://sigstore.dev/cosign/sign/v1"))
+}

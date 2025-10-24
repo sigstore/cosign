@@ -18,6 +18,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -37,7 +38,7 @@ func Tree() *cobra.Command {
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return TreeCmd(cmd.Context(), c.Registry, c.RegistryExperimental, c.ExperimentalOCI11, args[0])
+			return TreeCmd(cmd.Context(), c.Registry, c.RegistryExperimental, c.ExperimentalOCI11, args[0], cmd.OutOrStdout())
 		},
 	}
 
@@ -50,7 +51,7 @@ type OCIRelationsKey struct {
 	artifactDigest name.Digest
 }
 
-func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts options.RegistryExperimentalOptions, experimentalOCI11 bool, imageRef string) error {
+func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts options.RegistryExperimentalOptions, experimentalOCI11 bool, imageRef string, out io.Writer) error {
 	scsaMap := map[name.Tag][]v1.Layer{}
 	ociRelationsMap := map[OCIRelationsKey][]v1.Layer{}
 
@@ -63,7 +64,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "📦 Supply Chain Security Related artifacts for an image: %s\n", ref.String())
+	fmt.Fprintf(out, "📦 Supply Chain Security Related artifacts for an image: %s\n", ref.String())
 
 	simg, err := ociremote.SignedEntity(ref, remoteOpts...)
 	if err != nil {
@@ -151,6 +152,17 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 				continue
 			}
 
+			artifactType := manifest.ArtifactType
+			// Check if we are using protobuf bundle,
+			// and if so update artifactType to the bundle predicate
+			imageManifest, err := artifactImage.Manifest()
+			if err == nil {
+				val, ok := imageManifest.Annotations[ociremote.BundlePredicateType]
+				if ok {
+					artifactType = val
+				}
+			}
+
 			// Get layers for this artifact
 			layers, err := artifactImage.Layers()
 			if err != nil {
@@ -159,13 +171,13 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 			}
 
 			// Add to the map
-			key := OCIRelationsKey{manifest.ArtifactType, artifactRef}
+			key := OCIRelationsKey{artifactType, artifactRef}
 			ociRelationsMap[key] = append(ociRelationsMap[key], layers...)
 		}
 	}
 
 	if len(scsaMap) == 0 && len(ociRelationsMap) == 0 {
-		fmt.Fprintf(os.Stdout, "No Supply Chain Security Related Artifacts found for image %s,\n start creating one with simply running"+
+		fmt.Fprintf(out, "No Supply Chain Security Related Artifacts found for image %s,\n start creating one with simply running"+
 			"$ cosign sign <img>", ref.String())
 		return nil
 	}
@@ -173,14 +185,14 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 	for t, k := range scsaMap {
 		switch t {
 		case sigRef:
-			fmt.Fprintf(os.Stdout, "└── 🔐 Signatures for an image tag: %s\n", t.String())
+			fmt.Fprintf(out, "└── 🔐 Signatures for an image tag: %s\n", t.String())
 		case sbomRef:
-			fmt.Fprintf(os.Stdout, "└── 📦 SBOMs for an image tag: %s\n", t.String())
+			fmt.Fprintf(out, "└── 📦 SBOMs for an image tag: %s\n", t.String())
 		case attRef:
-			fmt.Fprintf(os.Stdout, "└── 💾 Attestations for an image tag: %s\n", t.String())
+			fmt.Fprintf(out, "└── 💾 Attestations for an image tag: %s\n", t.String())
 		}
 
-		if err := printLayers(k); err != nil {
+		if err := printLayers(k, out); err != nil {
 			return err
 		}
 	}
@@ -190,8 +202,8 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 
 		// TODO - We could apply different emojis here for different values of key.artifactType
 
-		fmt.Fprintf(os.Stdout, "└── %s %s artifacts via OCI referrer: %s\n", emoji, key.artifactType, key.artifactDigest)
-		if err := printLayers(layers); err != nil {
+		fmt.Fprintf(out, "└── %s %s artifacts via OCI referrer: %s\n", emoji, key.artifactType, key.artifactDigest)
+		if err := printLayers(layers, out); err != nil {
 			return err
 		}
 	}
@@ -199,7 +211,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 	return nil
 }
 
-func printLayers(layers []v1.Layer) error {
+func printLayers(layers []v1.Layer, out io.Writer) error {
 	for i, l := range layers {
 		last := i == len(layers)-1
 		var sym string
@@ -212,7 +224,7 @@ func printLayers(layers []v1.Layer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s 🍒 %s\n", sym, digest)
+		fmt.Fprintf(out, "%s 🍒 %s\n", sym, digest)
 	}
 	return nil
 }

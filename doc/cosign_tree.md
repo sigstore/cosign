@@ -18,7 +18,7 @@ cosign tree [flags]
       --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
       --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --experimental-oci11                                                                       set to true to enable experimental OCI 1.1 behaviour
+      --experimental-oci11                                                                       set to false to ignore OCI 1.1 behavior (default true)
   -h, --help                                                                                     help for tree
       --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
