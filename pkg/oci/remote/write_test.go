@@ -251,6 +251,24 @@ func TestWriteAttestationNewBundleFormat(t *testing.T) {
 	if refManifest.Annotations["dev.sigstore.bundle.predicateType"] != predicateType {
 		t.Errorf("Expected predicateType annotation to be %s, got %s", predicateType, refManifest.Annotations["dev.sigstore.bundle.predicateType"])
 	}
+
+	// Verify the layer has the org.opencontainers.image.title annotation
+	if len(refManifest.Layers) == 0 {
+		t.Fatal("Expected at least one layer in manifest")
+	}
+	layer := refManifest.Layers[0]
+	if layer.Annotations == nil {
+		t.Fatal("Expected layer to have annotations, but Annotations is nil")
+	}
+	title, ok := layer.Annotations["org.opencontainers.image.title"]
+	if !ok {
+		t.Error("Expected layer to have 'org.opencontainers.image.title' annotation, but it was not found")
+	}
+	// Verify the title format matches {algorithm}-{hex}.sigstore.json
+	expectedTitle := fmt.Sprintf("%s-%s.sigstore.json", layer.Digest.Algorithm, layer.Digest.Hex)
+	if title != expectedTitle {
+		t.Errorf("Expected layer title to be %s, got %s", expectedTitle, title)
+	}
 }
 
 func TestWriteAttestationsReferrer(t *testing.T) {
@@ -333,7 +351,22 @@ func TestWriteAttestationsReferrer(t *testing.T) {
 
 	// Verify we have at least one layer
 	if len(refManifest.Layers) == 0 {
-		t.Error("Expected at least one layer in manifest")
+		t.Fatal("Expected at least one layer in manifest")
+	}
+	// Verify each layer has the org.opencontainers.image.title annotation
+	for i, layer := range refManifest.Layers {
+		if layer.Annotations == nil {
+			t.Fatalf("Expected layer %d to have annotations, but Annotations is nil", i)
+		}
+		title, ok := layer.Annotations["org.opencontainers.image.title"]
+		if !ok {
+			t.Errorf("Expected layer %d to have 'org.opencontainers.image.title' annotation, but it was not found", i)
+		}
+		// Verify the title format matches {algorithm}-{hex}.sigstore.json
+		expectedTitle := fmt.Sprintf("%s-%s.sigstore.json", layer.Digest.Algorithm, layer.Digest.Hex)
+		if title != expectedTitle {
+			t.Errorf("Expected layer %d title to be %s, got %s", i, expectedTitle, title)
+		}
 	}
 }
 
@@ -409,6 +442,24 @@ func TestWriteReferrer(t *testing.T) {
 	// Verify we have the expected number of layers
 	if len(refManifest.Layers) != 1 {
 		t.Errorf("Expected 1 layer, got %d", len(refManifest.Layers))
+	}
+
+	// Verify the layer has the org.opencontainers.image.title annotation
+	if len(refManifest.Layers) == 0 {
+		t.Fatal("Expected at least one layer in manifest")
+	}
+	layer := refManifest.Layers[0]
+	if layer.Annotations == nil {
+		t.Fatal("Expected layer to have annotations, but Annotations is nil")
+	}
+	title, ok := layer.Annotations["org.opencontainers.image.title"]
+	if !ok {
+		t.Error("Expected layer to have 'org.opencontainers.image.title' annotation, but it was not found")
+	}
+	// Verify the title format matches {algorithm}-{hex}.sigstore.json
+	expectedTitle := fmt.Sprintf("%s-%s.sigstore.json", layer.Digest.Algorithm, layer.Digest.Hex)
+	if title != expectedTitle {
+		t.Errorf("Expected layer title to be %s, got %s", expectedTitle, title)
 	}
 
 	// Verify the subject is set

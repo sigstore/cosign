@@ -277,6 +277,9 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			MediaType: mediaType,
 			Digest:    layerDigest,
 			Size:      layerSize,
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": fmt.Sprintf("%s-%s.sigstore.json", layerDigest.Algorithm, layerDigest.Hex),
+			},
 		}
 	}
 

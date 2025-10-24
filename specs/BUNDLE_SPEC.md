@@ -65,7 +65,10 @@ Content-Type: application/vnd.oci.image.manifest.v1+json
     {
       "digest": "sha256:cafed00d...",
       "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
-      "size": 4971
+      "size": 4971,
+      "annotations": {
+        "org.opencontainers.image.title": "sha256-cafed00d.sigstore.json"
+      }
     }
   ],
   "subject": {
@@ -184,7 +187,10 @@ GET /v2/foo/manifests/sha256:badf00d..
     {
       "digest": "sha256:cafed00d...",
       "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
-      "size": 4971
+      "size": 4971,
+      "annotations": {
+        "org.opencontainers.image.title": "sha256-cafed00d.sigstore.json"
+      }
     }
   ],
   "subject": {
@@ -249,6 +255,18 @@ when it was created:
   the pre-defined annotation keys identified in the
   [OCI spec](https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys)).
 
+### Layer Annotations
+
+In addition to manifest-level annotations, individual layer descriptors within
+the bundle manifest may optionally include the `org.opencontainers.image.title`
+annotation to provide a meaningful filename for the attestation bundle:
+
+- `org.opencontainers.image.title` (optional) - A suggested filename for the
+  layer content, formatted as `{digest-algorithm}-{digest-hex}.sigstore.json`.
+  The hyphen separator (rather than colon) ensures the filename is valid across
+  all platforms, including Windows. This enables tools like `oras pull` to save
+  attestation bundles with collision-free, human-readable filenames.
+
 These annotations should be included as part of the bundle manifest:
 
 ```json
@@ -270,7 +288,10 @@ These annotations should be included as part of the bundle manifest:
     {
       "digest": "sha256:cafed00d...",
       "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
-      "size": 4971
+      "size": 4971,
+      "annotations": {
+        "org.opencontainers.image.title": "sha256-cafed00d.sigstore.json"
+      }
     }
   ],
   "subject": {
