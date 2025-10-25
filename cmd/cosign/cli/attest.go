@@ -100,6 +100,7 @@ func Attest() *cobra.Command {
 				TSAServerName:                  o.TSAServerName,
 				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
+				BundlePath:                     o.BundlePath,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
 			// If a signing config is used, then service URLs cannot be specified

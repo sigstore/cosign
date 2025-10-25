@@ -26,6 +26,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -36,6 +37,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -4042,6 +4044,7 @@ func TestTree(t *testing.T) {
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	so := options.SignOptions{
 		NewBundleFormat: true,
+		Upload:          true,
 	}
 
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
@@ -4050,4 +4053,185 @@ func TestTree(t *testing.T) {
 	out.Reset()
 	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
 	assert.True(t, strings.Contains(out.String(), "https://sigstore.dev/cosign/sign/v1"))
+}
+
+func TestSignVerifyUploadFalse(t *testing.T) {
+	td := t.TempDir()
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e-no-upload")
+	name, desc, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+
+	regOpts := options.RegistryOptions{}
+	regExpOpts := options.RegistryExperimentalOptions{}
+	out := bytes.Buffer{}
+
+	// There should be no signatures yet
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now sign the image with Upload: false
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload: false,
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// There should still be no signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now with Upload: true
+	so.Upload = true
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Now there should be signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), fmt.Sprintf("Signatures for an image tag: %s:%s-%s.sig", name, desc.Digest.Algorithm, desc.Digest.Hex))
+
+	// Try on a new image with new bundle format
+	imgName = path.Join(repo, "cosign-e2e-no-upload-bundle")
+	name2, _, cleanup2 := mkimage(t, imgName)
+	defer cleanup2()
+
+	// There should be no signatures yet
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now sign the image with Upload: false
+	so.Upload = false
+	so.NewBundleFormat = true
+	so.BundlePath = path.Join(td, "output.bundle")
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	assert.FileExists(t, so.BundlePath)
+
+	// There should still be no signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now with Upload: true
+	so.Upload = true
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+
+	// Now there should be signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("https://sigstore.dev/cosign/sign/v1 artifacts via OCI referrer: %s@sha256:[a-z0-9]*\n", name2)), out.String())
+	assert.FileExists(t, so.BundlePath)
+	f, err := os.Open(so.BundlePath)
+	must(err, t)
+	defer f.Close()
+	h := sha256.New()
+	_, err = io.Copy(h, f)
+	must(err, t)
+	assert.Contains(t, out.String(), fmt.Sprintf("sha256:%s", hex.EncodeToString(h.Sum(nil))))
+}
+
+func TestAttestVerifyUploadFalse(t *testing.T) {
+	td := t.TempDir()
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e-no-upload")
+	name, desc, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+
+	regOpts := options.RegistryOptions{}
+	regExpOpts := options.RegistryExperimentalOptions{}
+	out := bytes.Buffer{}
+
+	// There should be no attestations yet
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now attest the image with NoUpload: true
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+		t.Fatal(err)
+	}
+	attestCmd := attest.AttestCommand{
+		KeyOpts:        ko,
+		PredicatePath:  predicatePath,
+		PredicateType:  "slsaprovenance",
+		RekorEntryType: "dsse",
+		NoUpload:       true,
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
+
+	// There should still be no attestations
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now with NoUpload: false
+	attestCmd.NoUpload = false
+	must(attestCmd.Exec(ctx, imgName), t)
+
+	// Now there should be attestations
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), fmt.Sprintf("Attestations for an image tag: %s:%s-%s.att", name, desc.Digest.Algorithm, desc.Digest.Hex))
+
+	// Try on a new image with new bundle format
+	imgName = path.Join(repo, "cosign-e2e-no-upload-bundle")
+	name2, _, cleanup2 := mkimage(t, imgName)
+	defer cleanup2()
+
+	// There should be no attestations yet
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now attest the image with NoUpload: true
+	attestCmd.NoUpload = true
+	attestCmd.NewBundleFormat = true
+	attestCmd.BundlePath = path.Join(td, "output.bundle")
+	must(attestCmd.Exec(ctx, imgName), t)
+	assert.FileExists(t, attestCmd.BundlePath)
+
+	// There should still be no attestations
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now with NoUpload: true
+	attestCmd.NoUpload = false
+	must(attestCmd.Exec(ctx, imgName), t)
+
+	// Now there should be attestations
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Regexp(t, regexp.MustCompile(fmt.Sprintf("https://slsa.dev/provenance/v0.2 artifacts via OCI referrer: %s@sha256:[a-z0-9]*\n", name2)), out.String())
+	assert.FileExists(t, attestCmd.BundlePath)
+	f, err := os.Open(attestCmd.BundlePath)
+	must(err, t)
+	defer f.Close()
+	h := sha256.New()
+	_, err = io.Copy(h, f)
+	must(err, t)
+	assert.Contains(t, out.String(), fmt.Sprintf("sha256:%s", hex.EncodeToString(h.Sum(nil))))
 }

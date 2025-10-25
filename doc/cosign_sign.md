@@ -77,6 +77,7 @@ cosign sign [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        DEPRECATED, related image attachment to sign (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
+      --bundle string                                                                            write everything required to verify the image to FILE
       --certificate string                                                                       path to the X.509 certificate in PEM format to include in the OCI Signature
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-auth-flow string                                                                  fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
