@@ -38,6 +38,7 @@ type AttestOptions struct {
 	TSAServerURL            string
 	RekorEntryType          string
 	RecordCreationTimestamp bool
+	BundlePath              string
 	NewBundleFormat         bool
 	UseSigningConfig        bool
 	SigningConfigPath       string
@@ -113,6 +114,10 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
+
+	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
+		"write everything required to verify the blob to a FILE")
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "attach a Sigstore bundle using OCI referrers API")
 

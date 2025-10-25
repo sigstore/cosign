@@ -122,7 +122,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, digest, types.CosignSignPredicateType, "", c.SigningConfig, c.TrustedMaterial, ociremoteOpts...)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, digest, types.CosignSignPredicateType, c.BundlePath, !c.NoUpload, c.SigningConfig, c.TrustedMaterial, ociremoteOpts...)
 	}
 
 	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, c.NoUpload, c.TlogUpload, payload, digest, c.RekorEntryType)
@@ -133,7 +133,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 
 	sv := bundleComponents.SV
 
-	if c.NoUpload {
+	if c.NoUpload && c.BundlePath == "" {
 		fmt.Println(string(bundleComponents.SignedPayload))
 		return nil
 	}
@@ -163,7 +163,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.KeyOpts.NewBundleFormat {
-		return signcommon.WriteBundle(sv, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, predicateType, ociremoteOpts...)
+		return signcommon.WriteBundle(ctx, sv, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, predicateType, "", !c.NoUpload, ociremoteOpts...)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it

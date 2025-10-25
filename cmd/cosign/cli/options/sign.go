@@ -29,6 +29,7 @@ type SignOptions struct {
 	OutputSignature         string // TODO: this should be the root output file arg.
 	OutputPayload           string
 	OutputCertificate       string
+	BundlePath              string
 	PayloadPath             string
 	Recursive               bool
 	Attachment              string
@@ -96,6 +97,10 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
 	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
+
+	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
+		"write everything required to verify the image to FILE")
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")

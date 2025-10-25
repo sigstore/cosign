@@ -184,7 +184,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	}
 
 	if ko.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, payload, digest, types.CosignSignPredicateType, "", ko.SigningConfig, ko.TrustedMaterial, ociremoteOpts...)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, payload, digest, types.CosignSignPredicateType, signOpts.BundlePath, signOpts.Upload, ko.SigningConfig, ko.TrustedMaterial, ociremoteOpts...)
 	}
 
 	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, signOpts.Cert, signOpts.CertChain, ko, false, signOpts.TlogUpload, payload, digest, "dsse")
@@ -193,7 +193,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	}
 	defer closeSV()
 
-	return signcommon.WriteBundle(bundleComponents.SV, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, types.CosignSignPredicateType, ociremoteOpts...)
+	return signcommon.WriteBundle(ctx, bundleComponents.SV, bundleComponents.RekorEntry, payload, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes, digest, types.CosignSignPredicateType, signOpts.BundlePath, signOpts.Upload, ociremoteOpts...)
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
