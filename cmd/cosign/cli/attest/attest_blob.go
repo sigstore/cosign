@@ -143,7 +143,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, name.Digest{}, "", c.BundlePath, c.SigningConfig, c.TrustedMaterial, nil)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, name.Digest{}, "", c.BundlePath, false, c.SigningConfig, c.TrustedMaterial, nil)
 	}
 
 	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, false, c.TlogUpload, payload, nil, c.RekorEntryType)
