@@ -466,37 +466,46 @@ func UploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, t
 	return entry, nil
 }
 
+type CommonBundleOpts struct {
+	Payload       []byte
+	Digest        name.Digest
+	PredicateType string
+	BundlePath    string
+	Upload        bool
+	OCIRemoteOpts []ociremote.Option
+}
+
 // WriteBundle compiles a protobuf bundle from components and writes the bundle to the OCI remote layer.
-func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.LogEntryAnon, payload, signedPayload, signerBytes, timestampBytes []byte, digest name.Digest, predicateType, bundlePath string, upload bool, ociremoteOpts ...ociremote.Option) error {
+func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.LogEntryAnon, bundleOpts CommonBundleOpts, signedPayload, signerBytes, timestampBytes []byte) error {
 	pubKey, err := sv.PublicKey()
 	if err != nil {
 		return err
 	}
-	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, payload, signedPayload, signerBytes, timestampBytes)
+	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, bundleOpts.Payload, signedPayload, signerBytes, timestampBytes)
 	if err != nil {
 		return err
 	}
-	if bundlePath != "" {
-		if err := os.WriteFile(bundlePath, bundleBytes, 0600); err != nil {
+	if bundleOpts.BundlePath != "" {
+		if err := os.WriteFile(bundleOpts.BundlePath, bundleBytes, 0600); err != nil {
 			return fmt.Errorf("creating bundle file: %w", err)
 		}
-		ui.Infof(ctx, "Wrote bundle to file %s", bundlePath)
+		ui.Infof(ctx, "Wrote bundle to file %s", bundleOpts.BundlePath)
 	}
-	if !upload {
+	if !bundleOpts.Upload {
 		return nil
 	}
-	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, ociremoteOpts...)
+	return ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...)
 }
 
 // WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
-func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, payload []byte, digest name.Digest, predicateType, bundlePath string, upload bool, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, ociremoteOpts ...ociremote.Option) error {
+func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) error {
 	keypair, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
 		return fmt.Errorf("getting keypair and token: %w", err)
 	}
 
 	content := &sign.DSSEData{
-		Data:        payload,
+		Data:        bundleOpts.Payload,
 		PayloadType: "application/vnd.in-toto+json",
 	}
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, signingConfig, trustedMaterial)
@@ -504,17 +513,17 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 		return fmt.Errorf("signing bundle: %w", err)
 	}
 
-	if bundlePath != "" {
-		if err := os.WriteFile(bundlePath, bundle, 0600); err != nil {
+	if bundleOpts.BundlePath != "" {
+		if err := os.WriteFile(bundleOpts.BundlePath, bundle, 0600); err != nil {
 			return fmt.Errorf("creating bundle file: %w", err)
 		}
-		ui.Infof(ctx, "Wrote bundle to file %s", bundlePath)
+		ui.Infof(ctx, "Wrote bundle to file %s", bundleOpts.BundlePath)
 		return nil
 	}
-	if !upload {
+	if !bundleOpts.Upload {
 		return nil
 	}
-	return ociremote.WriteAttestationNewBundleFormat(digest, bundle, predicateType, ociremoteOpts...)
+	return ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...)
 }
 
 type bundleComponents struct {
