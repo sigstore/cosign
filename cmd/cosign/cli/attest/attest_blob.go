@@ -29,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
@@ -142,8 +141,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		}
 	}
 
+	bundleOpts := signcommon.CommonBundleOpts{
+		Payload:    payload,
+		BundlePath: c.BundlePath,
+	}
+
 	if c.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, payload, name.Digest{}, "", c.BundlePath, false, c.SigningConfig, c.TrustedMaterial, nil)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	}
 
 	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, false, c.TlogUpload, payload, nil, c.RekorEntryType)
