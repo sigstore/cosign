@@ -60,7 +60,7 @@ func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Has
 // nolint
 func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
-
+	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
 	defer cancel()
 
@@ -257,7 +257,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 				return nil, fmt.Errorf("create certificate file: %w", err)
 			}
 			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
-		}
+		} 
 	}
 
 	return sig, nil
