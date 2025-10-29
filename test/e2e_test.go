@@ -852,7 +852,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 }
 
-func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
+func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string { //nolint: unparam
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
 	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
