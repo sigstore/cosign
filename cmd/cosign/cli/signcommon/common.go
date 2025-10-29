@@ -617,9 +617,6 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 			tsaServerURL != "") {
 		return fmt.Errorf("cannot specify service URLs and use signing config")
 	}
-	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config without a transparency log service")
-	}
 	// Signing config requires a bundle as output for verification materials since sigstore-go is used
 	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
 		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
@@ -651,6 +648,11 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
 		}
+	}
+	// --tlog-upload will be removed in a future release in favor of users providing a --signing-config
+	// without any transparency log services.
+	if ko.SigningConfig != nil && !tlogUpload {
+		_ = ko.SigningConfig.WithRekorLogURLs()
 	}
 	return nil
 }
