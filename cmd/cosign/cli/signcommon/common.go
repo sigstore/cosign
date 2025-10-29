@@ -474,6 +474,7 @@ type CommonBundleOpts struct {
 	BundlePath    string
 	Upload        bool
 	OCIRemoteOpts []ociremote.Option
+	TlogUpload    bool
 }
 
 // WriteBundle compiles a protobuf bundle from components and writes the bundle to the OCI remote layer.
@@ -509,6 +510,13 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 		Data:        bundleOpts.Payload,
 		PayloadType: "application/vnd.in-toto+json",
 	}
+
+	// This will be removed in a later release in favor of users providing a signing configuration
+	// without transparency log services
+	if !bundleOpts.TlogUpload {
+		_ = ko.SigningConfig.WithRekorLogURLs()
+	}
+
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, signingConfig, trustedMaterial)
 	if err != nil {
 		return fmt.Errorf("signing bundle: %w", err)
@@ -607,7 +615,7 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 // LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
 func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath string,
 	rekorURL, fulcioURL, oidcIssuer, tsaServerURL, trustedRootPath string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool) error {
+	newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool) error {
 	var err error
 	// If a signing config is used, then service URLs cannot be specified
 	if (useSigningConfig || signingConfigPath != "") &&
@@ -648,11 +656,6 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
 		}
-	}
-	// --tlog-upload will be removed in a future release in favor of users providing a --signing-config
-	// without any transparency log services.
-	if ko.SigningConfig != nil && !tlogUpload {
-		_ = ko.SigningConfig.WithRekorLogURLs()
 	}
 	return nil
 }

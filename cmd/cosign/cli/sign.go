@@ -130,7 +130,7 @@ race conditions or (worse) malicious tampering.
 				IssueCertificateForExistingKey: o.IssueCertificate,
 			}
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(context.Background(), &ko, o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
+				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath,
 				o.NewBundleFormat, "", o.Key, o.IssueCertificate); err != nil {
 				return err
 			}

@@ -128,6 +128,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		BundlePath:    c.BundlePath,
 		Upload:        !c.NoUpload,
 		OCIRemoteOpts: ociremoteOpts,
+		TlogUpload:    c.TlogUpload,
 	}
 
 	if c.SigningConfig != nil {

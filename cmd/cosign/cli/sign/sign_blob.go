@@ -95,6 +95,12 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 			Data: data,
 		}
 
+		// This will be removed in a later release in favor of users providing a signing configuration
+		// without transparency log services
+		if !shouldUpload {
+			_ = ko.SigningConfig.WithRekorLogURLs()
+		}
+
 		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
 		if err != nil {
 			return nil, fmt.Errorf("signing bundle: %w", err)
