@@ -3290,6 +3290,7 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
 	so := options.SignOptions{
 		NewBundleFormat: true,
+		Upload:          true,
 	}
 
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
