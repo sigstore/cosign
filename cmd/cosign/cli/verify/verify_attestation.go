@@ -122,7 +122,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if !c.LocalImage {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co, c.NameOptions...)
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false
 			}

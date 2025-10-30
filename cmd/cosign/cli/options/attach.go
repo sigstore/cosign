@@ -47,6 +47,9 @@ func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Payload, "payload", "",
 		"path to the payload covered by the signature")
 
+	cmd.Flags().StringVar(&o.Payload, "bundle", "",
+		"path to bundle containing signature (alias for payload)")
+
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the X.509 certificate in PEM format to include in the OCI Signature")
 
