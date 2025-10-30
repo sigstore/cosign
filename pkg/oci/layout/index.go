@@ -21,7 +21,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
+	"github.com/sigstore/cosign/v3/pkg/types"
 )
 
 const (
@@ -59,7 +61,7 @@ var _ oci.SignedImageIndex = (*index)(nil)
 
 // Signatures implements oci.SignedImageIndex
 func (i *index) Signatures() (oci.Signatures, error) {
-	img, err := i.imageByAnnotation(sigsAnnotation)
+	img, err := i.imageByAnnotation(kindAnnotation, sigsAnnotation)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +73,19 @@ func (i *index) Signatures() (oci.Signatures, error) {
 
 // Attestations implements oci.SignedImageIndex
 func (i *index) Attestations() (oci.Signatures, error) {
-	img, err := i.imageByAnnotation(attsAnnotation)
+	img, err := i.imageByAnnotation(kindAnnotation, attsAnnotation)
+	if err != nil {
+		return nil, err
+	}
+	if img == nil {
+		return nil, nil
+	}
+	return &sigs{img}, nil
+}
+
+// Bundles implements oci.SignedImageIndex
+func (i *index) Bundles() (oci.Signatures, error) {
+	img, err := i.imageByAnnotation(remote.BundlePredicateType, types.CosignSignPredicateType)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +106,7 @@ func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 	var img v1.Image
 	var err error
 	if h.String() == ":" {
-		img, err = i.imageByAnnotation(imageAnnotation)
+		img, err = i.imageByAnnotation(kindAnnotation, imageAnnotation)
 	} else {
 		img, err = i.Image(h)
 	}
@@ -107,13 +121,13 @@ func (i *index) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 
 // imageByAnnotation searches through all manifests in the index.json
 // and returns the image that has the matching annotation
-func (i *index) imageByAnnotation(annotation string) (v1.Image, error) {
+func (i *index) imageByAnnotation(annotationKey string, annotationValue string) (v1.Image, error) {
 	manifest, err := i.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
 	for _, m := range manifest.Manifests {
-		if val, ok := m.Annotations[kindAnnotation]; ok && val == annotation {
+		if val, ok := m.Annotations[annotationKey]; ok && val == annotationValue {
 			return i.Image(m.Digest)
 		}
 	}

@@ -68,6 +68,11 @@ func (*index) Attestations() (oci.Signatures, error) {
 	return empty.Signatures(), nil
 }
 
+// Bundles implements oci.SignedImageIndex
+func (*index) Bundles() (oci.Signatures, error) {
+	return empty.Signatures(), nil
+}
+
 // Attestations implements oci.SignedImage
 func (*index) Attachment(name string) (oci.File, error) { //nolint: revive
 	return nil, errors.New("unimplemented")

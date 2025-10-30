@@ -59,6 +59,27 @@ func SaveCmd(ctx context.Context, opts options.SaveOptions, imageRef string) err
 		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
 	}
 
+	// See if we are using referrers
+	digest, ok := ref.(name.Digest)
+	if ok {
+		indexManifest, err := ociremote.Referrers(digest, "", regClientOpts...)
+		if err != nil {
+			return fmt.Errorf("getting referrers: %w", err)
+		}
+
+		for _, manifest := range indexManifest.Manifests {
+			if manifest.ArtifactType == "" {
+				continue
+			}
+			artifactRef := ref.Context().Digest(manifest.Digest.String())
+			si, err := ociremote.SignedImage(artifactRef, regClientOpts...)
+			if err != nil {
+				return fmt.Errorf("getting signed image: %w", err)
+			}
+			return layout.WriteSignedImage(opts.Directory, si)
+		}
+	}
+
 	se, err := ociremote.SignedEntity(ref, regClientOpts...)
 	if err != nil {
 		return fmt.Errorf("signed entity: %w", err)

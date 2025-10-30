@@ -67,6 +67,11 @@ func (i *image) Attestations() (oci.Signatures, error) {
 	return attestations(i, i.opt)
 }
 
+// Bundles implements oci.SignedImage
+func (i *image) Bundles() (oci.Signatures, error) {
+	return nil, errors.New("not implemented")
+}
+
 // Attestations implements oci.SignedImage
 func (i *image) Attachment(name string) (oci.File, error) {
 	return attachment(i, name, i.opt)

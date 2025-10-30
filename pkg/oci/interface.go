@@ -31,6 +31,12 @@ type SignedEntity interface {
 	// Base64Signature because it's baked into the payload.
 	Attestations() (Signatures, error)
 
+	// Bundles returns the set of protobuf bundle attestations currently
+	// associated with this entity, or the empty equivalent if none are found.
+	// Bundles contain all the information required for verification, and are
+	// stored using the OCI1.1 referrer specification.
+	Bundles() (Signatures, error)
+
 	// Attachment returns a named entity associated with this entity, or error if not found.
 	Attachment(name string) (File, error)
 }

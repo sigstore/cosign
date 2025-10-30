@@ -30,6 +30,7 @@ type signedImage struct {
 	digest       v1.Hash
 	signature    oci.Signatures
 	attestations oci.Signatures
+	bundles      oci.Signatures
 }
 
 func (se *signedImage) Signatures() (oci.Signatures, error) {
@@ -38,6 +39,10 @@ func (se *signedImage) Signatures() (oci.Signatures, error) {
 
 func (se *signedImage) Attestations() (oci.Signatures, error) {
 	return se.attestations, nil
+}
+
+func (se *signedImage) Bundles() (oci.Signatures, error) {
+	return se.bundles, nil
 }
 
 func (se *signedImage) Attachment(name string) (oci.File, error) { //nolint: revive
@@ -66,5 +71,6 @@ func SignedImage(ref name.Reference) (oci.SignedImage, error) {
 		digest:       d,
 		signature:    Signatures(),
 		attestations: Signatures(),
+		bundles:      Signatures(),
 	}, nil
 }

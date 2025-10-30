@@ -16,6 +16,8 @@
 package remote
 
 import (
+	"errors"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v3/pkg/oci"
@@ -52,6 +54,11 @@ func (i *unknown) Signatures() (oci.Signatures, error) {
 // Attestations implements oci.SignedEntity
 func (i *unknown) Attestations() (oci.Signatures, error) {
 	return attestations(i, i.opt)
+}
+
+// Bundles implements oci.SignedEntity
+func (i *unknown) Bundles() (oci.Signatures, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Attachment implements oci.SignedEntity

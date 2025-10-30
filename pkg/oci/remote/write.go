@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	goremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
@@ -49,7 +49,7 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 		return fmt.Errorf("signed image index: %w", err)
 	}
 	if ii != nil {
-		if err := remote.WriteIndex(ref, ii, o.ROpt...); err != nil {
+		if err := goremote.WriteIndex(ref, ii, o.ROpt...); err != nil {
 			return fmt.Errorf("writing index: %w", err)
 		}
 	}
@@ -92,6 +92,25 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 		}
 		return remoteWrite(attsTag, atts, o.ROpt...)
 	}
+
+	// write the bundles
+	bundles, err := sii.Bundles()
+	if err != nil {
+		return err
+	}
+	if bundles != nil { // will be nil if there are no associated bundles
+		if digest, ok := ref.(name.Digest); ok {
+			se, err := SignedEntity(ref, opts...)
+			if err != nil {
+				return err
+			}
+			err = WriteSignaturesExperimentalOCI(digest, se, opts...)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
