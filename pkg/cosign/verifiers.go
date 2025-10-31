@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/in-toto/in-toto-golang/in_toto"
+	in_toto "github.com/in-toto/attestation/go/v1"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 
 	"github.com/sigstore/cosign/v3/pkg/oci"
@@ -56,7 +56,7 @@ func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map
 }
 
 // IntotoSubjectClaimVerifier verifies that sig.Payload() is an Intoto statement which references the given image digest.
-func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[string]interface{}) error {
+func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error {
 	p, err := sig.Payload()
 	if err != nil {
 		return err
@@ -82,9 +82,13 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, _ map[st
 			continue
 		}
 		subjDigest := "sha256:" + dgst
-		if subjDigest == imageDigest.String() {
-			return nil
+		if subjDigest != imageDigest.String() {
+			continue
 		}
+		if !correctAnnotations(annotations, subj.Annotations.AsMap()) {
+			return errors.New("missing or incorrect annotation")
+		}
+		return nil
 	}
 	return errors.New("no matching subject digest found")
 }

@@ -47,6 +47,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/types"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	// Loads OIDC providers
 	_ "github.com/sigstore/cosign/v3/pkg/providers/all"
@@ -114,7 +115,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 				return fmt.Errorf("accessing image: %w", err)
 			}
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts)
+				err = signDigestBundle(ctx, digest, ko, signOpts, annotations)
 			} else {
 				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
@@ -137,7 +138,7 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 			}
 			digest := ref.Context().Digest(d.String())
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts)
+				err = signDigestBundle(ctx, digest, ko, signOpts, annotations)
 			} else {
 				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
@@ -153,14 +154,16 @@ func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignO
 	return nil
 }
 
-func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions) error {
+func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, annotations map[string]any) error {
 	digestParts := strings.Split(digest.DigestStr(), ":")
 	if len(digestParts) != 2 {
 		return fmt.Errorf("unable to parse digest %s", digest.DigestStr())
 	}
 
+	annoStruct, _ := structpb.NewStruct(annotations)
 	subject := intotov1.ResourceDescriptor{
-		Digest: map[string]string{digestParts[0]: digestParts[1]},
+		Digest:      map[string]string{digestParts[0]: digestParts[1]},
+		Annotations: annoStruct,
 	}
 
 	statement := &intotov1.Statement{
