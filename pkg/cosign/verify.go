@@ -1716,6 +1716,11 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 				if err != nil {
 					return err
 				}
+				if co.ClaimVerifier != nil {
+					if err := co.ClaimVerifier(att, *hash, co.Annotations); err != nil {
+						return err
+					}
+				}
 				bundlesVerified[index] = true
 
 				return err

@@ -351,7 +351,7 @@ func TestTransformOutputSuccess(t *testing.T) {
 	stmt := `{
 	  "_type": "https://in-toto.io/Statement/v0.1",
 	  "subject": [
-		{ "name": "artifact", "digest": { "sha256": "deadbeef" } }
+		{ "name": "artifact", "digest": { "sha256": "deadbeef" }, "annotations": { "foo": "bar" } }
 	  ],
 	  "predicateType": "https://slsa.dev/provenance/v0.2"
 	}`
@@ -394,4 +394,5 @@ func TestTransformOutputSuccess(t *testing.T) {
 	assert.Equal(t, name, sci.Critical.Identity.DockerReference, "docker reference mismatch")
 	assert.Equal(t, "sha256:deadbeef", sci.Critical.Image.DockerManifestDigest, "digest mismatch")
 	assert.Equal(t, "https://slsa.dev/provenance/v0.2", sci.Critical.Type, "type mismatch")
+	assert.Equal(t, map[string]any{"foo": "bar"}, sci.Optional, "missing annotation")
 }

@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	in_toto_attest "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
@@ -154,7 +155,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	if c.CheckClaims {
-		co.ClaimVerifier = cosign.SimpleClaimVerifier
+		if co.NewBundleFormat {
+			co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
+		} else {
+			co.ClaimVerifier = cosign.SimpleClaimVerifier
+		}
 	}
 
 	err = SetLegacyClientsAndKeys(ctx, c.IgnoreTlog, shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk), keylessVerification(c.KeyRef, c.Sk), c.RekorURL, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, co)
@@ -255,6 +260,7 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
 			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
 		}
+		// Unmarshal first into in_toto.StatementHeader which should correctly parse the predicate type
 		var intotoStatement in_toto.StatementHeader
 		err = json.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
 		if err != nil {
@@ -263,11 +269,21 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
 			return nil, fmt.Errorf("no intoto subject or digest found")
 		}
+		// Unmarshal again into in_toto_attest.Statement in order to parse annotations
+		var intotoAnnoStatement in_toto_attest.Statement
+		err = json.Unmarshal(dsseEnvelope.Payload, &intotoAnnoStatement)
+		if err != nil {
+			return nil, err
+		}
+		if len(intotoAnnoStatement.Subject) < 1 || len(intotoAnnoStatement.Subject[0].Digest) < 1 {
+			return nil, fmt.Errorf("no intoto subject or digest found")
+		}
 
 		var digest string
 		for k, v := range intotoStatement.Subject[0].Digest {
 			digest = k + ":" + v
 		}
+		annotations := intotoAnnoStatement.Subject[0].Annotations.AsMap()
 
 		sci := payload.SimpleContainerImage{
 			Critical: payload.Critical{
@@ -279,6 +295,7 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 				},
 				Type: intotoStatement.PredicateType,
 			},
+			Optional: annotations,
 		}
 		p, err := json.Marshal(sci)
 		if err != nil {
