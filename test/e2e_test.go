@@ -77,6 +77,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/kubernetes"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -1290,6 +1291,39 @@ func TestSignVerifyBundle(t *testing.T) {
 		UseSignedTimestamps: false,
 	}
 	must(cmd.Exec(ctx, args), t)
+
+	// Add annotations and verify claims
+	_, privKeyPath, pubKeyPath = keypair(t, td)
+	ko = options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so = options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+		AnnotationOptions: options.AnnotationOptions{
+			Annotations: []string{"foo=bar"},
+		},
+	}
+	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	cmd = cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+		Annotations:         sigs.AnnotationsMap{Annotations: map[string]any{"foo": "bar"}},
+		CheckClaims:         true,
+	}
+	must(cmd.Exec(ctx, args), t)
+
+	// Verfying other annotations should not work
+	cmd.Annotations.Annotations["baz"] = "bat"
+	mustErr(cmd.Exec(ctx, args), t)
 }
 
 func TestAttestVerify(t *testing.T) {
