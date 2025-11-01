@@ -118,6 +118,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
 		"whether or not to upload to the tlog")
+	_ = cmd.Flags().MarkDeprecated("tlog-upload", "prefer using a --signing-config file with no transparency log services")
 
 	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")

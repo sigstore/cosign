@@ -78,6 +78,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -851,7 +852,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	}
 }
 
-func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string {
+func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string { //nolint: unparam
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
 	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
@@ -964,6 +965,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 		KeyOpts:        ko,
 		RekorEntryType: "dsse",
 		StatementPath:  statementPath,
+		TlogUpload:     true,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1072,6 +1074,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 		PredicateType:  "slsaprovenance",
 		Timeout:        30 * time.Second,
 		RekorEntryType: "dsse",
+		TlogUpload:     true,
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
 
@@ -1176,6 +1179,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 		KeyOpts:        ko,
 		RekorEntryType: "dsse",
 		StatementPath:  statementPath,
+		TlogUpload:     true,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1188,6 +1192,90 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 		CheckClaims: true,
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
+	must(err, t)
+}
+
+func TestSignVerifyBlobWithSigningConfigWithoutTlogUpload(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko := options.KeyOpts{
+		IDToken:          identityToken,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign a blob
+	blob := "someblob"
+	blobDir := t.TempDir()
+	bp := filepath.Join(blobDir, blob)
+	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+
+	tlogUpload := false
+	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", tlogUpload)
+	must(err, t)
+
+	// Verify bundle does not contain a transparency log proof
+	b, err := sgbundle.LoadJSONFromPath(bundlePath)
+	must(err, t)
+	assert.Empty(t, b.GetVerificationMaterial().GetTlogEntries())
+
+	// Verify a blob without transparency log proof
+	issuer := os.Getenv("OIDC_URL")
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: ko,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: issuer,
+			CertIdentity:   certID,
+		},
+		UseSignedTimestamps: true,
+		IgnoreTlog:          true,
+	}
+	err = verifyBlobCmd.Exec(ctx, bp)
 	must(err, t)
 }
 

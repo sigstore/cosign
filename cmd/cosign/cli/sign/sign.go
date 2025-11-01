@@ -190,6 +190,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		BundlePath:    signOpts.BundlePath,
 		Upload:        signOpts.Upload,
 		OCIRemoteOpts: ociremoteOpts,
+		TlogUpload:    signOpts.TlogUpload,
 	}
 
 	if ko.SigningConfig != nil {

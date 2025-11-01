@@ -144,6 +144,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	bundleOpts := signcommon.CommonBundleOpts{
 		Payload:    payload,
 		BundlePath: c.BundlePath,
+		TlogUpload: c.TlogUpload,
 	}
 
 	if c.SigningConfig != nil {
