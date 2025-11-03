@@ -72,4 +72,8 @@ type KeyOpts struct {
 	// By default, Ed25519ph is used for ed25519 keys and RSA-PKCS1v15 is used
 	// for RSA keys.
 	DefaultLoadOptions *[]signature.LoadOption
+
+	// SigningAlgorithm is the AlgorithmDetails string representation used to
+	// sign/hash the payload.
+	SigningAlgorithm string
 }

@@ -57,6 +57,7 @@ cosign sign-blob [flags]
       --output-signature string          write the signature to FILE
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --rfc3161-timestamp string         write the RFC3161 timestamp to a file
+      --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
       --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)

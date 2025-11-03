@@ -112,7 +112,7 @@ func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string
 	}
 	defer closeSV()
 
-	hashFunction, err := getHashFunction(sv, ko.DefaultLoadOptions)
+	hashFunction, err := getHashFunction(sv, ko)
 	if err != nil {
 		return nil, err
 	}
@@ -277,18 +277,31 @@ func extractCertificate(ctx context.Context, sv *signcommon.SignerVerifier) ([]b
 	return nil, nil
 }
 
-func getHashFunction(sv *signcommon.SignerVerifier, defaultLoadOptions *[]signature.LoadOption) (crypto.Hash, error) {
-	pubKey, err := sv.PublicKey()
-	if err != nil {
-		return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
+func getHashFunction(sv *signcommon.SignerVerifier, ko options.KeyOpts) (crypto.Hash, error) {
+	if ko.Sk || ko.KeyRef != "" {
+		pubKey, err := sv.PublicKey()
+		if err != nil {
+			return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
+		}
+
+		defaultLoadOptions := cosign.GetDefaultLoadOptions(ko.DefaultLoadOptions)
+
+		// TODO: Ideally the SignerVerifier should have a method to get the hash function
+		algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
+		if err != nil {
+			return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
+		}
+		return algo.GetHashType(), nil
 	}
 
-	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
-
-	// TODO: Ideally the SignerVerifier should have a method to get the hash function
-	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
+	// New key was generated, using the signing	algorithm specified by the user
+	keyDetails, err := signcommon.ParseSignatureAlgorithmFlag(ko.SigningAlgorithm)
 	if err != nil {
-		return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
+		return crypto.Hash(0), fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		return crypto.Hash(0), fmt.Errorf("getting algorithm details: %w", err)
 	}
 	return algo.GetHashType(), nil
 }

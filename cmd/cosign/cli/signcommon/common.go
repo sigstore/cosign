@@ -17,7 +17,6 @@ package signcommon
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -44,6 +43,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/root"
@@ -82,6 +82,17 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	return pemBytes, nil
 }
 
+func getEphemeralKeypairOptions(signingAlgorithm string) (*sign.EphemeralKeypairOptions, error) {
+	keyDetails, err := ParseSignatureAlgorithmFlag(signingAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+
+	return &sign.EphemeralKeypairOptions{
+		Algorithm: keyDetails,
+	}, nil
+}
+
 // GetKeypairAndToken creates a keypair object from provided key or cert flags or generates an ephemeral key.
 // For an ephemeral key, it also uses the key to fetch an OIDC token, the pair of which are later used to get a Fulcio cert.
 func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, string, error) {
@@ -101,7 +112,11 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 			return nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
 		}
 	} else {
-		keypair, err = sign.NewEphemeralKeypair(nil)
+		ephemeralKeypairOptions, err := getEphemeralKeypairOptions(ko.SigningAlgorithm)
+		if err != nil {
+			return nil, "", fmt.Errorf("getting ephemeral keypair options: %w", err)
+		}
+		keypair, err = sign.NewEphemeralKeypair(ephemeralKeypairOptions)
 		if err != nil {
 			return nil, "", fmt.Errorf("generating keypair: %w", err)
 		}
@@ -231,7 +246,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
-		sv, err = signerFromNewKey()
+		sv, err = signerFromNewKey(ko.SigningAlgorithm, ko.DefaultLoadOptions)
 	}
 	if err != nil {
 		return nil, false, err
@@ -386,12 +401,23 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	return certSigner, nil
 }
 
-func signerFromNewKey() (*SignerVerifier, error) {
-	privKey, err := cosign.GeneratePrivateKey()
+func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+	keyDetails, err := ParseSignatureAlgorithmFlag(signingAlgorithm)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signature algorithm: %w", err)
+	}
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm details: %w", err)
+	}
+
+	privKey, err := cosign.GeneratePrivateKeyWithAlgorithm(&algo)
 	if err != nil {
 		return nil, fmt.Errorf("generating cert: %w", err)
 	}
-	sv, err := signature.LoadECDSASignerVerifier(privKey, crypto.SHA256)
+
+	defaultLoadOptions = cosign.GetDefaultLoadOptions(defaultLoadOptions)
+	sv, err := signature.LoadSignerVerifierFromAlgorithmDetails(privKey, algo, *defaultLoadOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -601,4 +627,15 @@ func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) 
 		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
 	}
 	return ref, nil
+}
+
+func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDetails, error) {
+	if signingAlgorithm == "" {
+		var err error
+		signingAlgorithm, err = signature.FormatSignatureAlgorithmFlag(pb_go_v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256)
+		if err != nil {
+			return pb_go_v1.PublicKeyDetails_PUBLIC_KEY_DETAILS_UNSPECIFIED, fmt.Errorf("formatting signature algorithm: %w", err)
+		}
+	}
+	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
 }
