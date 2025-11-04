@@ -18,14 +18,14 @@ package download
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
-func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string) error {
+func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, out io.Writer) error {
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err
@@ -34,6 +34,23 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 	if err != nil {
 		return err
 	}
+
+	// Try bundles first
+	newBundles, _, err := cosign.GetBundles(ctx, ref, ociremoteOpts)
+	if err == nil && len(newBundles) > 0 {
+		for _, eachBundle := range newBundles {
+			b, err := json.Marshal(eachBundle)
+			if err != nil {
+				return err
+			}
+			_, err = out.Write(append(b, byte('\n')))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	signatures, err := cosign.FetchSignaturesForReference(ctx, ref, ociremoteOpts...)
 	if err != nil {
 		return err
@@ -43,7 +60,10 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(b))
+		_, err = out.Write(append(b, byte('\n')))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

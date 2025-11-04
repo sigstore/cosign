@@ -53,7 +53,7 @@ func TestGetBundles_Empty(t *testing.T) {
 	assert.NoError(t, err)
 
 	// If tag doesn't exist, should return ErrImageTagNotFound
-	bundles, hash, err := GetBundles(context.Background(), ref, &CheckOpts{})
+	bundles, hash, err := GetBundles(context.Background(), ref, []ociremote.Option{})
 	imgTagNotFound := &ErrImageTagNotFound{}
 	assert.ErrorAs(t, err, &imgTagNotFound)
 	assert.Len(t, bundles, 0)
@@ -65,7 +65,7 @@ func TestGetBundles_Empty(t *testing.T) {
 	assert.NoError(t, remote.Write(ref, img))
 
 	// Check that no matching attestation error is returned
-	bundles, hash, err = GetBundles(context.Background(), ref, &CheckOpts{})
+	bundles, hash, err = GetBundles(context.Background(), ref, []ociremote.Option{})
 	var noMatchErr *ErrNoMatchingAttestations
 	assert.ErrorAs(t, err, &noMatchErr)
 	assert.Len(t, bundles, 0)
@@ -81,7 +81,7 @@ func TestGetBundles_Empty(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Should still return no matching attestation error, as it failed to parse the bundle
-	bundles, hash, err = GetBundles(context.Background(), ref, &CheckOpts{})
+	bundles, hash, err = GetBundles(context.Background(), ref, []ociremote.Option{})
 	assert.ErrorAs(t, err, &noMatchErr)
 	assert.Len(t, bundles, 0)
 	assert.Nil(t, hash)
@@ -111,7 +111,7 @@ func TestGetBundles_Valid(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Retrieve the attestation
-	bundles, hash, err := GetBundles(context.Background(), ref, &CheckOpts{})
+	bundles, hash, err := GetBundles(context.Background(), ref, []ociremote.Option{})
 	assert.NoError(t, err)
 	assert.Len(t, bundles, 1)
 	assert.NotNil(t, hash)

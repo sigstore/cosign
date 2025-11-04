@@ -28,6 +28,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	"github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signedPayloads []string, imageRef string) error {
@@ -37,7 +38,28 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	}
 
 	for _, payload := range signedPayloads {
-		if err := attachAttestation(ctx, ociremoteOpts, payload, imageRef, regOpts.NameOptions()); err != nil {
+		fmt.Fprintf(os.Stderr, "Using payload from: %s", payload)
+
+		ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
+		if err != nil {
+			return err
+		}
+		if _, ok := ref.(name.Digest); !ok {
+			ui.Warnf(ctx, ui.TagReferenceMessage, imageRef)
+		}
+
+		digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
+		if err != nil {
+			return err
+		}
+
+		// Detect if we are using new bundle format
+		b, err := bundle.LoadJSONFromPath(payload)
+		if err == nil {
+			return attachAttestationNewBundle(ociremoteOpts, b, digest)
+		}
+
+		if err := attachAttestation(ociremoteOpts, payload, digest); err != nil {
 			return fmt.Errorf("attaching payload from %s: %w", payload, err)
 		}
 	}
@@ -45,8 +67,29 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signed
 	return nil
 }
 
-func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signedPayload, imageRef string, nameOpts []name.Option) error {
-	fmt.Fprintf(os.Stderr, "Using payload from: %s", signedPayload)
+func attachAttestationNewBundle(remoteOpts []ociremote.Option, b *bundle.Bundle, digest name.Digest) error {
+	envelope, err := b.Envelope()
+	if err != nil {
+		return err
+	}
+	if envelope == nil {
+		return fmt.Errorf("bundle does not have DSSE envelope")
+	}
+	statement, err := envelope.Statement()
+	if err != nil {
+		return err
+	}
+	if statement == nil {
+		return fmt.Errorf("unable to understand bundle envelope statement")
+	}
+	bundleBytes, err := b.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, statement.PredicateType, remoteOpts...)
+}
+
+func attachAttestation(remoteOpts []ociremote.Option, signedPayload string, digest name.Digest) error {
 	attestationFile, err := os.Open(signedPayload)
 	if err != nil {
 		return err
@@ -72,22 +115,6 @@ func attachAttestation(ctx context.Context, remoteOpts []ociremote.Option, signe
 		if len(env.Signatures) == 0 {
 			return fmt.Errorf("could not attach attestation without having signatures")
 		}
-
-		ref, err := name.ParseReference(imageRef, nameOpts...)
-		if err != nil {
-			return err
-		}
-		if _, ok := ref.(name.Digest); !ok {
-			ui.Warnf(ctx, ui.TagReferenceMessage, imageRef)
-		}
-		digest, err := ociremote.ResolveDigest(ref, remoteOpts...)
-		if err != nil {
-			return err
-		}
-		// Overwrite "ref" with a digest to avoid a race where we use a tag
-		// multiple times, and it potentially points to different things at
-		// each access.
-		ref = digest // nolint
 
 		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
 		att, err := static.NewAttestation(payload, opts...)

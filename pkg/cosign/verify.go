@@ -1621,10 +1621,10 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	return verifySignatures(ctx, sigs, h, co)
 }
 
-func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
+func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOpts []ociremote.Option, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
-	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	digest, err := ociremote.ResolveDigest(signedImgRef, registryClientOpts...)
 	if err != nil {
 		if terr := (&transport.Error{}); errors.As(err, &terr) && terr.StatusCode == http.StatusNotFound {
 			return nil, nil, &ErrImageTagNotFound{
@@ -1638,7 +1638,7 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts, n
 		return nil, nil, err
 	}
 
-	index, err := ociremote.Referrers(digest, "", co.RegistryClientOpts...)
+	index, err := ociremote.Referrers(digest, "", registryClientOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1648,7 +1648,7 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts, n
 		if err != nil {
 			return nil, nil, err
 		}
-		bundle, err := ociremote.Bundle(st, co.RegistryClientOpts...)
+		bundle, err := ociremote.Bundle(st, registryClientOpts...)
 		if err != nil {
 			// There may be non-Sigstore referrers in the index, so we can ignore them.
 			// TODO: Should we surface any errors here (e.g. if the bundle is invalid)?
@@ -1668,7 +1668,7 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, co *CheckOpts, n
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
 func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := GetBundles(ctx, signedImgRef, co, nameOpts...)
+	bundles, hash, err := GetBundles(ctx, signedImgRef, co.RegistryClientOpts, nameOpts...)
 	if err != nil {
 		return nil, false, err
 	}
