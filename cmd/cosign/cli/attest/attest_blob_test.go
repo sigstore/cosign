@@ -341,3 +341,62 @@ func TestStatementPath(t *testing.T) {
 	err := at.Exec(ctx, "")
 	assert.NoError(t, err)
 }
+
+// TestAttestBlobBundleStdout tests that the bundle is printed to stdout
+// with a trailing newline when --bundle is set to "-"
+func TestAttestBlobBundleStdout(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	keys, _ := cosign.GenerateKeyPair(nil)
+	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+	predicatePath := makeSLSA02PredicateFile(t, td)
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	at := AttestBlobCommand{
+		KeyOpts: options.KeyOpts{
+			KeyRef:          keyRef,
+			NewBundleFormat: true,
+			BundlePath:      "-", // stdout
+		},
+		PredicatePath:  predicatePath,
+		PredicateType:  "slsaprovenance",
+		RekorEntryType: "dsse",
+	}
+
+	err := at.Exec(ctx, blobPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Restore stdout and read captured output
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	output := buf.String()
+
+	// Verify output has trailing newline
+	if !strings.HasSuffix(output, "\n") {
+		t.Fatal("expected bundle output to have trailing newline")
+	}
+
+	// Verify output is valid JSON
+	outputWithoutNewline := strings.TrimSuffix(output, "\n")
+	var bundle interface{}
+	if err := json.Unmarshal([]byte(outputWithoutNewline), &bundle); err != nil {
+		t.Fatalf("bundle output is not valid JSON: %v", err)
+	}
+
+	// Verify bundle is non-empty
+	if len(outputWithoutNewline) == 0 {
+		t.Fatal("expected non-empty bundle output")
+	}
+}
