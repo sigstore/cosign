@@ -945,15 +945,23 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// We have a public key.
+	var pub crypto.PublicKey
 	if co.SigVerifier != nil {
-		pub, err := co.SigVerifier.PublicKey(co.PKOpts...)
+		pub, err = co.SigVerifier.PublicKey(co.PKOpts...)
 		if err != nil {
 			return nil, err
 		}
-		return cryptoutils.MarshalPublicKeyToPEM(pub)
 	}
-	return cryptoutils.MarshalCertificateToPEM(cert)
+	if cert != nil && co.SigVerifier != nil {
+		if err := cryptoutils.EqualKeys(cert.PublicKey, pub); err != nil {
+			return nil, fmt.Errorf("both public key and certificate were provided but did not match")
+		}
+	}
+
+	if cert != nil {
+		return cryptoutils.MarshalCertificateToPEM(cert)
+	}
+	return cryptoutils.MarshalPublicKeyToPEM(pub)
 }
 
 // VerifyBlobSignature verifies a blob signature.
