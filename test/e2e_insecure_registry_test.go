@@ -83,7 +83,7 @@ func TestInsecureRegistry(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	mustErr(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
 		AllowInsecure:     true,
 		AllowHTTPRegistry: true,
@@ -93,7 +93,7 @@ func TestInsecureRegistry(t *testing.T) {
 			RegistryReferrersMode: options.RegistryReferrersModeOCI11,
 		}
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
@@ -115,7 +115,7 @@ func TestInsecureRegistry(t *testing.T) {
 	defer cleanup2()
 
 	so.NewBundleFormat = true
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	cmd.NewBundleFormat = true
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
@@ -155,7 +155,7 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

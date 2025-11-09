@@ -58,10 +58,10 @@ func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Has
 }
 
 // nolint
-func SignBlobCmd(ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
 
-	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
 	defer cancel()
 
 	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)

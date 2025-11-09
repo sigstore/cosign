@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -84,7 +83,7 @@ func SignBlob() *cobra.Command {
 
 			return nil
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -142,7 +141,7 @@ func SignBlob() *cobra.Command {
 				} else {
 					ko.TrustedMaterial, err = cosign.TrustedRoot()
 					if err != nil {
-						ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+						ui.Warnf(cmd.Context(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 					}
 				}
 			}
@@ -165,7 +164,7 @@ func SignBlob() *cobra.Command {
 					o.OutputSignature = o.Output
 				}
 
-				if _, err := sign.SignBlobCmd(ro, ko, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
+				if _, err := sign.SignBlobCmd(cmd.Context(), ro, ko, blob, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", blob, err)
 				}
 			}

@@ -69,7 +69,7 @@ func TestTSAMTLS(t *testing.T) {
 		Cert:       pemLeafRef,
 		CertChain:  pemRootRef,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	verifyCmd := cliverify.VerifyCommand{
 		IgnoreTlog:       true,
@@ -110,7 +110,7 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
 	}
-	sig, err := sign.SignBlobCmd(ro, signingKO, blobPath, true, "", "", false)
+	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, true, "", "", false)
 	must(err, t)
 
 	verifyKO := options.KeyOpts{
@@ -145,7 +145,8 @@ func generateSigningKeys(t *testing.T, td string) (string, string, string) {
 	encBytes, _ := encrypted.Encrypt(x509Encoded, keyPass)
 	keyPem := pem.EncodeToMemory(&pem.Block{
 		Type:  cosign.CosignPrivateKeyPemType,
-		Bytes: encBytes})
+		Bytes: encBytes,
+	})
 	pemKeyRef := mkfile(string(keyPem), td, t)
 
 	return pemRootRef, pemLeafRef, pemKeyRef
@@ -162,7 +163,8 @@ func generateMTLSKeys(t *testing.T, td string) (string, string, string, string, 
 	serverX509Encoded, _ := x509.MarshalPKCS8PrivateKey(serverPrivKey)
 	serverKeyPem := pem.EncodeToMemory(&pem.Block{
 		Type:  cosign.ECPrivateKeyPemType,
-		Bytes: serverX509Encoded})
+		Bytes: serverX509Encoded,
+	})
 	serverPemKeyRef := mkfile(string(serverKeyPem), td, t)
 
 	clientLeafCert, clientPrivKey, _ := cert_test.GenerateLeafCert("tsa-mtls-client", "oidc-issuer", rootCert, rootKey)
@@ -171,7 +173,8 @@ func generateMTLSKeys(t *testing.T, td string) (string, string, string, string, 
 	clientX509Encoded, _ := x509.MarshalPKCS8PrivateKey(clientPrivKey)
 	clientKeyPem := pem.EncodeToMemory(&pem.Block{
 		Type:  cosign.ECPrivateKeyPemType,
-		Bytes: clientX509Encoded})
+		Bytes: clientX509Encoded,
+	})
 	clientPemKeyRef := mkfile(string(clientKeyPem), td, t)
 	return pemRootRef, serverPemLeafRef, serverPemKeyRef, clientPemLeafRef, clientPemKeyRef
 }

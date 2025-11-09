@@ -64,12 +64,12 @@ func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremot
 }
 
 // nolint
-func SignCmd(ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
+func SignCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
 	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
 		return &options.KeyParseError{}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), ro.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
 	defer cancel()
 
 	var staticPayload []byte
