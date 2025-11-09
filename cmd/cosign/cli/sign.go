@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -94,7 +93,7 @@ race conditions or (worse) malicious tampering.
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom":
 				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
@@ -157,7 +156,7 @@ race conditions or (worse) malicious tampering.
 				} else {
 					ko.TrustedMaterial, err = cosign.TrustedRoot()
 					if err != nil {
-						ui.Warnf(context.Background(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+						ui.Warnf(cmd.Context(), "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 					}
 				}
 			}
@@ -173,7 +172,7 @@ race conditions or (worse) malicious tampering.
 				}
 			}
 
-			if err := sign.SignCmd(ro, ko, *o, args); err != nil {
+			if err := sign.SignCmd(cmd.Context(), ro, ko, *o, args); err != nil {
 				if o.Attachment == "" {
 					return fmt.Errorf("signing %v: %w", args, err)
 				}

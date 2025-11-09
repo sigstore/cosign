@@ -37,7 +37,7 @@ func TestSignBlobCmd(t *testing.T) {
 	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 
 	// Test happy path
-	_, err := SignBlobCmd(rootOpts, keyOpts, blobPath, true, "", "", false)
+	_, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, true, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -46,7 +46,7 @@ func TestSignBlobCmd(t *testing.T) {
 	keyOpts.NewBundleFormat = true
 	sigPath := filepath.Join(td, "output.sig")
 	certPath := filepath.Join(td, "output.pem")
-	_, err = SignBlobCmd(rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)
+	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -55,7 +55,7 @@ func TestSignBlobCmd(t *testing.T) {
 func writeFile(t *testing.T, td string, blob string, name string) string {
 	// Write blob to disk
 	blobPath := filepath.Join(td, name)
-	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(blobPath, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return blobPath

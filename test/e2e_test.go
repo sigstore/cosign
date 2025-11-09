@@ -123,7 +123,7 @@ func TestSignVerify(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
@@ -144,7 +144,7 @@ func TestSignVerify(t *testing.T) {
 		Annotations: []string{"foo=bar"},
 	}
 	// Sign the image with an annotation
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// It should match this time.
 	must(verify(pubKeyPath, imgName, true, map[string]interface{}{"foo": "bar"}, "", false), t)
@@ -189,7 +189,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Now verify and download should work!
 	ignoreTlog := true
@@ -205,7 +205,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 		Annotations: []string{"foo=bar"},
 	}
 	// Sign the image with an annotation
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// It should match this time.
 	must(verifyCertBundle(pubKeyPath, caCertFile, caIntermediateCertFile, imgName, true, map[string]interface{}{"foo": "bar"}, "", ignoreTlog), t)
@@ -243,7 +243,7 @@ func TestSignVerifyClean(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
@@ -285,7 +285,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Now verify and download should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
@@ -310,7 +310,7 @@ func downloadTargets(td string, targets []targetInfo, targetsMeta *metadata.Meta
 	if err != nil {
 		return err
 	}
-	err = os.Mkdir(targetsDir, 0700)
+	err = os.Mkdir(targetsDir, 0o700)
 	if err != nil {
 		return err
 	}
@@ -788,7 +788,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				TlogUpload:       true,
 				SkipConfirmation: true,
 			}
-			gotErr := sign.SignCmd(ro, ko, so, []string{imgName})
+			gotErr := sign.SignCmd(ctx, ro, ko, so, []string{imgName})
 			if test.wantSignErr {
 				mustErr(gotErr, t)
 				return
@@ -817,7 +817,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			blob := "someblob"
 			blobDir := t.TempDir()
 			bp := filepath.Join(blobDir, blob)
-			if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+			if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			tsPath := filepath.Join(blobDir, "ts.txt")
@@ -825,7 +825,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			// TODO(cmurphy): make this work with ko.NewBundleFormat = true
 			ko.BundlePath = bundlePath
 			ko.RFC3161TimestampPath = tsPath
-			_, gotErr = sign.SignBlobCmd(ro, ko, bp, true, "", "", true)
+			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true)
 			if test.wantSignErr {
 				mustErr(gotErr, t)
 			} else {
@@ -927,14 +927,14 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	blob := "someblob"
 	blobDir := t.TempDir()
 	bp := filepath.Join(blobDir, blob)
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	bundlePath := filepath.Join(blobDir, "bundle.json")
 	ko.NewBundleFormat = true
 	ko.BundlePath = bundlePath
 
-	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", true)
+	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, false, "", "", true)
 	must(err, t)
 
 	// Verify a blob
@@ -954,7 +954,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
 	attestDir := t.TempDir()
 	statementPath := filepath.Join(attestDir, "statement")
-	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+	if err := os.WriteFile(statementPath, []byte(statement), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
@@ -1047,7 +1047,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 		NewBundleFormat: true,
 		TlogUpload:      true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Verify Fulcio-signed image
 	cmd := cliverify.VerifyCommand{
@@ -1064,7 +1064,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	// Attest image
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
-	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	attestCmd := attest.AttestCommand{
@@ -1142,7 +1142,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	blob := "someblob"
 	blobDir := t.TempDir()
 	bp := filepath.Join(blobDir, blob)
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	bundlePath := filepath.Join(blobDir, "bundle.json")
@@ -1150,7 +1150,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	ko.BundlePath = bundlePath
 	ko.KeyRef = privKeyPath
 
-	_, err = sign.SignBlobCmd(ro, ko, bp, false, "", "", true)
+	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, false, "", "", true)
 	must(err, t)
 
 	// Verify a blob with the key in the trusted root
@@ -1165,7 +1165,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
 	attestDir := t.TempDir()
 	statementPath := filepath.Join(attestDir, "statement")
-	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+	if err := os.WriteFile(statementPath, []byte(statement), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
@@ -1218,7 +1218,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat: true,
 		TlogUpload:      true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Verify bundle
 	trustedRootPath := prepareTrustedRoot(t, "")
@@ -1246,7 +1246,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat: true,
 		TlogUpload:      false,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 	// Verify bundle without Rekor
 	cmd = cliverify.VerifyCommand{
 		CommonVerifyOptions: options.CommonVerifyOptions{
@@ -1276,7 +1276,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		NewBundleFormat: true,
 		TlogUpload:      true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Verify Fulcio-signed image
 	cmd = cliverify.VerifyCommand{
@@ -1308,7 +1308,7 @@ func TestSignVerifyBundle(t *testing.T) {
 			Annotations: []string{"foo=bar"},
 		},
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 	cmd = cliverify.VerifyCommand{
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootPath,
@@ -1422,7 +1422,7 @@ func attestVerify(t *testing.T, newBundleFormat bool, predicateType, attestation
 	// Fail case when using without type and policy flag
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
-	if err := os.WriteFile(attestationPath, []byte(attestation), 0600); err != nil {
+	if err := os.WriteFile(attestationPath, []byte(attestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1443,13 +1443,13 @@ func attestVerify(t *testing.T, newBundleFormat bool, predicateType, attestation
 	verifyAttestation.Policies = []string{policyPath}
 
 	// Fail case
-	if err := os.WriteFile(policyPath, []byte(badCue), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(badCue), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
 	// Success case
-	if err := os.WriteFile(policyPath, []byte(goodCue), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(goodCue), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
@@ -1475,7 +1475,7 @@ func TestAttestationDownload(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1503,7 +1503,7 @@ func TestAttestationDownload(t *testing.T) {
 }
 `
 	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
-	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1569,7 +1569,7 @@ func TestAttestationDownloadWithPredicateType(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1597,7 +1597,7 @@ func TestAttestationDownloadWithPredicateType(t *testing.T) {
 }
 `
 	vulnAttestationPath := filepath.Join(td, "attestation.vuln.json")
-	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0600); err != nil {
+	if err := os.WriteFile(vulnAttestationPath, []byte(vulnAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1666,7 +1666,7 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1707,7 +1707,7 @@ func TestAttestationReplaceCreate(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1760,7 +1760,7 @@ func TestAttestationReplace(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1805,7 +1805,6 @@ func TestAttestationReplace(t *testing.T) {
 	}
 	must(attestCommand.Exec(ctx, imgName), t)
 	attestations, err = cosign.FetchAttestationsForReference(ctx, ref, attOpts.PredicateType, ociremoteOpts...)
-
 	// Download and count the attestations
 	if err != nil {
 		t.Fatal(err)
@@ -1859,7 +1858,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1948,12 +1947,12 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	})
 
 	bp := filepath.Join(td, blob)
-	if err := os.WriteFile(bp, []byte(blob), 0600); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
 	predicatePath := filepath.Join(td, "predicate")
-	if err := os.WriteFile(predicatePath, []byte(predicate), 0600); err != nil {
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2017,7 +2016,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0600); err != nil {
+	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2058,7 +2057,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 
 	b := bytes.Buffer{}
 	blobRef := filepath.Join(td, blob)
-	if err := os.WriteFile(blobRef, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(blobRef, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
@@ -2135,7 +2134,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		KeyRef:   privKeyRef,
 		PassFunc: passFunc,
 	}
-	blobSig, err := sign.SignBlobCmd(ro, ko, blobRef, true, "", "", false)
+	blobSig, err := sign.SignBlobCmd(ctx, ro, ko, blobRef, true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2307,7 +2306,7 @@ func TestRekorBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 
@@ -2345,7 +2344,7 @@ func TestRekorOutput(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 
@@ -2392,7 +2391,7 @@ func TestFulcioBundle(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 
@@ -2451,7 +2450,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the TSA server
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), true), t)
 }
@@ -2513,7 +2512,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	}
 
 	// Sign the image
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the Rekor and TSA clients
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
 }
@@ -2549,7 +2548,7 @@ func TestDuplicateSign(t *testing.T) {
 	so := options.SignOptions{
 		Upload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Now verify and download should work!
 	// Ignore the tlog, because uploading to the tlog causes new signatures with new timestamp entries to be appended.
@@ -2557,7 +2556,7 @@ func TestDuplicateSign(t *testing.T) {
 	must(download.SignatureCmd(ctx, options.RegistryOptions{}, imgName, os.Stdout), t)
 
 	// Signing again should work just fine...
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	se, err := ociremote.SignedEntity(ref, ociremote.WithRemoteOptions(registryClientOpts(ctx)...))
 	must(err, t)
@@ -2673,14 +2672,14 @@ func TestMultipleSignatures(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Now verify should work with that one, but not the other
 	must(verify(pub1, imgName, true, nil, "", false), t)
 	mustErr(verify(pub2, imgName, true, nil, "", false), t)
 
 	// Now sign with the other key too
 	ko.KeyRef = priv2
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Now verify should work with both
 	must(verify(pub1, imgName, true, nil, "", false), t)
@@ -2698,7 +2697,7 @@ func TestSignBlob(t *testing.T) {
 	td2 := t.TempDir()
 	bp := filepath.Join(td1, blob)
 
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2732,7 +2731,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false)
+	sig, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2749,7 +2748,7 @@ func TestSignBlobBundle(t *testing.T) {
 	bp := filepath.Join(td1, blob)
 	bundlePath := filepath.Join(td1, "bundle.sig")
 
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2781,14 +2780,14 @@ func TestSignBlobBundle(t *testing.T) {
 		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2803,7 +2802,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 
 	blob := "someblob"
 	blobPath := filepath.Join(td1, blob)
-	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(blobPath, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2834,7 +2833,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 		NewBundleFormat: true,
 	}
 
-	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2847,7 +2846,7 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 
 	blob := "someblob"
 	blobPath := filepath.Join(td1, blob)
-	if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(blobPath, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2864,7 +2863,7 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 		BundlePath:      bundlePath,
 		NewBundleFormat: true,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2939,7 +2938,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 
 			blob := "someblob"
 			blobPath := filepath.Join(td1, blob)
-			if err := os.WriteFile(blobPath, []byte(blob), 0644); err != nil {
+			if err := os.WriteFile(blobPath, []byte(blob), 0o644); err != nil {
 				t.Fatal(err)
 			}
 
@@ -2980,7 +2979,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 				SkipConfirmation:               true,
 			}
 
-			if _, err := sign.SignBlobCmd(ro, ko, blobPath, true, "", "", true); err != nil {
+			if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", true); err != nil {
 				t.Fatal(err)
 			}
 
@@ -2990,7 +2989,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 				t.Fatal(err)
 			}
 			tmpBundlePath := filepath.Join("/tmp", fmt.Sprintf("bundle-%s", tt.algo))
-			if err := os.WriteFile(tmpBundlePath, bundleBytes, 0644); err != nil {
+			if err := os.WriteFile(tmpBundlePath, bundleBytes, 0o644); err != nil {
 				t.Fatal(err)
 			}
 
@@ -3018,7 +3017,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	bundlePath := filepath.Join(td, "bundle.sig")
 	tsPath := filepath.Join(td, "rfc3161Timestamp.json")
 
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3069,14 +3068,14 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		RekorURL:             rekorURL,
 		SkipConfirmation:     true,
 	}
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ro, ko, bp, true, "", "", true); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
@@ -3155,7 +3154,7 @@ func TestSaveLoad(t *testing.T) {
 				Upload:     true,
 				TlogUpload: true,
 			}
-			must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+			must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 			must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 
 			// save the image to a temp dir
@@ -3202,13 +3201,13 @@ func TestSaveLoadAttestation(t *testing.T) {
 		Upload:     true,
 		TlogUpload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
 
 	// now, append an attestation to the image
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3242,7 +3241,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 	verifyAttestation.Policies = []string{policyPath}
 	// Success case (remote)
 	cuePolicy := `predicate: builder: id: "2"`
-	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0600); err != nil {
+	if err := os.WriteFile(policyPath, []byte(cuePolicy), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName2}), t)
@@ -3272,7 +3271,7 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
-	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0600); err != nil {
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3295,7 +3294,7 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 	defer cleanup()
 
 	bundlePath := filepath.Join(td, "downloaded-bundle.sigstore.json")
-	if err := os.WriteFile(bundlePath, out.Bytes(), 0600); err != nil {
+	if err := os.WriteFile(bundlePath, out.Bytes(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3327,7 +3326,7 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 		Upload:          true,
 	}
 
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 	// Download should now succeed - redirect stdout to use with attach
 	out := bytes.Buffer{}
@@ -3339,7 +3338,7 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 	defer cleanup()
 
 	bundlePath := filepath.Join(td, "downloaded-bundle.sigstore.json")
-	if err := os.WriteFile(bundlePath, out.Bytes(), 0600); err != nil {
+	if err := os.WriteFile(bundlePath, out.Bytes(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3417,7 +3416,7 @@ func TestAttachSBOM(t *testing.T) {
 		TlogUpload: true,
 		Attachment: "sbom",
 	}
-	must(sign.SignCmd(ro, ko1, so, []string{imgName}), t)
+	must(sign.SignCmd(ctx, ro, ko1, so, []string{imgName}), t)
 
 	// Now verify should work with that one, but not the other
 	must(verify(pubKeyPath1, imgName, true, nil, "sbom", false), t)
@@ -3448,7 +3447,7 @@ func TestNoTlog(t *testing.T) {
 	so := options.SignOptions{
 		Upload: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Now verify should work!
 	must(verify(pubKeyPath, imgName, true, nil, "", true), t)
@@ -3461,7 +3460,7 @@ func TestGetPublicKeyCustomOut(t *testing.T) {
 
 	outFile := "output.pub"
 	outPath := filepath.Join(td, outFile)
-	outWriter, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0600)
+	outWriter, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0o600)
 	must(err, t)
 
 	pk := publickey.Pkopts{
@@ -3508,7 +3507,7 @@ func TestInvalidBundle(t *testing.T) {
 		TlogUpload:       true,
 		SkipConfirmation: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{img1}), t)
 	// verify image1
 	must(verify(pubKeyPath, img1, true, nil, "", false), t)
 	// extract the bundle from image1
@@ -3536,7 +3535,7 @@ func TestInvalidBundle(t *testing.T) {
 		Upload:     true,
 		TlogUpload: false,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{img2}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{img2}), t)
 	must(verify(pubKeyPath, img2, true, nil, "", true), t)
 
 	si2, err := ociremote.SignedEntity(imgRef2, remoteOpts)
@@ -3595,22 +3594,22 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	})
 
 	bp := filepath.Join(td1, blob)
-	if err := os.WriteFile(bp, []byte(blob), 0644); err != nil {
+	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	anotherBlob := filepath.Join(td1, "another-blob")
-	if err := os.WriteFile(anotherBlob, []byte("another-blob"), 0644); err != nil {
+	if err := os.WriteFile(anotherBlob, []byte("another-blob"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	predicatePath := filepath.Join(td1, "predicate")
-	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	statementPath := filepath.Join(td1, "statement")
-	if err := os.WriteFile(statementPath, []byte(statement), 0644); err != nil {
+	if err := os.WriteFile(statementPath, []byte(statement), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3707,7 +3706,7 @@ func TestOffline(t *testing.T) {
 		TlogUpload:       true,
 		SkipConfirmation: true,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{img1}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{img1}), t)
 	// verify image1 online and offline
 	must(verify(pubKeyPath, img1, true, nil, "", false), t)
 	verifyCmd := &cliverify.VerifyCommand{
@@ -3803,8 +3802,8 @@ func TestDockerfileVerify(t *testing.T) {
 		SkipConfirmation: true,
 	}
 	ctx := context.Background()
-	must(sign.SignCmd(ro, ko, so, []string{signedImg1}), t)
-	must(sign.SignCmd(ro, ko, so, []string{signedImg2}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{signedImg1}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{signedImg2}), t)
 
 	// create the dockerfiles
 	singleStageDockerfileContents := fmt.Sprintf(`
@@ -3949,7 +3948,7 @@ func TestManifestVerify(t *testing.T) {
 		SkipConfirmation: true,
 	}
 	ctx := context.Background()
-	must(sign.SignCmd(ro, ko, so, []string{signedImg}), t)
+	must(sign.SignCmd(ctx, ro, ko, so, []string{signedImg}), t)
 
 	// create the manifests
 	manifestTemplate := `
@@ -4071,7 +4070,7 @@ func TestSignVerifyWithRepoOverride(t *testing.T) {
 		TlogUpload: true,
 	}
 
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Bundle should appear in the second repo
 	tags, err = crane.ListTags(cosignRepo)
@@ -4090,7 +4089,7 @@ func TestSignVerifyWithRepoOverride(t *testing.T) {
 
 	// Sign another image with the new protobuf bundle format
 	so.NewBundleFormat = true
-	must(sign.SignCmd(ro, ko, so, []string{name.String()}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{name.String()}), t)
 
 	// The new bundle should appear under a new tag for the second repo
 	tags, err = crane.ListTags(cosignRepo)
@@ -4147,7 +4146,7 @@ func TestSignVerifyMultipleIdentities(t *testing.T) {
 		TlogUpload:              true,
 		SignContainerIdentities: []string{"registry/cosign-e2e:tag1", "registry/cosign-e2e:tag2"},
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Now verify should work
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
@@ -4179,7 +4178,7 @@ func TestTree(t *testing.T) {
 		Upload:          true,
 	}
 
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Test out tree command after sign
 	out.Reset()
@@ -4217,7 +4216,7 @@ func TestSignVerifyUploadFalse(t *testing.T) {
 	so := options.SignOptions{
 		Upload: false,
 	}
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// There should still be no signatures
 	out.Reset()
@@ -4226,7 +4225,7 @@ func TestSignVerifyUploadFalse(t *testing.T) {
 
 	// Now with Upload: true
 	so.Upload = true
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Now there should be signatures
 	out.Reset()
@@ -4247,7 +4246,7 @@ func TestSignVerifyUploadFalse(t *testing.T) {
 	so.Upload = false
 	so.NewBundleFormat = true
 	so.BundlePath = path.Join(td, "output.bundle")
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	assert.FileExists(t, so.BundlePath)
 
 	// There should still be no signatures
@@ -4257,7 +4256,7 @@ func TestSignVerifyUploadFalse(t *testing.T) {
 
 	// Now with Upload: true
 	so.Upload = true
-	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
 	// Now there should be signatures
 	out.Reset()
@@ -4302,7 +4301,7 @@ func TestAttestVerifyUploadFalse(t *testing.T) {
 	}
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
-	if err := os.WriteFile(predicatePath, []byte(predicate), 0644); err != nil {
+	if err := os.WriteFile(predicatePath, []byte(predicate), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	attestCmd := attest.AttestCommand{
