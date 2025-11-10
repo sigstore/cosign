@@ -164,8 +164,14 @@ cosign save $IMAGE_NAME --dir ./path/to/dir
 
 Now, in an air-gapped environment, this local image can be verified:
 
-```
-cosign verify --certificate-identity $CERT_IDENTITY --certificate-oidc-issuer $CERT_OIDC_ISSUER --offline --local-image ./path/to/dir
+```shell
+cosign verify \
+  --certificate-identity $CERT_IDENTITY \
+  --certificate-oidc-issuer $CERT_OIDC_ISSUER \
+  --offline=true \
+  --new-bundle-format=false \ # for artifacts signed without the new protobuf bundle format
+  --trusted-root ~/.sigstore/root/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json \ # default location of trusted root
+  --local-image ./path/to/dir
 ```
 
 You'll need to pass in expected values for `$CERT_IDENTITY` and `$CERT_OIDC_ISSUER` to correctly verify this image.
