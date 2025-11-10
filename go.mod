@@ -1,6 +1,6 @@
 module github.com/sigstore/cosign/v3
 
-go 1.24.6
+go 1.24.9
 
 require (
 	cuelang.org/go v0.14.2
@@ -49,7 +49,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/spiffe/go-spiffe/v2 v2.6.0
 	github.com/stretchr/testify v1.11.1
-	github.com/theupdateframework/go-tuf/v2 v2.2.0
+	github.com/theupdateframework/go-tuf/v2 v2.3.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v0.157.0
