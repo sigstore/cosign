@@ -655,7 +655,7 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		return fmt.Errorf("cannot specify service URLs and use signing config")
 	}
 	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config without a transparency log service")
+		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config with --signing-config without a transparency log service, which can be created with `cosign signing-config create` or `curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)'` for the public instance")
 	}
 	// Signing config requires a bundle as output for verification materials since sigstore-go is used
 	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
