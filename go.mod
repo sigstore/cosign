@@ -52,7 +52,7 @@ require (
 	github.com/theupdateframework/go-tuf/v2 v2.3.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
-	gitlab.com/gitlab-org/api/client-go v0.157.0
+	gitlab.com/gitlab-org/api/client-go v0.160.0
 	golang.org/x/crypto v0.43.0
 	golang.org/x/oauth2 v0.33.0
 	golang.org/x/sync v0.17.0
@@ -67,7 +67,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.24.0 // indirect
+	cel.dev/expr v0.25.1 // indirect
 	cloud.google.com/go v0.121.6 // indirect
 	cloud.google.com/go/auth v0.17.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
