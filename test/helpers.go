@@ -74,16 +74,17 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify, newBundle bool) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		IgnoreTlog:    skipTlogVerify,
+		KeyRef:          keyRef,
+		RekorURL:        rekorURL,
+		CheckClaims:     checkClaims,
+		Annotations:     sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:      attachment,
+		HashAlgorithm:   crypto.SHA256,
+		MaxWorkers:      10,
+		IgnoreTlog:      skipTlogVerify,
+		NewBundleFormat: newBundle,
 	}
 
 	args := []string{imageRef}
@@ -222,16 +223,17 @@ var verifyBlobKeylessWithCARoots = func(blobRef string,
 }
 
 // Used to verify local images stored on disk
-var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
+var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string, newBundle bool) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		LocalImage:    true,
-		MaxWorkers:    10,
+		KeyRef:          keyRef,
+		RekorURL:        rekorURL,
+		CheckClaims:     checkClaims,
+		Annotations:     sigs.AnnotationsMap{Annotations: annotations},
+		Attachment:      attachment,
+		HashAlgorithm:   crypto.SHA256,
+		LocalImage:      true,
+		MaxWorkers:      10,
+		NewBundleFormat: newBundle,
 	}
 
 	args := []string{path}

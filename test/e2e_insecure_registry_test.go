@@ -94,7 +94,7 @@ func TestInsecureRegistry(t *testing.T) {
 		}
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, "", false, false), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
 		CheckClaims: true,
