@@ -32,8 +32,8 @@ import (
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
-	tsaserver "github.com/sigstore/timestamp-authority/pkg/server"
+	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
+	tsaserver "github.com/sigstore/timestamp-authority/v2/pkg/server"
 	"github.com/spf13/viper"
 )
 

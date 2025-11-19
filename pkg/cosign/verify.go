@@ -73,7 +73,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/tuf"
-	tsaverification "github.com/sigstore/timestamp-authority/pkg/verification"
+	tsaverification "github.com/sigstore/timestamp-authority/v2/pkg/verification"
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
