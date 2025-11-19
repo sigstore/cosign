@@ -53,6 +53,7 @@ jobs:
           persist-credentials: false
 
       - name: Extract version of Go to use
+        shell: bash # To use awk on Windows
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0

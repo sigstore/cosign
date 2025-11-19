@@ -27,7 +27,7 @@ import (
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/timestamp-authority/pkg/signer"
+	"github.com/sigstore/timestamp-authority/v2/pkg/signer"
 )
 
 // TSAClient creates RFC3161 timestamps and implements client.TimestampAuthority.
