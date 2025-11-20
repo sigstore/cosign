@@ -29,14 +29,15 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
+func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
 	var opts sign.BundleOptions
 
 	if trustedMaterial != nil {
 		opts.TrustedRoot = trustedMaterial
 	}
 
-	if idToken != "" {
+	switch {
+	case idToken != "":
 		if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
 			return nil, fmt.Errorf("no fulcio URLs provided in signing config")
 		}
@@ -53,7 +54,9 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		opts.CertificateProviderOptions = &sign.CertificateProviderOptions{
 			IDToken: idToken,
 		}
-	} else {
+	case cert != nil:
+		opts.CertificateProvider = &localCertProvider{cert}
+	default:
 		publicKeyPem, err := keypair.GetPublicKeyPem()
 		if err != nil {
 			return nil, err
@@ -129,4 +132,16 @@ type verifyTrustedMaterial struct {
 
 func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstrainedVerifier, error) {
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
+}
+
+type localCertProvider struct {
+	cert []byte
+}
+
+func (c *localCertProvider) GetCertificate(_ context.Context, _ sign.Keypair, _ *sign.CertificateProviderOptions) ([]byte, error) {
+	certBlock, _ := pem.Decode(c.cert)
+	if certBlock == nil {
+		return nil, fmt.Errorf("could not decode cert")
+	}
+	return certBlock.Bytes, nil
 }
