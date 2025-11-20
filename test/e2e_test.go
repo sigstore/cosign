@@ -21,16 +21,20 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -572,8 +576,7 @@ func downloadTSACerts(downloadDirectory string, tsaServer string) (string, strin
 	return leafPath, intermediatePath, rootPath, nil
 }
 
-func prepareTrustedRoot(t *testing.T, tsaURL string) string {
-	downloadDirectory := t.TempDir()
+func trustedRootCmd(t *testing.T, downloadDirectory, tsaURL string) *trustedroot.CreateCmd {
 	caPath := filepath.Join(downloadDirectory, "fulcio.crt.pem")
 	caFP, err := os.Create(caPath)
 	must(err, t)
@@ -602,8 +605,22 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 		must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
 		cmd.TSACertChainPath = []string{tsaPath}
 	}
+	return cmd
+}
+
+func prepareTrustedRoot(t *testing.T, tsaURL string) string {
+	downloadDirectory := t.TempDir()
+	cmd := trustedRootCmd(t, downloadDirectory, tsaURL)
 	must(cmd.Exec(context.TODO()), t)
-	return out
+	return cmd.Out
+}
+
+func prepareTrustedRootWithSelfSignedCertificate(t *testing.T, certPath, tsaURL string) string {
+	td := t.TempDir()
+	cmd := trustedRootCmd(t, td, tsaURL)
+	cmd.CertChain = append(cmd.CertChain, certPath)
+	must(cmd.Exec(context.TODO()), t)
+	return cmd.Out
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
@@ -889,8 +906,12 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	mirror := tufServer.URL
 	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
 	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	sc, err := os.ReadFile(signingConfigStr)
+	must(err, t)
+	fmt.Println(string(sc))
+	fmt.Println(fulcioURL)
 
-	_, err := newTUF(tufMirror, []targetInfo{
+	_, err = newTUF(tufMirror, []targetInfo{
 		{
 			name:   "trusted_root.json",
 			source: trustedRoot,
@@ -1092,6 +1113,113 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 		CheckClaims:         true,
 	}
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
+func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+
+	cert, privKey, err := selfSignedCertificate()
+	must(err, t)
+	keysDir := t.TempDir()
+	privKeyPath := filepath.Join(keysDir, "priv.key")
+	privDer, err := x509.MarshalECPrivateKey(privKey)
+	must(err, t)
+	keyWriter, err := os.OpenFile(privKeyPath, os.O_WRONLY|os.O_CREATE, 0o600)
+	must(err, t)
+	defer keyWriter.Close()
+	block := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: privDer,
+	}
+	must(pem.Encode(keyWriter, block), t)
+
+	certPath := filepath.Join(keysDir, "cert.pem")
+	certWriter, err := os.OpenFile(certPath, os.O_WRONLY|os.O_CREATE, 0o600)
+	must(err, t)
+	defer certWriter.Close()
+	block = &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	}
+	must(pem.Encode(certWriter, block), t)
+
+	keys, err := cosign.ImportKeyPair(privKeyPath, passFunc)
+	must(err, t)
+	importKeyPath := filepath.Join(keysDir, "import-priv.key")
+	must(os.WriteFile(importKeyPath, keys.PrivateBytes, 0o600), t)
+
+	trustedRoot := prepareTrustedRootWithSelfSignedCertificate(t, certPath, tsaServer.URL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+
+	_, err = newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	ko := options.KeyOpts{
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+		KeyRef:           importKeyPath,
+		PassFunc:         passFunc,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	// Sign image with cert in bundle format
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		Key:             importKeyPath,
+		Cert:            certPath,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Verify image
+	cmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuerRegexp: ".*",
+			CertIdentity:         "foo@bar.com",
+		},
+		NewBundleFormat: true,
+		IgnoreSCT:       true,
+	}
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
 }
 
 func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
@@ -4368,4 +4496,32 @@ func TestAttestVerifyUploadFalse(t *testing.T) {
 	_, err = io.Copy(h, f)
 	must(err, t)
 	assert.Contains(t, out.String(), fmt.Sprintf("sha256:%s", hex.EncodeToString(h.Sum(nil))))
+}
+
+func selfSignedCertificate() (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	ct := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   "self.signed.cert",
+			Organization: []string{"dev"},
+		},
+		EmailAddresses: []string{"foo@bar.com"},
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		NotAfter:       time.Now().Add(24 * time.Hour),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, ct, ct, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, err
+	}
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cert, priv, nil
 }

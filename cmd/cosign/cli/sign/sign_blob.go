@@ -77,7 +77,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if ko.SigningConfig != nil {
-		keypair, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, "", "")
+		keypair, _, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, "", "")
 		if err != nil {
 			return nil, fmt.Errorf("getting keypair and token: %w", err)
 		}
@@ -95,7 +95,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 			Data: data,
 		}
 
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, ko.SigningConfig, ko.TrustedMaterial)
+		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, nil, ko.SigningConfig, ko.TrustedMaterial)
 		if err != nil {
 			return nil, fmt.Errorf("signing bundle: %w", err)
 		}
