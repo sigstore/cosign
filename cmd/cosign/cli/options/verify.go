@@ -123,6 +123,8 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
+
+	cmd.MarkFlagsMutuallyExclusive("local-image", "new-bundle-format")
 }
 
 // VerifyAttestationOptions is the top level wrapper for the `verify attestation` command.
@@ -168,6 +170,8 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
+
+	cmd.MarkFlagsMutuallyExclusive("local-image", "new-bundle-format")
 }
 
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.

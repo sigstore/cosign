@@ -20,14 +20,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	goremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
@@ -39,7 +42,7 @@ const BundlePredicateType string = "dev.sigstore.bundle.predicateType"
 // This includes the signed image and associated signatures in the image index
 // TODO (priyawadhwa@): write the `index.json` itself to the repo as well
 // TODO (priyawadhwa@): write the attestations
-func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, opts ...Option) error {
+func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, directory string, opts ...Option) error {
 	repo := ref.Context()
 	o := makeOptions(repo, opts...)
 
@@ -49,7 +52,7 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 		return fmt.Errorf("signed image index: %w", err)
 	}
 	if ii != nil {
-		if err := remote.WriteIndex(ref, ii, o.ROpt...); err != nil {
+		if err := goremote.WriteIndex(ref, ii, o.ROpt...); err != nil {
 			return fmt.Errorf("writing index: %w", err)
 		}
 	}
@@ -92,6 +95,74 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 		}
 		return remoteWrite(attsTag, atts, o.ROpt...)
 	}
+
+	// Look for any referring artifacts
+	digest, ok := ref.(name.Digest)
+	if !ok {
+		var err error
+		digest, err = ResolveDigest(ref, opts...)
+		if err != nil {
+			return fmt.Errorf("resolving digest: %w", err)
+		}
+	}
+	blobPath := filepath.Join(directory, "blobs", "sha256")
+
+	files, err := os.ReadDir(blobPath)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		fd, err := os.Open(filepath.Join(blobPath, file.Name()))
+		if err != nil {
+			return err
+		}
+		manifest, err := v1.ParseManifest(fd)
+		if err != nil || manifest.Subject == nil {
+			continue
+		}
+		if strings.Compare(manifest.Subject.Digest.String(), digest.DigestStr()) == 0 {
+			// Get the predicate type
+			predicateType := ""
+			if manifest.Annotations != nil {
+				if v, ok := manifest.Annotations[BundlePredicateType]; ok {
+					predicateType = v
+				}
+			}
+			if predicateType != "" {
+				// Write the empty layer
+				_, _, err := writeEmptyConfigLayer(o)
+				if err != nil {
+					return err
+				}
+
+				// Write the manifest
+				m := referrerManifest{*manifest, bundle.BundleV03MediaType}
+				targetRef, err := m.targetRef(o.TargetRepository, opts...)
+				if err != nil {
+					return fmt.Errorf("failed to create target reference: %w", err)
+				}
+				if err := remotePut(targetRef, m, o.ROpt...); err != nil {
+					return fmt.Errorf("failed to upload manifest: %w", err)
+				}
+
+				// Write bundle layers
+				for _, layer := range manifest.Layers {
+					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
+					bundleBytes, err := os.ReadFile(bundlePath)
+					if err != nil {
+						return err
+					}
+					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
+					err = remoteWriteLayer(o.TargetRepository, layer, o.ROpt...)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -226,6 +297,23 @@ func (taggable taggableManifest) MediaType() (types.MediaType, error) {
 	return taggable.mediaType, nil
 }
 
+func writeEmptyConfigLayer(o *options) (v1.Hash, int64, error) {
+	configLayer := static.NewLayer([]byte("{}"), "application/vnd.oci.image.config.v1+json")
+	configDigest, err := configLayer.Digest()
+	if err != nil {
+		return v1.Hash{}, 0, fmt.Errorf("failed to calculate digest: %w", err)
+	}
+	configSize, err := configLayer.Size()
+	if err != nil {
+		return v1.Hash{}, 0, fmt.Errorf("failed to calculate size: %w", err)
+	}
+	err = remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...)
+	if err != nil {
+		return v1.Hash{}, 0, fmt.Errorf("failed to upload layer: %w", err)
+	}
+	return configDigest, configSize, nil
+}
+
 // WriteReferrer writes a referrer manifest for a given subject digest.
 // It uploads the provided layers and creates a manifest that refers to the subject.
 func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annotations map[string]string, opts ...Option) error {
@@ -242,18 +330,9 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 	}
 
 	// Write the empty config layer
-	configLayer := static.NewLayer([]byte("{}"), "application/vnd.oci.image.config.v1+json")
-	configDigest, err := configLayer.Digest()
+	configDigest, configSize, err := writeEmptyConfigLayer(o)
 	if err != nil {
-		return fmt.Errorf("failed to calculate digest: %w", err)
-	}
-	configSize, err := configLayer.Size()
-	if err != nil {
-		return fmt.Errorf("failed to calculate size: %w", err)
-	}
-	err = remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...)
-	if err != nil {
-		return fmt.Errorf("failed to upload layer: %w", err)
+		return err
 	}
 
 	layerDescriptors := make([]v1.Descriptor, len(layers))
