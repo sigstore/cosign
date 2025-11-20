@@ -155,6 +155,9 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 					}
 					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
 					err = remoteWriteLayer(o.TargetRepository, layer, o.ROpt...)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
