@@ -62,5 +62,5 @@ func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) err
 		return err
 	}
 
-	return remote.WriteSignedImageIndexImages(ref, sii, ociremoteOpts...)
+	return remote.WriteSignedImageIndexImages(ref, sii, opts.Directory, ociremoteOpts...)
 }
