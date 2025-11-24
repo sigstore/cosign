@@ -29,6 +29,8 @@ import (
 // The new output-certificate flag is only in use when COSIGN_EXPERIMENTAL is enabled
 type SignBlobOptions struct {
 	Key                  string
+	Cert                 string
+	CertChain            string
 	Base64Output         bool
 	Output               string // deprecated: TODO remove when the output flag is fully deprecated
 	OutputSignature      string // TODO: this should be the root output file arg.
@@ -68,6 +70,17 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the private key file, KMS URI or Kubernetes Secret")
 	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
+
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
+		"path to the X.509 certificate for signing attestation")
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
+
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
+		"path to a list of CA X.509 certificates in PEM format which will be needed "+
+			"when building the certificate chain for the signed attestation. "+
+			"Must start with the parent intermediate CA certificate of the "+
+			"signing certificate and end with the root certificate.")
+	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")

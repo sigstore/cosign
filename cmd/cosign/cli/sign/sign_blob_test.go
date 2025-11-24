@@ -15,11 +15,15 @@
 package sign
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
@@ -37,7 +41,7 @@ func TestSignBlobCmd(t *testing.T) {
 	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 
 	// Test happy path
-	_, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, true, "", "", false)
+	_, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -46,7 +50,32 @@ func TestSignBlobCmd(t *testing.T) {
 	keyOpts.NewBundleFormat = true
 	sigPath := filepath.Join(td, "output.sig")
 	certPath := filepath.Join(td, "output.pem")
-	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, false, sigPath, certPath, false)
+	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", false, sigPath, certPath, false)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Test signing with a certificate
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	cert, certPrivKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	certPemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	signCertPath := writeFile(t, td, string(certPemBytes), "cert.pem")
+	x509Encoded, err := x509.MarshalPKCS8PrivateKey(certPrivKey)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	encBytes, err := encrypted.Encrypt(x509Encoded, nil)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Bytes: encBytes,
+		Type:  cosign.SigstorePrivateKeyPemType,
+	})
+	certPrivKeyRef := writeFile(t, td, string(pemBytes), "certkey.pem")
+	keyOpts.KeyRef = certPrivKeyRef
+
+	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, signCertPath, "", false, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}

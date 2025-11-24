@@ -842,7 +842,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			// TODO(cmurphy): make this work with ko.NewBundleFormat = true
 			ko.BundlePath = bundlePath
 			ko.RFC3161TimestampPath = tsPath
-			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true)
+			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true)
 			if test.wantSignErr {
 				mustErr(gotErr, t)
 			} else {
@@ -955,7 +955,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	ko.NewBundleFormat = true
 	ko.BundlePath = bundlePath
 
-	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, false, "", "", true)
+	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", false, "", "", true)
 	must(err, t)
 
 	// Verify a blob
@@ -1280,7 +1280,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	ko.BundlePath = bundlePath
 	ko.KeyRef = privKeyPath
 
-	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, false, "", "", true)
+	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", false, "", "", true)
 	must(err, t)
 
 	// Verify a blob with the key in the trusted root
@@ -2265,7 +2265,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		KeyRef:   privKeyRef,
 		PassFunc: passFunc,
 	}
-	blobSig, err := sign.SignBlobCmd(ctx, ro, ko, blobRef, true, "", "", false)
+	blobSig, err := sign.SignBlobCmd(ctx, ro, ko, blobRef, "", "", true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2862,7 +2862,7 @@ func TestSignBlob(t *testing.T) {
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
-	sig, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false)
+	sig, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2911,14 +2911,14 @@ func TestSignBlobBundle(t *testing.T) {
 		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2964,7 +2964,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 		NewBundleFormat: true,
 	}
 
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2994,7 +2994,7 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 		BundlePath:      bundlePath,
 		NewBundleFormat: true,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3110,7 +3110,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 				SkipConfirmation:               true,
 			}
 
-			if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, true, "", "", true); err != nil {
+			if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", true); err != nil {
 				t.Fatal(err)
 			}
 
@@ -3199,14 +3199,14 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		RekorURL:             rekorURL,
 		SkipConfirmation:     true,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", false); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
 		t.Fatal(err)
 	}
 	// Now verify should work
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 
 	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, true, "", "", true); err != nil {
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true); err != nil {
 		t.Fatal(err)
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
