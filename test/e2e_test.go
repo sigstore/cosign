@@ -3250,14 +3250,22 @@ func TestSaveLoad(t *testing.T) {
 	tests := []struct {
 		description     string
 		getSignedEntity func(t *testing.T, n string) (name.Reference, *remote.Descriptor, func())
+		newBundle       bool
 	}{
 		{
 			description:     "save and load an image",
 			getSignedEntity: mkimage,
+			newBundle:       false,
+		},
+		{
+			description:     "save and load an image bundle",
+			getSignedEntity: mkimage,
+			newBundle:       true,
 		},
 		{
 			description:     "save and load an image index",
 			getSignedEntity: mkimageindex,
+			newBundle:       false,
 		},
 	}
 	for i, test := range tests {
@@ -3282,23 +3290,45 @@ func TestSaveLoad(t *testing.T) {
 				SkipConfirmation: true,
 			}
 			so := options.SignOptions{
-				Upload:     true,
-				TlogUpload: true,
+				Upload:          true,
+				TlogUpload:      true,
+				NewBundleFormat: test.newBundle,
 			}
 			must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
-			must(verify(pubKeyPath, imgName, true, nil, "", false), t)
+			trustedRootPath := prepareTrustedRoot(t, "")
+			bundleVerifyCmd := cliverify.VerifyCommand{
+				CommonVerifyOptions: options.CommonVerifyOptions{
+					TrustedRootPath: trustedRootPath,
+				},
+				KeyRef:              pubKeyPath,
+				NewBundleFormat:     true,
+				UseSignedTimestamps: false,
+			}
+
+			if test.newBundle {
+				must(bundleVerifyCmd.Exec(ctx, []string{imgName}), t)
+			} else {
+				must(verify(pubKeyPath, imgName, true, nil, "", false), t)
+			}
 
 			// save the image to a temp dir
 			imageDir := t.TempDir()
 			must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
 
 			// verify the local image using a local key
-			must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)
+			// if we are not using protobuf bundle format
+			if !test.newBundle {
+				must(verifyLocal(pubKeyPath, imageDir, true, nil, ""), t)
+			}
 
 			// load the image from the temp dir into a new image and verify the new image
 			imgName2 := path.Join(repo, fmt.Sprintf("save-load-%d-2", i))
 			must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
-			must(verify(pubKeyPath, imgName2, true, nil, "", false), t)
+			if test.newBundle {
+				must(bundleVerifyCmd.Exec(ctx, []string{imgName2}), t)
+			} else {
+				must(verify(pubKeyPath, imgName2, true, nil, "", false), t)
+			}
 		})
 	}
 }
