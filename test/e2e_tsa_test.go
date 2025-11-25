@@ -110,7 +110,7 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
 	}
-	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, true, "", "", false)
+	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
 	must(err, t)
 
 	verifyKO := options.KeyOpts{
