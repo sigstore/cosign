@@ -88,8 +88,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
-	"github.com/sigstore/timestamp-authority/v2/pkg/server"
-	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
@@ -610,9 +608,8 @@ func trustedRootCmd(t *testing.T, downloadDirectory, tsaURL string) *trustedroot
 	defer rekorFP.Close()
 	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
 	ctfePath := filepath.Join(downloadDirectory, "ctfe.pub")
-	home, err := os.UserHomeDir()
-	must(err, t)
-	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
+	ctLogKey := os.Getenv("CT_LOG_KEY")
+	must(copyFile(ctLogKey, ctfePath), t)
 	out := filepath.Join(downloadDirectory, "trusted_root.json")
 	cmd := &trustedroot.CreateCmd{
 		CertChain:    []string{caPath},
@@ -646,23 +643,17 @@ func prepareTrustedRootWithSelfSignedCertificate(t *testing.T, certPath, tsaURL 
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
-	must(err, t)
+	ctLogKey := os.Getenv("CT_LOG_KEY")
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
 	}))
 	mirror := tufServer.URL
-	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaServer.URL)
+	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaURL)
 	must(err, t)
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
 	tests := []struct {
 		name          string
 		targets       []targetInfo
@@ -674,7 +665,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			targets: []targetInfo{
 				{
 					name:   "ct.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 			},
 			wantSignErr: true,
@@ -692,7 +683,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsa_leaf.crt.pem",
@@ -721,7 +712,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -759,7 +750,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "cert-transparency.pem",
 					usage:  "CTFE",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -816,7 +807,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				RekorURL:         rekorURL,
 				IDToken:          identityToken,
 				SkipConfirmation: true,
-				TSAServerURL:     tsaServer.URL + "/api/v1/timestamp",
+				TSAServerURL:     tsaURL + "/api/v1/timestamp",
 			}
 			trustedMaterial, err := cosign.TrustedRoot()
 			if err == nil {
@@ -835,7 +826,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			must(gotErr, t)
 
 			// Verify an image
-			issuer := os.Getenv("OIDC_URL")
+			issuer := os.Getenv("ISSUER_URL")
 			verifyCmd := cliverify.VerifyCommand{
 				CertVerifyOptions: options.CertVerifyOptions{
 					CertOidcIssuer: issuer,
@@ -917,17 +908,12 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
 	}))
 	mirror := tufServer.URL
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
-	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 	sc, err := os.ReadFile(signingConfigStr)
 	must(err, t)
 	fmt.Println(string(sc))
@@ -981,7 +967,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	must(err, t)
 
 	// Verify a blob
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
 		KeyOpts: ko,
 		CertVerifyOptions: options.CertVerifyOptions{
@@ -1032,17 +1018,12 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
 	}))
 	mirror := tufServer.URL
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
-	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 
 	_, err := newTUF(tufMirror, []targetInfo{
 		{
@@ -1096,7 +1077,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	// Verify Fulcio-signed image
 	cmd := cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
 		},
 		NewBundleFormat:     true,
@@ -1124,7 +1105,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	// Verify attestation
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
 		},
 		CommonVerifyOptions: options.CommonVerifyOptions{
@@ -1140,11 +1121,6 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
 	tufMirror := t.TempDir()
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
@@ -1181,8 +1157,8 @@ func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
 	importKeyPath := filepath.Join(keysDir, "import-priv.key")
 	must(os.WriteFile(importKeyPath, keys.PrivateBytes, 0o600), t)
 
-	trustedRoot := prepareTrustedRootWithSelfSignedCertificate(t, certPath, tsaServer.URL)
-	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	trustedRoot := prepareTrustedRootWithSelfSignedCertificate(t, certPath, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 
 	_, err = newTUF(tufMirror, []targetInfo{
 		{
@@ -1330,17 +1306,12 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
 	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
 	}))
 	mirror := tufServer.URL
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
-	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaServer.URL+"/api/v1/timestamp")
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 
 	_, err := newTUF(tufMirror, []targetInfo{
 		{
@@ -1516,7 +1487,7 @@ func TestSignVerifyBundle(t *testing.T) {
 	// Verify Fulcio-signed image
 	cmd = cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer:     os.Getenv("OIDC_URL"),
+			CertOidcIssuer:     os.Getenv("ISSUER_URL"),
 			CertIdentityRegexp: ".+",
 		},
 		CommonVerifyOptions: options.CommonVerifyOptions{
@@ -1617,12 +1588,7 @@ func TestTrustedRootCreateFromDefaults(t *testing.T) {
 	}))
 	t.Cleanup(tufServer.Close)
 	mirror := tufServer.URL
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
 
 	_, err := newTUF(tufMirror, []targetInfo{
 		{
@@ -1711,16 +1677,10 @@ func TestSigningConfigCreateFromDefaults(t *testing.T) {
 	}))
 	t.Cleanup(tufServer.Close)
 	mirror := tufServer.URL
-	tsaURL := "https://tsa.example"
 	oidcURL := "https://oidc.example"
 	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, oidcURL, tsaURL+"/api/v1/timestamp")
 	// Trusted root is needed as well for initialization
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
-	t.Cleanup(tsaServer.Close)
-	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+	trustedRoot := prepareTrustedRoot(t, tsaURL)
 
 	_, err := newTUF(tufMirror, []targetInfo{
 		{
@@ -2313,13 +2273,6 @@ func TestAttestationReplace(t *testing.T) {
 }
 
 func TestAttestationRFC3161Timestamp(t *testing.T) {
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -2356,7 +2309,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		PredicatePath:  slsaAttestationPath,
 		PredicateType:  "slsaprovenance",
 		Timeout:        30 * time.Second,
-		TSAServerURL:   server.URL + "/api/v1/timestamp",
+		TSAServerURL:   tsaURL + "/api/v1/timestamp",
 		TlogUpload:     false,
 		RekorEntryType: "dsse",
 	}
@@ -2372,7 +2325,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		t.Fatal(fmt.Errorf("expected len(attestations) == 1, got %d", len(attestations)))
 	}
 
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2408,13 +2361,6 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 }
 
 func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
 	blob := "someblob"
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicateType := "slsaprovenance"
@@ -2442,7 +2388,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 		KeyRef:          privKeyPath,
 		BundlePath:      bundlePath,
 		NewBundleFormat: true,
-		TSAServerURL:    server.URL + "/api/v1/timestamp",
+		TSAServerURL:    tsaURL + "/api/v1/timestamp",
 		PassFunc:        passFunc,
 	}
 
@@ -2456,7 +2402,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2517,12 +2463,6 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 
 func TestVerifyWithCARoots(t *testing.T) {
 	ctx := context.Background()
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
 
 	repo, stop := reg(t)
 	defer stop()
@@ -2575,7 +2515,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 	pemrootBundleRef := mkfile(string(append(pemRoot, pemRoot02...)), td, t)
 	pemsubBundleRef := mkfile(string(append(pemSub, pemSub02...)), td, t)
 
-	tsclient, err := tsaclient.GetTimestampClient(server.URL)
+	tsclient, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2595,7 +2535,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(server.URL+"/api/v1/timestamp"))
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -2879,14 +2819,7 @@ func TestFulcioBundle(t *testing.T) {
 }
 
 func TestRFC3161Timestamp(t *testing.T) {
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2920,7 +2853,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:       privKeyPath,
 		PassFunc:     passFunc,
-		TSAServerURL: server.URL + "/api/v1/timestamp",
+		TSAServerURL: tsaURL + "/api/v1/timestamp",
 	}
 	so := options.SignOptions{
 		Upload:     true,
@@ -2940,14 +2873,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2980,7 +2906,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
-		TSAServerURL:     server.URL + "/api/v1/timestamp",
+		TSAServerURL:     tsaURL + "/api/v1/timestamp",
 		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
@@ -2993,6 +2919,76 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the Rekor and TSA clients
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
+}
+
+func TestAttachWithRFC3161Timestamp(t *testing.T) {
+	ctx := context.Background()
+
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	b := bytes.Buffer{}
+	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
+
+	rootCert, rootKey, _ := cert_test.GenerateRootCa()
+	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
+	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	payloadref := mkfile(b.String(), td, t)
+
+	h := sha256.Sum256(b.Bytes())
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64signature := base64.StdEncoding.EncodeToString(signature)
+	sigRef := mkfile(b64signature, td, t)
+	pemleafRef := mkfile(string(pemLeaf), td, t)
+	pemrootRef := mkfile(string(pemRoot), td, t)
+
+	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
+
+	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
+
+	tsclient, err := tsaclient.GetTimestampClient(tsaURL)
+	if err != nil {
+		t.Error(err)
+	}
+
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	if err != nil {
+		t.Fatalf("unexpected error getting timestamp chain: %v", err)
+	}
+
+	file, err := os.CreateTemp(os.TempDir(), "tempfile")
+	if err != nil {
+		t.Fatalf("error creating temp file: %v", err)
+	}
+	defer os.Remove(file.Name())
+	_, err = file.WriteString(chain.Payload)
+	if err != nil {
+		t.Fatalf("error writing chain payload to temp file: %v", err)
+	}
+
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TSRef := mkfile(string(tsBytes), td, t)
+
+	// Upload it!
+	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	must(verifyKeylessTSA(imgName, file.Name(), pemrootRef, true, true), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -3483,12 +3479,6 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
 
 	blob := "someblob"
 	bp := filepath.Join(td, blob)
@@ -3499,7 +3489,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := tsaclient.GetTimestampClient(server.URL)
+	client, err := tsaclient.GetTimestampClient(tsaURL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -3542,7 +3532,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		PassFunc:             passFunc,
 		BundlePath:           bundlePath,
 		RFC3161TimestampPath: tsPath,
-		TSAServerURL:         server.URL + "/api/v1/timestamp",
+		TSAServerURL:         tsaURL + "/api/v1/timestamp",
 		RekorURL:             rekorURL,
 		SkipConfirmation:     true,
 	}
@@ -4449,7 +4439,7 @@ from %s
 `, signedImg1)
 	withLowercaseDockerfile := mkfile(withLowercaseDockerfileContents, td, t)
 
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 
 	tests := []struct {
 		name       string
@@ -4578,7 +4568,7 @@ spec:
 	unsignedManifestContents := fmt.Sprintf(manifestTemplate, "unsigned-img", unsignedImg)
 	unsignedManifest := mkfileWithExt(unsignedManifestContents, td, ".yaml", t)
 
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 
 	tests := []struct {
 		name     string
