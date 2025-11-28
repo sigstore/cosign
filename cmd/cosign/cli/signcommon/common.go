@@ -543,6 +543,11 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 	}
 
 	if bundleOpts.BundlePath != "" {
+		// If bundleOpts.BundlePath is "-", write to stdout with trailing newline
+		if bundleOpts.BundlePath == "-" {
+			fmt.Fprintln(os.Stdout, string(bundle))
+			return nil
+		}
 		if err := os.WriteFile(bundleOpts.BundlePath, bundle, 0600); err != nil {
 			return fmt.Errorf("creating bundle file: %w", err)
 		}
