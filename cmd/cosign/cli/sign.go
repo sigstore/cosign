@@ -16,7 +16,6 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -132,18 +130,8 @@ race conditions or (worse) malicious tampering.
 			}
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
-				o.NewBundleFormat, "", o.Key, o.IssueCertificate); err != nil {
+				o.NewBundleFormat, "", o.Key, o.IssueCertificate, o.Output, "", o.OutputCertificate, o.OutputPayload, o.OutputSignature); err != nil {
 				return err
-			}
-
-			if o.NewBundleFormat && o.OutputSignature != "" {
-				ui.Warnf(context.Background(), "--output-signature is deprecated when using --new-bundle-format and will be ignored")
-			}
-			if o.NewBundleFormat && o.OutputCertificate != "" {
-				ui.Warnf(context.Background(), "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
-			}
-			if o.NewBundleFormat && o.Output != "" {
-				ui.Warnf(context.Background(), "--output is deprecated when using --new-bundle-format and will be ignored")
 			}
 
 			if err := sign.SignCmd(cmd.Context(), ro, ko, *o, args); err != nil {
