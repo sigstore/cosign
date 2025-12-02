@@ -34,6 +34,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/cryptoutils/goodkey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -152,7 +153,7 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing rsa private key: %w", err)
 		}
-		if err = cryptoutils.ValidatePubKey(rsaPk.Public()); err != nil {
+		if err = goodkey.ValidatePubKey(rsaPk.Public()); err != nil {
 			return nil, fmt.Errorf("error validating rsa key: %w", err)
 		}
 		pk = rsaPk
@@ -161,7 +162,7 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing ecdsa private key")
 		}
-		if err = cryptoutils.ValidatePubKey(ecdsaPk.Public()); err != nil {
+		if err = goodkey.ValidatePubKey(ecdsaPk.Public()); err != nil {
 			return nil, fmt.Errorf("error validating ecdsa key: %w", err)
 		}
 		pk = ecdsaPk
@@ -172,17 +173,17 @@ func ImportKeyPair(keyPath string, pf PassFunc) (*KeysBytes, error) {
 		}
 		switch k := pkcs8Pk.(type) {
 		case *rsa.PrivateKey:
-			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+			if err = goodkey.ValidatePubKey(k.Public()); err != nil {
 				return nil, fmt.Errorf("error validating rsa key: %w", err)
 			}
 			pk = k
 		case *ecdsa.PrivateKey:
-			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+			if err = goodkey.ValidatePubKey(k.Public()); err != nil {
 				return nil, fmt.Errorf("error validating ecdsa key: %w", err)
 			}
 			pk = k
 		case ed25519.PrivateKey:
-			if err = cryptoutils.ValidatePubKey(k.Public()); err != nil {
+			if err = goodkey.ValidatePubKey(k.Public()); err != nil {
 				return nil, fmt.Errorf("error validating ed25519 key: %w", err)
 			}
 			pk = k

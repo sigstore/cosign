@@ -87,8 +87,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
-	tsaclient "github.com/sigstore/timestamp-authority/pkg/client"
-	"github.com/sigstore/timestamp-authority/pkg/server"
+	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
+	"github.com/sigstore/timestamp-authority/v2/pkg/server"
 	"github.com/spf13/viper"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
