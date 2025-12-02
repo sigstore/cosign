@@ -77,7 +77,8 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
 
-	payload, closePayload, err := getPayload(ctx, payloadPath, protoHashAlgoToHash(keypair.GetHashAlgorithm()))
+	hashFunction := protoHashAlgoToHash(keypair.GetHashAlgorithm())
+	payload, closePayload, err := getPayload(ctx, payloadPath, hashFunction)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
@@ -101,8 +102,6 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 		return bundle, nil
 	}
-
-	hashFunction := protoHashAlgoToHash(keypair.GetHashAlgorithm())
 
 	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
