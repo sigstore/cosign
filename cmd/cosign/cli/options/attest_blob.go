@@ -72,14 +72,14 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
 
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
-		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+		"path to the X.509 certificate for signing attestation")
 	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA X.509 certificates in PEM format which will be needed "+
-			"when building the certificate chain for the signing certificate. "+
+			"when building the certificate chain for the signed attestation. "+
 			"Must start with the parent intermediate CA certificate of the "+
-			"signing certificate and end with the root certificate. Included in the OCI Signature")
+			"signing certificate and end with the root certificate.")
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",

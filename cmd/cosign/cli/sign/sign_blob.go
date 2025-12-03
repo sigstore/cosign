@@ -58,35 +58,33 @@ func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Has
 }
 
 // nolint
-func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
+func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, payloadPath, certPath, certChainPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
 	var payload internal.HashReader
 
 	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
 	defer cancel()
 
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-	if err != nil {
-		return nil, fmt.Errorf("upload to tlog: %w", err)
-	}
-
-	if !shouldUpload {
+	// TODO - this does not take ko.SigningConfig into account
+	if !tlogUpload {
 		// To maintain backwards compatibility with older cosign versions,
 		// we do not use ed25519ph for ed25519 keys when the signatures are not
 		// uploaded to the Tlog.
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
-	if ko.SigningConfig != nil {
-		keypair, _, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, "", "")
-		if err != nil {
-			return nil, fmt.Errorf("getting keypair and token: %w", err)
-		}
+	keypair, sv, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
+	if err != nil {
+		return nil, fmt.Errorf("getting keypair and token: %w", err)
+	}
 
-		payload, closePayload, err := getPayload(ctx, payloadPath, protoHashAlgoToHash(keypair.GetHashAlgorithm()))
-		if err != nil {
-			return nil, fmt.Errorf("getting payload: %w", err)
-		}
-		defer closePayload()
+	hashFunction := protoHashAlgoToHash(keypair.GetHashAlgorithm())
+	payload, closePayload, err := getPayload(ctx, payloadPath, hashFunction)
+	if err != nil {
+		return nil, fmt.Errorf("getting payload: %w", err)
+	}
+	defer closePayload()
+
+	if ko.SigningConfig != nil {
 		data, err := io.ReadAll(&payload)
 		if err != nil {
 			return nil, fmt.Errorf("reading payload: %w", err)
@@ -94,8 +92,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		content := &sign.PlainData{
 			Data: data,
 		}
-
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, nil, ko.SigningConfig, ko.TrustedMaterial)
+		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
 		if err != nil {
 			return nil, fmt.Errorf("signing bundle: %w", err)
 		}
@@ -106,15 +103,9 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return bundle, nil
 	}
 
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, "", "", ko)
+	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
-		return nil, fmt.Errorf("getting signer: %w", err)
-	}
-	defer closeSV()
-
-	hashFunction, err := getHashFunction(sv, ko)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("upload to tlog: %w", err)
 	}
 
 	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
@@ -126,12 +117,6 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		}
 		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
 	}
-
-	payload, closePayload, err := getPayload(ctx, payloadPath, hashFunction)
-	if err != nil {
-		return nil, err
-	}
-	defer closePayload()
 
 	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
 	if err != nil {
@@ -275,35 +260,6 @@ func extractCertificate(ctx context.Context, sv *signcommon.SignerVerifier) ([]b
 		return signer, nil
 	}
 	return nil, nil
-}
-
-func getHashFunction(sv *signcommon.SignerVerifier, ko options.KeyOpts) (crypto.Hash, error) {
-	if ko.Sk || ko.KeyRef != "" {
-		pubKey, err := sv.PublicKey()
-		if err != nil {
-			return crypto.Hash(0), fmt.Errorf("error getting public key: %w", err)
-		}
-
-		defaultLoadOptions := cosign.GetDefaultLoadOptions(ko.DefaultLoadOptions)
-
-		// TODO: Ideally the SignerVerifier should have a method to get the hash function
-		algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *defaultLoadOptions...)
-		if err != nil {
-			return crypto.Hash(0), fmt.Errorf("error getting default algorithm details: %w", err)
-		}
-		return algo.GetHashType(), nil
-	}
-
-	// New key was generated, using the signing	algorithm specified by the user
-	keyDetails, err := signcommon.ParseSignatureAlgorithmFlag(ko.SigningAlgorithm)
-	if err != nil {
-		return crypto.Hash(0), fmt.Errorf("parsing signature algorithm: %w", err)
-	}
-	algo, err := signature.GetAlgorithmDetails(keyDetails)
-	if err != nil {
-		return crypto.Hash(0), fmt.Errorf("getting algorithm details: %w", err)
-	}
-	return algo.GetHashType(), nil
 }
 
 func hashFuncToProtoBundle(hashFunc crypto.Hash) protocommon.HashAlgorithm {
