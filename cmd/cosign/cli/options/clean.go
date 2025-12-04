@@ -25,6 +25,7 @@ type CleanType string
 const (
 	CleanTypeSignature   CleanType = "signature"
 	CleanTypeAttestation CleanType = "attestation"
+	CleanTypeReferrer    CleanType = "referrer"
 	CleanTypeSbom        CleanType = "sbom"
 	CleanTypeAll         CleanType = "all"
 )
@@ -41,11 +42,11 @@ func (c *CleanType) String() string {
 // cleanType implements github.com/spf13/pflag.Value.
 func (c *CleanType) Set(v string) error {
 	switch v {
-	case "signature", "attestation", "sbom", "all":
+	case "signature", "attestation", "referrer", "sbom", "all":
 		*c = CleanType(v)
 		return nil
 	default:
-		return errors.New(`must be one of "signature", "attestation", "sbom", or "all"`)
+		return errors.New(`must be one of "signature", "attestation", "referrer", "sbom", or "all"`)
 	}
 }
 
@@ -65,7 +66,7 @@ var _ Interface = (*CleanOptions)(nil)
 func (c *CleanOptions) AddFlags(cmd *cobra.Command) {
 	c.Registry.AddFlags(cmd)
 	c.CleanType = defaultCleanType()
-	cmd.Flags().Var(&c.CleanType, "type", "a type of clean: <signature|attestation|sbom|all> (sbom is deprecated)")
+	cmd.Flags().Var(&c.CleanType, "type", "a type of clean: <signature|attestation|referrer|sbom|all> (sbom is deprecated)")
 	// TODO(#2044): Rename to --skip-confirmation for consistency?
 	cmd.Flags().BoolVarP(&c.Force, "force", "f", false, "do not prompt for confirmation")
 }

@@ -33,10 +33,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const bundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
+const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
 
 func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntryAnon, timestampBytes []byte) (*protobundle.Bundle, error) {
-	bundle := &protobundle.Bundle{MediaType: bundleV03MediaType}
+	bundle := &protobundle.Bundle{MediaType: BundleV03MediaType}
 
 	if hint != "" {
 		bundle.VerificationMaterial = &protobundle.VerificationMaterial{

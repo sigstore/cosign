@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
@@ -117,7 +118,19 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 				if err != nil {
 					return err
 				}
-				referrerRefs = append(referrerRefs, layerDigest)
+				layerImage, err := remote.Image(layerDigest, remoteOpts...)
+				if err != nil {
+					return err
+				}
+				layerManifest, err := layerImage.Manifest()
+				if err != nil {
+					return err
+				}
+				if layerManifest != nil {
+					if layerManifest.Config.ArtifactType == bundle.BundleV03MediaType {
+						referrerRefs = append(referrerRefs, layerDigest)
+					}
+				}
 			}
 		}
 	}
@@ -125,11 +138,13 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	var cleanTags []name.Reference
 	switch cleanType {
 	case options.CleanTypeSignature:
-		cleanTags = append([]name.Reference{sigRef}, referrerRefs...)
+		cleanTags = []name.Reference{sigRef}
 	case options.CleanTypeSbom:
 		cleanTags = []name.Reference{sbomRef}
 	case options.CleanTypeAttestation:
-		cleanTags = append([]name.Reference{attRef}, referrerRefs...)
+		cleanTags = []name.Reference{attRef}
+	case options.CleanTypeReferrer:
+		cleanTags = referrerRefs
 	case options.CleanTypeAll:
 		cleanTags = append([]name.Reference{sigRef, attRef, sbomRef}, referrerRefs...)
 	default:
@@ -185,6 +200,8 @@ func prompt(cleanType options.CleanType) string {
 		return "this will remove all SBOMs from the image"
 	case options.CleanTypeAttestation:
 		return "this will remove all attestations from the image"
+	case options.CleanTypeReferrer:
+		return "this will remove all referrer attestations and/or signatures from the image"
 	case options.CleanTypeAll:
 		return "this will remove all signatures, SBOMs and attestations from the image"
 	}
