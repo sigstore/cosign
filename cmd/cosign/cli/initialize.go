@@ -45,6 +45,9 @@ with Fulcio root CA) are pulled from the trusted metadata.`,
 # initialize root with distributed root keys, using the default mirror.
 cosign initialize
 
+# initialize root with distributed root keys, using the staging mirror.
+cosign initialize --staging
+
 # initialize with an out-of-band root key file, using the default mirror.
 cosign initialize --root <url>
 
@@ -55,6 +58,9 @@ cosign initialize --mirror <url> --root <url>
 cosign initialize --mirror <url> --root <url> --root-checksum <sha256>`,
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if o.Staging {
+				return initialize.DoInitializeStaging(cmd.Context())
+			}
 			return initialize.DoInitializeWithRootChecksum(cmd.Context(), o.Root, o.Mirror, o.RootChecksum)
 		},
 	}
