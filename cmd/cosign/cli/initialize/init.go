@@ -40,6 +40,10 @@ func DoInitializeWithRootChecksum(ctx context.Context, root, mirror, rootChecksu
 	return doInitialize(ctx, root, mirror, rootChecksum, false)
 }
 
+func DoInitializeStaging(ctx context.Context) error {
+	return doInitialize(ctx, "", tuf.StagingMirror, "", true)
+}
+
 func doInitialize(ctx context.Context, root, mirror, rootChecksum string, forceSkipChecksumValidation bool) error {
 	// Get the initial trusted root contents.
 	var rootFileBytes []byte
@@ -67,6 +71,9 @@ func doInitialize(ctx context.Context, root, mirror, rootChecksum string, forceS
 	}
 	if mirror != "" {
 		opts.RepositoryBaseURL = mirror
+		if mirror == tuf.StagingMirror {
+			opts.Root = tuf.StagingRoot()
+		}
 	}
 	if tufCacheDir := env.Getenv(env.VariableTUFRootDir); tufCacheDir != "" { //nolint:forbidigo
 		opts.CachePath = tufCacheDir
@@ -77,6 +84,9 @@ func doInitialize(ctx context.Context, root, mirror, rootChecksum string, forceS
 	remoteBytes, err := json.Marshal(remote)
 	if err != nil {
 		return err
+	}
+	if err := os.RemoveAll(opts.CachePath); err != nil {
+		return fmt.Errorf("clearing cache directory: %w", err)
 	}
 	if err := os.MkdirAll(opts.CachePath, 0o700); err != nil {
 		return fmt.Errorf("creating cache directory: %w", err)

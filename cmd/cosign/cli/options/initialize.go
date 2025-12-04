@@ -25,6 +25,7 @@ type InitializeOptions struct {
 	Mirror       string
 	Root         string
 	RootChecksum string
+	Staging      bool
 }
 
 var _ Interface = (*InitializeOptions)(nil)
@@ -40,4 +41,7 @@ func (o *InitializeOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RootChecksum, "root-checksum", "",
 		"checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>")
+
+	cmd.Flags().BoolVar(&o.Staging, "staging", false,
+		"use the staging TUF repository")
 }
