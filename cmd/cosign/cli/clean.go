@@ -139,16 +139,22 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	switch cleanType {
 	case options.CleanTypeSignature:
 		cleanTags = []name.Reference{sigRef}
+		if len(referrerRefs) > 0 {
+			ui.Warnf(ctx, "image has referrers, consider using --referrer")
+		}
 	case options.CleanTypeSbom:
 		cleanTags = []name.Reference{sbomRef}
 	case options.CleanTypeAttestation:
 		cleanTags = []name.Reference{attRef}
+		if len(referrerRefs) > 0 {
+			ui.Warnf(ctx, "image has referrers, consider using --referrer")
+		}
 	case options.CleanTypeReferrer:
 		cleanTags = referrerRefs
 	case options.CleanTypeAll:
 		cleanTags = append([]name.Reference{sigRef, attRef, sbomRef}, referrerRefs...)
 	default:
-		panic("invalid CleanType value")
+		return errors.New("invalid CleanType value")
 	}
 
 	for _, t := range cleanTags {
