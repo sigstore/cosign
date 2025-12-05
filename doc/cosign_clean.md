@@ -28,7 +28,7 @@ cosign clean [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --type CLEAN_TYPE                                                                          a type of clean: <signature|attestation|sbom|all> (sbom is deprecated) (default all)
+      --type CLEAN_TYPE                                                                          a type of clean: <signature|attestation|referrer|sbom|all> (sbom is deprecated) (default all)
 ```
 
 ### Options inherited from parent commands

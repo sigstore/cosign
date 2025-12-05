@@ -300,6 +300,28 @@ func TestImportSignVerifyClean(t *testing.T) {
 
 	// It doesn't work
 	mustErr(verify(pubKeyPath, imgName, true, nil, "", false), t)
+
+	// Sign with new bundle format
+	so.NewBundleFormat = true
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Verify should work again
+	trustedRootPath := prepareTrustedRoot(t, "")
+	bundleVerifyCmd := cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: false,
+	}
+	must(bundleVerifyCmd.Exec(ctx, []string{imgName}), t)
+
+	// Clean again
+	must(cli.CleanCmd(ctx, options.RegistryOptions{}, "all", imgName, true), t)
+
+	// Verify should fail again
+	mustErr(bundleVerifyCmd.Exec(ctx, []string{imgName}), t)
 }
 
 type targetInfo struct {
