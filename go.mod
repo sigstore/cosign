@@ -55,7 +55,7 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.160.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/oauth2 v0.33.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.38.0
 	google.golang.org/api v0.256.0
 	google.golang.org/protobuf v1.36.11
