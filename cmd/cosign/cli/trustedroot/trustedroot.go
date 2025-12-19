@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -42,6 +43,13 @@ type CreateCmd struct {
 	CTFESpecs   []string
 	TSASpecs    []string
 
+	WithDefaultServices bool
+	NoDefaultFulcio     bool
+	NoDefaultCTFE       bool
+	NoDefaultTSA        bool
+	NoDefaultRekor      bool
+
+	// Deprecated flags
 	CertChain        []string
 	FulcioURI        []string
 	CtfeKeyPath      []string
@@ -89,6 +97,25 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 		return fmt.Errorf("cannot use --tsa and old tsa flags at the same time")
 	}
 
+	if c.WithDefaultServices {
+		tr, err := cosign.TrustedRoot()
+		if err != nil {
+			return fmt.Errorf("getting default trusted root: %w", err)
+		}
+		if !c.NoDefaultFulcio {
+			fulcioCertAuthorities = append(fulcioCertAuthorities, tr.FulcioCertificateAuthorities()...)
+		}
+		if !c.NoDefaultCTFE {
+			maps.Copy(ctLogs, tr.CTLogs())
+		}
+		if !c.NoDefaultRekor {
+			maps.Copy(rekorTransparencyLogs, tr.RekorLogs())
+		}
+		if !c.NoDefaultTSA {
+			timestampAuthorities = append(timestampAuthorities, tr.TimestampingAuthorities()...)
+		}
+	}
+
 	if fulcioSpecUsed {
 		for _, spec := range c.FulcioSpecs {
 			fulcioAuthority, err := parseFulcioSpec(spec)
@@ -97,7 +124,7 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			}
 			fulcioCertAuthorities = append(fulcioCertAuthorities, fulcioAuthority)
 		}
-	} else {
+	} else if deprecatedFulcioFlagsUsed {
 		for i := 0; i < len(c.CertChain); i++ {
 			var fulcioURI string
 			if i < len(c.FulcioURI) {
@@ -119,7 +146,7 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			}
 			ctLogs[id] = ctLog
 		}
-	} else {
+	} else if deprecatedCTFEFlagsUsed {
 		for i := 0; i < len(c.CtfeKeyPath); i++ {
 			ctLogPubKey, id, idBytes, err := getPubKey(c.CtfeKeyPath[i]) // #nosec G601
 			if err != nil {
@@ -176,7 +203,7 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			}
 			rekorTransparencyLogs[id] = rekorLog
 		}
-	} else {
+	} else if deprecatedRekorFlagsUsed {
 		for i := 0; i < len(c.RekorKeyPath); i++ {
 			keyParts := strings.SplitN(c.RekorKeyPath[i], ",", 2) // #nosec G601
 			keyPath := keyParts[0]
@@ -236,7 +263,7 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			}
 			timestampAuthorities = append(timestampAuthorities, tsa)
 		}
-	} else {
+	} else if deprecatedTSAFlagsUsed {
 		for i := 0; i < len(c.TSACertChainPath); i++ {
 			var tsaURI string // #nosec G601
 			if i < len(c.TSAURI) {
