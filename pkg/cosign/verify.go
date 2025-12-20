@@ -1594,7 +1594,14 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	sigRef := co.SignatureRef
 	if sigRef == "" {
 		artifactType := ociexperimental.ArtifactType("sig")
-		index, err := ociremote.Referrers(digest, artifactType, co.RegistryClientOpts...)
+		targetDigest := digest
+		if envRepo := os.Getenv("COSIGN_REPOSITORY"); envRepo != "" {
+			if r, err := name.NewRepository(envRepo); err == nil {
+				targetDigest = r.Digest(digest.DigestStr())
+			}
+		}
+
+		index, err := ociremote.Referrers(targetDigest, artifactType, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
 		}
@@ -1608,7 +1615,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 		}
 		// TODO: do this smarter using "created" annotations
 		lastResult := results[numResults-1]
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", targetDigest.Repository, lastResult.Digest.String()))
 		if err != nil {
 			return nil, false, err
 		}
@@ -1646,13 +1653,20 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 		return nil, nil, err
 	}
 
-	index, err := ociremote.Referrers(digest, "", registryClientOpts...)
+	targetDigest := digest
+	if envRepo := os.Getenv("COSIGN_REPOSITORY"); envRepo != "" {
+		if r, err := name.NewRepository(envRepo); err == nil {
+			targetDigest = r.Digest(digest.DigestStr())
+		}
+	}
+
+	index, err := ociremote.Referrers(targetDigest, "", registryClientOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()), nameOpts...)
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", targetDigest.Repository, result.Digest.String()), nameOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
