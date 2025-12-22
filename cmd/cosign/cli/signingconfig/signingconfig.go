@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
@@ -34,6 +35,12 @@ type CreateCmd struct {
 	TSAConfig         string
 	RekorConfig       string
 	Out               string
+
+	WithDefaultServices bool
+	NoDefaultFulcio     bool
+	NoDefaultRekor      bool
+	NoDefaultOIDC       bool
+	NoDefaultTSA        bool
 }
 
 func (c *CreateCmd) Exec(_ context.Context) error {
@@ -48,15 +55,43 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	rekorServices := make([]root.Service, 0, len(c.RekorSpecs))
 	oidcProviders := make([]root.Service, 0, len(c.OIDCProviderSpecs))
 	tsaServices := make([]root.Service, 0, len(c.TSASpecs))
+	var rekorConfig root.ServiceConfiguration
+	var tsaConfig root.ServiceConfiguration
+	var err error
 
-	rekorConfig, err := parseServiceConfig(c.RekorConfig)
-	if err != nil {
-		return fmt.Errorf("parsing rekor-config: %w", err)
+	if c.WithDefaultServices {
+		sc, err := cosign.SigningConfig()
+		if err != nil {
+			return fmt.Errorf("getting default trusted root: %w", err)
+		}
+		if !c.NoDefaultFulcio {
+			fulcioServices = append(fulcioServices, sc.FulcioCertificateAuthorityURLs()...)
+		}
+		if !c.NoDefaultRekor {
+			rekorServices = append(rekorServices, sc.RekorLogURLs()...)
+			rekorConfig = sc.RekorLogURLsConfig()
+		}
+		if !c.NoDefaultOIDC {
+			oidcProviders = append(oidcProviders, sc.OIDCProviderURLs()...)
+		}
+		if !c.NoDefaultTSA {
+			tsaServices = append(tsaServices, sc.TimestampAuthorityURLs()...)
+			tsaConfig = sc.TimestampAuthorityURLsConfig()
+		}
 	}
 
-	tsaConfig, err := parseServiceConfig(c.TSAConfig)
-	if err != nil {
-		return fmt.Errorf("parsing tsa-config: %w", err)
+	if c.RekorConfig != "" {
+		rekorConfig, err = parseServiceConfig(c.RekorConfig)
+		if err != nil {
+			return fmt.Errorf("parsing rekor-config: %w", err)
+		}
+	}
+
+	if c.TSAConfig != "" {
+		tsaConfig, err = parseServiceConfig(c.TSAConfig)
+		if err != nil {
+			return fmt.Errorf("parsing tsa-config: %w", err)
+		}
 	}
 
 	for _, spec := range c.FulcioSpecs {

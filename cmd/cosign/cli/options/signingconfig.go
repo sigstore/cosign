@@ -26,6 +26,12 @@ type SigningConfigCreateOptions struct {
 	TSAConfig    string
 	RekorConfig  string
 	Out          string
+
+	WithDefaultServices bool
+	NoDefaultFulcio     bool
+	NoDefaultRekor      bool
+	NoDefaultTSA        bool
+	NoDefaultOIDC       bool
 }
 
 var _ Interface = (*SigningConfigCreateOptions)(nil)
@@ -44,6 +50,12 @@ func (o *SigningConfigCreateOptions) AddFlags(cmd *cobra.Command) {
 		"timestamping authority configuration. Required if --tsa is provided. One of: ANY, ALL, EXACT:<count>")
 	cmd.Flags().StringVar(&o.RekorConfig, "rekor-config", "",
 		"rekor configuration. Required if --rekor is provided. One of: ANY, ALL, EXACT:<count>")
+
+	cmd.Flags().BoolVar(&o.WithDefaultServices, "with-default-services", false, "use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.")
+	cmd.Flags().BoolVar(&o.NoDefaultFulcio, "no-default-fulcio", false, "removes the default Fulcio URLs from the signing config.")
+	cmd.Flags().BoolVar(&o.NoDefaultRekor, "no-default-rekor", false, "removes the default Rekor URLs from the signing config.")
+	cmd.Flags().BoolVar(&o.NoDefaultOIDC, "no-default-oidc", false, "removes the default OIDC provider URLs from the signing config.")
+	cmd.Flags().BoolVar(&o.NoDefaultTSA, "no-default-tsa", false, "removes the default TSA URLs from the signing config.")
 
 	cmd.Flags().StringVar(&o.Out, "out", "", "path to output signing config")
 }

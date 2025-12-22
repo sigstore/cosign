@@ -52,13 +52,18 @@ Each service is specified via a repeatable flag (--fulcio, --rekor, --oidc-provi
     --out signing-config.json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			scCreateCmd := &signingconfig.CreateCmd{
-				FulcioSpecs:       o.Fulcio,
-				RekorSpecs:        o.Rekor,
-				OIDCProviderSpecs: o.OIDCProvider,
-				TSASpecs:          o.TSA,
-				TSAConfig:         o.TSAConfig,
-				RekorConfig:       o.RekorConfig,
-				Out:               o.Out,
+				FulcioSpecs:         o.Fulcio,
+				RekorSpecs:          o.Rekor,
+				OIDCProviderSpecs:   o.OIDCProvider,
+				TSASpecs:            o.TSA,
+				TSAConfig:           o.TSAConfig,
+				RekorConfig:         o.RekorConfig,
+				WithDefaultServices: o.WithDefaultServices,
+				NoDefaultFulcio:     o.NoDefaultFulcio,
+				NoDefaultRekor:      o.NoDefaultRekor,
+				NoDefaultOIDC:       o.NoDefaultOIDC,
+				NoDefaultTSA:        o.NoDefaultTSA,
+				Out:                 o.Out,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)

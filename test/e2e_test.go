@@ -1479,6 +1479,202 @@ func TestSignVerifyBundle(t *testing.T) {
 	mustErr(cmd.Exec(ctx, args), t)
 }
 
+func TestTrustedRootCreateFromDefaults(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	t.Cleanup(tufServer.Close)
+	mirror := tufServer.URL
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	// Create trusted root
+	td := t.TempDir()
+	outPath := filepath.Join(td, "trustedroot.json")
+	trustedrootCreate := trustedroot.CreateCmd{
+		WithDefaultServices: true,
+		Out:                 outPath,
+	}
+	must(trustedrootCreate.Exec(context.Background()), t)
+
+	// Verify trusted root was populated from TUF repo
+	tr, err := root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.FulcioCertificateAuthorities()) != 1 {
+		t.Fatal("expected default Fulcio certificate authority")
+	}
+	if len(tr.RekorLogs()) != 1 {
+		t.Fatal("expected default Rekor log")
+	}
+	if len(tr.CTLogs()) != 1 {
+		t.Fatal("expected default CT log")
+	}
+	if len(tr.TimestampingAuthorities()) != 1 {
+		t.Fatal("expected default timestamp authority")
+	}
+
+	// Skip Fulcio
+	trustedrootCreate.NoDefaultFulcio = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.FulcioCertificateAuthorities()) != 0 {
+		t.Fatal("expected no Fulcio certificate authorities")
+	}
+
+	// Skip Rekor
+	trustedrootCreate.NoDefaultRekor = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.RekorLogs()) != 0 {
+		t.Fatal("expected no Rekor logs")
+	}
+
+	// Skip CT log
+	trustedrootCreate.NoDefaultCTFE = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.CTLogs()) != 0 {
+		t.Fatal("expected no CT logs")
+	}
+
+	// Skip TSA
+	trustedrootCreate.NoDefaultTSA = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.TimestampingAuthorities()) != 0 {
+		t.Fatal("expected no timestamp authorities")
+	}
+}
+
+func TestSigningConfigCreateFromDefaults(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	t.Cleanup(tufServer.Close)
+	mirror := tufServer.URL
+	tsaURL := "https://tsa.example"
+	oidcURL := "https://oidc.example"
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, oidcURL, tsaURL+"/api/v1/timestamp")
+	// Trusted root is needed as well for initialization
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	// Create signing config
+	td := t.TempDir()
+	outPath := filepath.Join(td, "signingconfig.json")
+	signingConfigCreate := signingconfig.CreateCmd{
+		WithDefaultServices: true,
+		Out:                 outPath,
+	}
+	must(signingConfigCreate.Exec(context.Background()), t)
+
+	// Verify signing root was populated from TUF repo
+	sc, err := root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.FulcioCertificateAuthorityURLs()) != 1 || sc.FulcioCertificateAuthorityURLs()[0].URL != fulcioURL {
+		t.Fatal("expected default Fulcio certificate authority service")
+	}
+	if len(sc.RekorLogURLs()) != 1 || sc.RekorLogURLs()[0].URL != rekorURL {
+		t.Fatal("expected default Rekor log service")
+	}
+	if len(sc.OIDCProviderURLs()) != 1 || sc.OIDCProviderURLs()[0].URL != oidcURL {
+		t.Fatal("expected default OIDC provider service")
+	}
+	if len(sc.TimestampAuthorityURLs()) != 1 || sc.TimestampAuthorityURLs()[0].URL != tsaURL+"/api/v1/timestamp" {
+		t.Fatal("expected default timestamp authority service")
+	}
+
+	// Skip Fulcio
+	signingConfigCreate.NoDefaultFulcio = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.FulcioCertificateAuthorityURLs()) != 0 {
+		t.Fatal("expected no Fulcio certificate authority services")
+	}
+
+	// Skip Rekor
+	signingConfigCreate.NoDefaultRekor = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.RekorLogURLs()) != 0 {
+		t.Fatal("expected no Rekor log services")
+	}
+
+	// Skip OIDC
+	signingConfigCreate.NoDefaultOIDC = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.OIDCProviderURLs()) != 0 {
+		t.Fatal("expected no OIDC provider services")
+	}
+
+	// Skip TSA
+	signingConfigCreate.NoDefaultTSA = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.TimestampAuthorityURLs()) != 0 {
+		t.Fatal("expected no timestamp authority services")
+	}
+}
+
 func TestAttestVerify(t *testing.T) {
 	for _, newBundleFormat := range []bool{false, true} {
 		attestVerify(t,

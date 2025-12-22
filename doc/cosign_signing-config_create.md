@@ -30,6 +30,10 @@ cosign signing-config create \
       --fulcio stringArray          fulcio service specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
   -h, --help                        help for create
+      --no-default-fulcio           removes the default Fulcio URLs from the signing config.
+      --no-default-oidc             removes the default OIDC provider URLs from the signing config.
+      --no-default-rekor            removes the default Rekor URLs from the signing config.
+      --no-default-tsa              removes the default TSA URLs from the signing config.
       --oidc-provider stringArray   oidc provider specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
       --out string                  path to output signing config
@@ -39,6 +43,7 @@ cosign signing-config create \
       --tsa stringArray             timestamping authority specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
       --tsa-config string           timestamping authority configuration. Required if --tsa is provided. One of: ANY, ALL, EXACT:<count>
+      --with-default-services       use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.
 ```
 
 ### Options inherited from parent commands
