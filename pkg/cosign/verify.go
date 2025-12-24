@@ -49,6 +49,7 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/layout"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -1595,7 +1596,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	if sigRef == "" {
 		artifactType := ociexperimental.ArtifactType("sig")
 		targetDigest := digest
-		if envRepo := os.Getenv("COSIGN_REPOSITORY"); envRepo != "" {
+		if envRepo := env.Getenv(env.VariableRepository); envRepo != "" {
 			if r, err := name.NewRepository(envRepo); err == nil {
 				targetDigest = r.Digest(digest.DigestStr())
 			}
@@ -1654,7 +1655,7 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 	}
 
 	targetDigest := digest
-	if envRepo := os.Getenv("COSIGN_REPOSITORY"); envRepo != "" {
+	if envRepo := env.Getenv(env.VariableRepository); envRepo != "" {
 		if r, err := name.NewRepository(envRepo); err == nil {
 			targetDigest = r.Digest(digest.DigestStr())
 		}
