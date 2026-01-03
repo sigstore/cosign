@@ -71,8 +71,16 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 		return err
 	}
 
+	// Get the digest from the signed entity to avoid redundant manifest fetches
+	// in subsequent tag resolution calls
+	digest, err := simg.Digest()
+	if err != nil {
+		return err
+	}
+	digestRef := ref.Context().Digest(digest.String())
+
 	// Handle the legacy mode first, always
-	attRef, err := ociremote.AttestationTag(ref, remoteOpts...)
+	attRef, err := ociremote.AttestationTag(digestRef, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -88,7 +96,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 		}
 	}
 
-	sigRef, err := ociremote.SignatureTag(ref, remoteOpts...)
+	sigRef, err := ociremote.SignatureTag(digestRef, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -104,7 +112,7 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 		}
 	}
 
-	sbomRef, err := ociremote.SBOMTag(ref, remoteOpts...)
+	sbomRef, err := ociremote.SBOMTag(digestRef, remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -123,17 +131,11 @@ func TreeCmd(ctx context.Context, regOpts options.RegistryOptions, regExpOpts op
 	// Handle the experimental OCI 1.1 mode
 	if regExpOpts.RegistryReferrersMode == options.RegistryReferrersModeOCI11 || experimentalOCI11 {
 		// Handle OCI 1.1 mode
-		digest, ok := ref.(name.Digest)
-		if !ok {
-			var err error
-			digest, err = ociremote.ResolveDigest(ref, remoteOpts...)
-			if err != nil {
-				return fmt.Errorf("resolving digest: %w", err)
-			}
-		}
+		// We already have the digest from the SignedEntity, so reuse it
+		// instead of calling ResolveDigest again
 
 		// Get all referrers
-		indexManifest, err := ociremote.Referrers(digest, "", remoteOpts...)
+		indexManifest, err := ociremote.Referrers(digestRef, "", remoteOpts...)
 		if err != nil {
 			return fmt.Errorf("getting referrers: %w", err)
 		}
