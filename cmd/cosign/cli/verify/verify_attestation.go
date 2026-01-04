@@ -117,6 +117,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
 	}
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
 	// Check to see if we are using the new bundle format or not
 	if !c.LocalImage {
@@ -133,12 +134,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, co)
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
-	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
+	if err = CheckSigstoreBundleUnsupportedOptions(*c, vOfflineKey, co); err != nil {
 		return err
 	}
 
@@ -147,7 +148,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return fmt.Errorf("setting up clients and keys: %w", err)
 	}
 
-	// Keys are optional!
+	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
+	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
+	// after initializing trust material in order to verify certificate chain.
 	var closeSV func()
 	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
 	if err != nil {
