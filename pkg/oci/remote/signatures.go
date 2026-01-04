@@ -85,7 +85,7 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !b.MinVersion("v0.3") {
+	if !b.MinVersion("v0.2") {
 		return nil, errors.New("bundle version too old")
 	}
 	return b, nil

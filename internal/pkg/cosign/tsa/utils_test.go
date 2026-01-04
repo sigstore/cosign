@@ -26,10 +26,10 @@ import (
 func TestSplitPEMCertificateChain(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	rootCert2, rootKey2, _ := test.GenerateRootCa()
 	subCert2, subKey2, _ := test.GenerateSubordinateCa(rootCert2, rootKey2)
-	leafCert2, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert2, subKey2)
+	leafCert2, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert2, subKey2)
 	expectedLeaves := []*x509.Certificate{leafCert, leafCert2}
 	expectedInts := []*x509.Certificate{subCert, subCert2}
 	expectedRoots := []*x509.Certificate{rootCert, rootCert2}

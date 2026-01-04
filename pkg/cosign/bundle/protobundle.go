@@ -33,11 +33,20 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
+const (
+	BundleV02MediaType = "application/vnd.dev.sigstore.bundle.v0.2+json"
+	BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
+)
 
-func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntryAnon, timestampBytes []byte) (*protobundle.Bundle, error) {
-	bundle := &protobundle.Bundle{MediaType: BundleV03MediaType}
+func MakeProtobufBundle(hint string, rawCertChain [][]byte, rekorEntry *models.LogEntryAnon, timestampBytes []byte) (*protobundle.Bundle, error) {
+	mediaType := BundleV03MediaType
+	// Certificate Chains Not Supported in >= v0.3
+	// https://github.com/sigstore/sigstore-go/blob/cc06490446765e67a0e63797659f1439c3f53cc0/pkg/bundle/bundle.go#L111-L118
+	if len(rawCertChain) > 0 {
+		mediaType = BundleV02MediaType
+	}
 
+	bundle := &protobundle.Bundle{MediaType: mediaType}
 	if hint != "" {
 		bundle.VerificationMaterial = &protobundle.VerificationMaterial{
 			Content: &protobundle.VerificationMaterial_PublicKey{
@@ -46,12 +55,17 @@ func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntry
 				},
 			},
 		}
-	} else if len(rawCert) > 0 {
+	} else if len(rawCertChain) > 0 {
+		x509CertChain := &protocommon.X509CertificateChain{}
+		for _, certBytes := range rawCertChain {
+			x509CertChain.Certificates = append(x509CertChain.Certificates, &protocommon.X509Certificate{
+				RawBytes: certBytes,
+			})
+		}
+
 		bundle.VerificationMaterial = &protobundle.VerificationMaterial{
-			Content: &protobundle.VerificationMaterial_Certificate{
-				Certificate: &protocommon.X509Certificate{
-					RawBytes: rawCert,
-				},
+			Content: &protobundle.VerificationMaterial_X509CertificateChain{
+				X509CertificateChain: x509CertChain,
 			},
 		}
 	}
@@ -78,10 +92,10 @@ func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntry
 func MakeNewBundle(pubKey crypto.PublicKey, rekorEntry *models.LogEntryAnon, payload, sig, signer, timestampBytes []byte) ([]byte, error) {
 	// Determine if the signer is a certificate or not
 	var hint string
-	var rawCert []byte
+	var rawCertChain [][]byte
 
-	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-	if err != nil || len(cert) == 0 {
+	certificateChain, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
+	if err != nil || len(certificateChain) == 0 {
 		pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
 		if err != nil {
 			return nil, err
@@ -89,10 +103,14 @@ func MakeNewBundle(pubKey crypto.PublicKey, rekorEntry *models.LogEntryAnon, pay
 		hashedBytes := sha256.Sum256(pkixPubKey)
 		hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 	} else {
-		rawCert = cert[0].Raw
+		// Extract All Certificates from Chain
+		rawCertChain = make([][]byte, len(certificateChain))
+		for i, c := range certificateChain {
+			rawCertChain[i] = c.Raw
+		}
 	}
 
-	bundle, err := MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
+	bundle, err := MakeProtobufBundle(hint, rawCertChain, rekorEntry, timestampBytes)
 	if err != nil {
 		return nil, err
 	}

@@ -1589,7 +1589,7 @@ func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 func TestVerifyRFC3161Timestamp(t *testing.T) {
 	// generate signed artifact
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
 	payload := []byte{1, 2, 3, 4}

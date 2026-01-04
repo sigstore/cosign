@@ -75,7 +75,7 @@ func getTestCerts(t *testing.T) *certData {
 	if cd.SubCert, cd.SubKey, err = test.GenerateSubordinateCa(cd.RootCert, cd.RootKey); err != nil {
 		t.Fatal(err)
 	}
-	if cd.LeafCert, cd.PrivKey, err = test.GenerateLeafCert("subject", "oidc-issuer", cd.SubCert, cd.SubKey, eexts...); err != nil {
+	if cd.LeafCert, cd.PrivKey, err = test.GenerateLeafCert("subject@mail.com", "oidc-issuer", cd.SubCert, cd.SubKey, eexts...); err != nil {
 		t.Fatal(err)
 	}
 	cd.RootCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.RootCert.Raw})
@@ -144,7 +144,7 @@ func TestPrintVerification(t *testing.T) {
             "1.3.6.1.4.1.57264.1.5": "myWorkflowRepository",
             "1.3.6.1.4.1.57264.1.6": "myWorkflowRef",
             "Issuer": "oidc-issuer",
-            "Subject": "subject",
+            "Subject": "subject@mail.com",
             "githubWorkflowName": "myWorkflowName",
             "githubWorkflowRef": "myWorkflowRef",
             "githubWorkflowRepository": "myWorkflowRepository",

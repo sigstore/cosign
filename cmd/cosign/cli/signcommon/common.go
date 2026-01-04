@@ -73,6 +73,10 @@ func (c *SignerVerifier) Close() {
 // Bytes returns the raw bytes of the cert or key.
 func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	if c.Cert != nil {
+		// If we have both cert and chain, concatenate them (leaf first, then chain)
+		if c.Chain != nil {
+			return append(c.Cert, c.Chain...), nil
+		}
 		return c.Cert, nil
 	}
 
@@ -690,6 +694,8 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	if newBundleFormat && output != "" {
 		ui.Warnf(context.Background(), "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
+
+	ko.NewBundleFormat = newBundleFormat
 
 	return nil
 }

@@ -33,10 +33,13 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
-	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 const BundlePredicateType string = "dev.sigstore.bundle.predicateType"
+
+var bundleMediaType struct {
+	MediaType string `json:"mediaType"`
+}
 
 // WriteSignedImageIndexImages writes the images within the image index
 // This includes the signed image and associated signatures in the image index
@@ -393,10 +396,15 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 }
 
 func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
-	// generate bundle media type string
-	bundleMediaType, err := sgbundle.MediaTypeString("0.3")
-	if err != nil {
-		return fmt.Errorf("failed to generate bundle media type string: %w", err)
+	// Extract Media Type from Protobuf Bundle using a local variable to avoid test pollution
+	if err := json.Unmarshal(bundleBytes, &bundleMediaType); err != nil {
+		return fmt.Errorf("failed to parse bundle media type: %w", err)
+	}
+
+	// Use Bundle Media Type if Defined, Otherwise Use Default (application/vnd.dev.sigstore.bundle.v0.3+json)
+	bundleMediaType := bundleMediaType.MediaType
+	if len(bundleMediaType) == 0 {
+		bundleMediaType = bundle.BundleV03MediaType
 	}
 
 	// Write the bundle layer

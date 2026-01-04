@@ -98,7 +98,7 @@ func TestCreateCmd(t *testing.T) {
 
 	// Test using an identity certificate in an old bundle format
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 
 	sigBytes, err = privKey.Sign(rand.Reader, digest[:], crypto.SHA256)
 	checkErr(t, err)
