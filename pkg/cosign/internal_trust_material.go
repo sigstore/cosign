@@ -114,24 +114,24 @@ type InternalCertificateAuthority struct {
 // Verify attempts to verify the leaf certificate using the trusted CA.
 // If that fails, it tries again using intermediate certificates from the bundle.
 func (c *InternalCertificateAuthority) Verify(leafCertificate *x509.Certificate, observerTimestamp time.Time) ([][]*x509.Certificate, error) {
-	// Try to verify with the standard trusted certificate authority first
+	// Try To Verify With The Standard Trusted Certificate Authority First
 	certificateChains, err := c.TrustedCertificateAuthority.Verify(leafCertificate, observerTimestamp)
 	if err == nil {
 		return certificateChains, nil
 	}
 
-	// If no intermediate CAs from bundle, return the original error
+	// If No Intermediate CAs From Bundle, Return The Original Error
 	if len(c.UntrustedIntermediateCA) == 0 {
 		return nil, err
 	}
 
-	// Try to get the root certificate from the trusted CA
+	// Try To Get The Root Certificate From The Trusted CA
 	ca, ok := c.TrustedCertificateAuthority.(*root.FulcioCertificateAuthority)
 	if !ok {
 		return nil, fmt.Errorf("trusted certificate authority is not a fulcio certificate authority: %w", err)
 	}
 
-	// Check validity period of the trusted certificate authority
+	// Check Validity Period Of The Trusted Certificate Authority
 	if !ca.ValidityPeriodStart.IsZero() && observerTimestamp.Before(ca.ValidityPeriodStart) {
 		return nil, fmt.Errorf("certificate is not valid yet")
 	}
@@ -139,7 +139,7 @@ func (c *InternalCertificateAuthority) Verify(leafCertificate *x509.Certificate,
 		return nil, fmt.Errorf("certificate is no longer valid")
 	}
 
-	// Build verification options with intermediate CAs from the bundle
+	// Build Verification Options With Intermediate CAs From The Bundle
 	rootCertificatePool := x509.NewCertPool()
 	rootCertificatePool.AddCert(ca.Root)
 

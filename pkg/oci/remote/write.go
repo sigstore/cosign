@@ -37,10 +37,6 @@ import (
 
 const BundlePredicateType string = "dev.sigstore.bundle.predicateType"
 
-var bundleMediaType struct {
-	MediaType string `json:"mediaType"`
-}
-
 // WriteSignedImageIndexImages writes the images within the image index
 // This includes the signed image and associated signatures in the image index
 // TODO (priyawadhwa@): write the `index.json` itself to the repo as well
@@ -396,19 +392,22 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 }
 
 func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
-	// Extract Media Type from Protobuf Bundle using a local variable to avoid test pollution
-	if err := json.Unmarshal(bundleBytes, &bundleMediaType); err != nil {
+	// Extract Media Type from Protobuf Bundle
+	var localBundleMediaType struct {
+		MediaType string `json:"mediaType"`
+	}
+	if err := json.Unmarshal(bundleBytes, &localBundleMediaType); err != nil {
 		return fmt.Errorf("failed to parse bundle media type: %w", err)
 	}
 
 	// Use Bundle Media Type if Defined, Otherwise Use Default (application/vnd.dev.sigstore.bundle.v0.3+json)
-	bundleMediaType := bundleMediaType.MediaType
-	if len(bundleMediaType) == 0 {
-		bundleMediaType = bundle.BundleV03MediaType
+	mediaType := localBundleMediaType.MediaType
+	if len(mediaType) == 0 {
+		mediaType = bundle.BundleV03MediaType
 	}
 
 	// Write the bundle layer
-	layer := static.NewLayer(bundleBytes, types.MediaType(bundleMediaType))
+	layer := static.NewLayer(bundleBytes, types.MediaType(mediaType))
 
 	annotations := map[string]string{
 		"org.opencontainers.image.created": time.Now().UTC().Format(time.RFC3339),
@@ -416,7 +415,7 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		BundlePredicateType:                predicateType,
 	}
 
-	return WriteReferrer(d, bundleMediaType, []v1.Layer{layer}, annotations, opts...)
+	return WriteReferrer(d, mediaType, []v1.Layer{layer}, annotations, opts...)
 }
 
 // WriteAttestationsReferrer publishes the attestations attached to the given entity

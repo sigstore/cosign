@@ -73,9 +73,9 @@ func (c *SignerVerifier) Close() {
 // Bytes returns the raw bytes of the cert or key.
 func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 	if c.Cert != nil {
-		// If we have both cert and chain, concatenate them (leaf first, then chain)
+		// Certificate chain should contain a leaf certificate, any intermediates, and a root ca.
 		if c.Chain != nil {
-			return append(c.Cert, c.Chain...), nil
+			return c.Chain, nil
 		}
 		return c.Cert, nil
 	}
