@@ -25,6 +25,13 @@ type TrustedRootCreateOptions struct {
 	TSA    []string
 	Rekor  []string
 
+	WithDefaultServices bool
+	NoDefaultFulcio     bool
+	NoDefaultCTFE       bool
+	NoDefaultTSA        bool
+	NoDefaultRekor      bool
+
+	// Deprecated flags
 	CertChain        []string
 	FulcioURI        []string
 	CtfeKeyPath      []string
@@ -51,6 +58,11 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 		"timestamping authority specification, as a comma-separated key-value list.\nRequired keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.")
 	cmd.Flags().StringArrayVar(&o.Rekor, "rekor", nil,
 		"rekor service specification, as a comma-separated key-value list.\nRequired keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.")
+	cmd.Flags().BoolVar(&o.WithDefaultServices, "with-default-services", false, "use the Sigstore TUF root as default values to populate the trusted root. Specifying the other service flags will override the default values.")
+	cmd.Flags().BoolVar(&o.NoDefaultFulcio, "no-default-fulcio", false, "removes the default Fulcio URLs from the trusted root.")
+	cmd.Flags().BoolVar(&o.NoDefaultCTFE, "no-default-ctfe", false, "removes the default CTFE URLs from the trusted root.")
+	cmd.Flags().BoolVar(&o.NoDefaultTSA, "no-default-tsa", false, "removes the default TSA URLs from the trusted root.")
+	cmd.Flags().BoolVar(&o.NoDefaultRekor, "no-default-rekor", false, "removes the default Rekor URLs from the trusted root.")
 
 	cmd.Flags().StringArrayVar(&o.CertChain, "certificate-chain", nil,
 		"path to a list of CA certificates in PEM format which will be needed "+
