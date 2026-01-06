@@ -43,7 +43,7 @@ import (
 )
 
 // CheckSigstoreBundleUnsupportedOptions checks for incompatible settings on any Verify* command struct when NewBundleFormat is used.
-func CheckSigstoreBundleUnsupportedOptions(cmd any, co *cosign.CheckOpts) error {
+func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, co *cosign.CheckOpts) error {
 	if !co.NewBundleFormat {
 		return nil
 	}
@@ -63,7 +63,7 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, co *cosign.CheckOpts) error 
 			return fmt.Errorf("unsupported: %s when using --new-bundle-format", e)
 		}
 	}
-	if co.TrustedMaterial == nil {
+	if co.TrustedMaterial == nil && !verifyOfflineWithKey {
 		return fmt.Errorf("trusted root is required when using new bundle format")
 	}
 	return nil
@@ -126,7 +126,7 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 }
 
 // SetLegacyClientsAndKeys sets up TSA and rekor clients and keys for TSA, rekor, and CT log.
-// It may perform an online fetch of keys, so using trusted root instead of these TUF v1 methos is recommended.
+// It may perform an online fetch of keys, so using trusted root instead of these TUF v1 methods is recommended.
 // It takes a CheckOpts as input and modifies it.
 func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, keylessVerification bool, rekorURL, tsaCertChain, certChain, caRoots, caIntermediates string, co *cosign.CheckOpts) error {
 	var err error
@@ -171,13 +171,16 @@ func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, k
 
 // SetTrustedMaterial sets TrustedMaterial on CheckOpts, either from the provided trusted root path or from TUF.
 // It does not set TrustedMaterial if the user provided trusted material via other flags or environment variables.
-func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots, caIntermediates, tsaCertChainPath string, co *cosign.CheckOpts) error {
+func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots, caIntermediates, tsaCertChainPath string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
 	var err error
 	if trustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
 		if err != nil {
 			return fmt.Errorf("loading trusted root: %w", err)
 		}
+		return nil
+	}
+	if verifyOnlyWithKey {
 		return nil
 	}
 	if options.NOf(certChain, caRoots, caIntermediates, tsaCertChainPath) == 0 &&
@@ -399,6 +402,13 @@ func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
 		return false
 	}
 	return true
+}
+
+// No trusted root is needed if verification doesn't require Rekor or
+// signed timestamps, and a key is explicitly provided instead of using
+// a Fulcio certificate either via a key or certificate reference or security key.
+func verifyOfflineWithKey(keyRef, certRef string, sk bool, co *cosign.CheckOpts) bool {
+	return (keyRef != "" || certRef != "" || sk) && co.IgnoreTlog && !co.UseSignedTimestamps
 }
 
 // loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate

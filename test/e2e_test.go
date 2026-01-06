@@ -1479,6 +1479,53 @@ func TestSignVerifyBundle(t *testing.T) {
 	mustErr(cmd.Exec(ctx, args), t)
 }
 
+// TestSignVerifyBundleOffline tests that signing
+// with a key and not verifying with Rekor or the TSA
+// is entirely offline and doesn't try to request the TUF repo.
+func TestSignVerifyBundleOffline(t *testing.T) {
+	td := t.TempDir()
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// To simulate offline verification, we'll set the TUF repo
+	// env vars to invalid values. If signing were online, verification
+	// would err out when trying to request the TUF repo contents.
+	t.Setenv("TUF_ROOT", td)
+	t.Setenv("TUF_MIRROR", td)
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image with key in bundle format
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Verify bundle offline
+	cmd := cliverify.VerifyCommand{
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: false,
+	}
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+}
+
 func TestTrustedRootCreateFromDefaults(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)

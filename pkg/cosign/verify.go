@@ -190,8 +190,8 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 
 // verificationOptions returns the verification options for verifying with sigstore-go.
 func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
-	if co.TrustedMaterial == nil {
-		return nil, nil, nil, fmt.Errorf("TrustMaterial is required")
+	if co.TrustedMaterial == nil && co.SigVerifier == nil {
+		return nil, nil, nil, fmt.Errorf("a trusted root is required for identity-based verification")
 	}
 
 	policyOptions = make([]verify.PolicyOption, 0)
