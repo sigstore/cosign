@@ -144,6 +144,14 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 			if err != nil {
 				return fmt.Errorf("parsing ctfe spec: %w", err)
 			}
+			// Static CT needs origin for checkpoint ID
+			kvs, _ := parseKVs(spec)
+			if origin, ok := kvs["origin"]; ok {
+				id, ctLog.ID, err = getCheckpointID(origin, ctLog.PublicKey)
+				if err != nil {
+					return err
+				}
+			}
 			ctLogs[id] = ctLog
 		}
 	} else if deprecatedCTFEFlagsUsed {

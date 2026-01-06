@@ -53,7 +53,7 @@ func (o *TrustedRootCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&o.Fulcio, "fulcio", nil,
 		"fulcio service specification, as a comma-separated key-value list.\nRequired keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.")
 	cmd.Flags().StringArrayVar(&o.CTFE, "ctfe", nil,
-		"ctfe service specification, as a comma-separated key-value list.\nRequired keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time.")
+		"ctfe service specification, as a comma-separated key-value list.\nRequired keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.")
 	cmd.Flags().StringArrayVar(&o.TSA, "tsa", nil,
 		"timestamping authority specification, as a comma-separated key-value list.\nRequired keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.")
 	cmd.Flags().StringArrayVar(&o.Rekor, "rekor", nil,
