@@ -27,7 +27,7 @@ cosign trusted-root create \
 
 ```
       --ctfe stringArray        ctfe service specification, as a comma-separated key-value list.
-                                Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time.
+                                Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
       --fulcio stringArray      fulcio service specification, as a comma-separated key-value list.
                                 Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
   -h, --help                    help for create
