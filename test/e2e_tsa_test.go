@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
 	"net/http/httptest"
 	"path"
 	"path/filepath"
@@ -32,6 +34,7 @@ import (
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
 	tsaserver "github.com/sigstore/timestamp-authority/v2/pkg/server"
 	"github.com/spf13/viper"
@@ -89,44 +92,36 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 	td := t.TempDir()
 	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
 	blobPath := mkfile(blob, td, t)
-	timestampPath := filepath.Join(td, "timestamp.txt")
 	bundlePath := filepath.Join(td, "cosign.bundle")
 
 	_, privKey, pubKey := keypair(t, td)
 
 	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+	timestampCACert, timestampServerCert, timestampServerKey, _, _ := generateMTLSKeys(t, td)
 	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
 	t.Cleanup(tsaCleanup)
+
+	trustedMaterial, err := buildTsaTrustedMaterial(timestampCACert, timestampServerCert, timestampChainFile, timestampServerURL)
+	if err != nil {
+		t.Fatalf("failed building TSA trusted material: %v", err)
+	}
 
 	signingKO := options.KeyOpts{
 		KeyRef:               privKey,
 		PassFunc:             passFunc,
-		TSAServerURL:         timestampServerURL,
-		TSAClientCACert:      timestampCACert,
-		TSAClientCert:        timestampClientCert,
-		TSAClientKey:         timestampClientKey,
-		TSAServerName:        "server.example.com",
-		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
+		TrustedMaterial:      trustedMaterial,
 	}
-	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
+	_, err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
 	must(err, t)
 
 	verifyKO := options.KeyOpts{
 		KeyRef:               pubKey,
-		TSACertChainPath:     timestampChainFile,
-		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
 	}
 
 	verifyCmd := cliverify.VerifyBlobCmd{
 		KeyOpts: verifyKO,
-		SigRef:  string(sig),
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
-		},
 		IgnoreTlog: true,
 	}
 	must(verifyCmd.Exec(context.Background(), blobPath), t)
@@ -197,4 +192,105 @@ func setUpTSAServerWithTLS(t *testing.T, td, timestampCACert, timestampServerKey
 	timestampServerURL := tsaServer.URL + "/api/v1/timestamp"
 	timestampChainFile := mkfile(tsaChain.Payload, td, t)
 	return timestampServerURL, timestampChainFile, tsaServer.Close
+}
+
+func buildTsaTrustedMaterial(caPath, serverCertPath, chainPath, tsaURI string) (root.TrustedMaterial, error) {
+    readCertsFromPEM := func(path string) ([]*x509.Certificate, error) {
+        b, err := ioutil.ReadFile(path)
+        if err != nil {
+            return nil, err
+        }
+        var certs []*x509.Certificate
+        for {
+            var block *pem.Block
+            block, b = pem.Decode(b)
+            if block == nil {
+                break
+            }
+            if block.Type != "CERTIFICATE" {
+                continue
+            }
+            c, err := x509.ParseCertificate(block.Bytes)
+            if err != nil {
+                return nil, err
+            }
+            certs = append(certs, c)
+        }
+        if len(certs) == 0 {
+            return nil, fmt.Errorf("no certificates found in %s", path)
+        }
+        return certs, nil
+    }
+
+    var leaf *x509.Certificate
+    var intermediates []*x509.Certificate
+    var rootCert *x509.Certificate
+
+    if chainPath != "" {
+        certs, err := readCertsFromPEM(chainPath)
+        if err != nil {
+            return nil, fmt.Errorf("reading chain file: %w", err)
+        }
+        chainLen := len(certs)
+        if chainLen < 1 {
+            return nil, fmt.Errorf("chain file %s contains no certs", chainPath)
+        }
+        for i, c := range certs {
+            switch {
+            case i == 0 && !c.IsCA:
+                leaf = c
+            case i < chainLen-1:
+                intermediates = append(intermediates, c)
+            case i == chainLen-1:
+                rootCert = c
+            }
+        }
+        if leaf == nil && len(certs) >= 1 && !certs[0].IsCA {
+            leaf = certs[0]
+        }
+    }
+
+    if rootCert == nil && caPath != "" {
+        certs, err := readCertsFromPEM(caPath)
+        if err != nil {
+            return nil, fmt.Errorf("reading CA file: %w", err)
+        }
+        rootCert = certs[0]
+    }
+    if leaf == nil && serverCertPath != "" {
+        certs, err := readCertsFromPEM(serverCertPath)
+        if err != nil {
+            return nil, fmt.Errorf("reading server cert file: %w", err)
+        }
+        leaf = certs[0]
+    }
+
+    if rootCert == nil {
+        return nil, fmt.Errorf("no root certificate available")
+    }
+    if leaf == nil {
+        return nil, fmt.Errorf("no leaf (server) certificate available")
+    }
+
+    tsa := &root.SigstoreTimestampingAuthority{
+        Root:          rootCert,
+        Intermediates: intermediates,
+        Leaf:          leaf,
+        URI:           tsaURI,
+        ValidityPeriodStart: leaf.NotBefore,
+        ValidityPeriodEnd:   leaf.NotAfter,
+    }
+
+    tm := root.TrustedMaterialCollection{
+        &tsaMaterial{tsas: []root.TimestampingAuthority{tsa}},
+    }
+    return tm, nil
+}
+
+type tsaMaterial struct {
+		root.BaseTrustedMaterial
+		tsas []root.TimestampingAuthority
+}
+func (t *tsaMaterial) TimestampingAuthorities() []root.TimestampingAuthority {
+		return t.tsas
 }
