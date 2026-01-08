@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"net/http/httptest"
+	"os"
 	"path"
 	"path/filepath"
 	"testing"
@@ -35,6 +36,9 @@ import (
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
 	tsaserver "github.com/sigstore/timestamp-authority/v2/pkg/server"
 	"github.com/spf13/viper"
+
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 func TestTSAMTLS(t *testing.T) {
@@ -130,6 +134,232 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 		IgnoreTlog: true,
 	}
 	must(verifyCmd.Exec(context.Background(), blobPath), t)
+}
+
+func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
+	td := t.TempDir()
+	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
+	blobPath := mkfile(blob, td, t)
+	bundlePath := filepath.Join(td, "cosign.bundle")
+
+	_, privKey, pubKey := keypair(t, td)
+
+	// Set up TSA server with TLS
+	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
+	t.Cleanup(tsaCleanup)
+
+	// Create SigningConfig
+	tsaService := root.Service{
+		URL:                 timestampServerURL,
+		MajorAPIVersion:     1,
+		Operator:            "test-operator",
+		ValidityPeriodStart: time.Now().Add(-1 * time.Hour),
+	}
+
+	signingConfig, err := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil, nil, nil, root.ServiceConfiguration{},
+		[]root.Service{tsaService},
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+	)
+	must(err, t)
+
+	// Create TrustedRoot with TSA CA
+	chainBytes, err := os.ReadFile(timestampChainFile)
+	must(err, t)
+
+	var certs []*x509.Certificate
+	for block, rest := pem.Decode(chainBytes); block != nil; block, rest = pem.Decode(rest) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		must(err, t)
+		certs = append(certs, cert)
+	}
+
+	if len(certs) == 0 {
+		t.Fatal("no certs found in timestamp chain file")
+	}
+
+	var intermediates []*x509.Certificate
+	if len(certs) > 1 {
+		intermediates = certs[1 : len(certs)-1]
+	}
+
+	tsaAuth := &root.SigstoreTimestampingAuthority{
+		Root:                certs[len(certs)-1],
+		Leaf:                certs[0],
+		Intermediates:       intermediates,
+		ValidityPeriodStart: certs[0].NotBefore,
+		URI:                 timestampServerURL,
+	}
+
+	trustedRoot, err := root.NewTrustedRoot(
+		root.TrustedRootMediaType01,
+		nil,
+		nil,
+		[]root.TimestampingAuthority{tsaAuth},
+		nil,
+	)
+	must(err, t)
+
+	signingKO := options.KeyOpts{
+		KeyRef:          privKey,
+		PassFunc:        passFunc,
+		TSAClientCACert: timestampCACert,
+		TSAClientCert:   timestampClientCert,
+		TSAClientKey:    timestampClientKey,
+		TSAServerName:   "server.example.com",
+		BundlePath:      bundlePath,
+		SigningConfig:   signingConfig,
+		TrustedMaterial: trustedRoot,
+		NewBundleFormat: true,
+	}
+	_, err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
+	must(err, t)
+
+	verifyKO := options.KeyOpts{
+		KeyRef:          pubKey,
+		BundlePath:      bundlePath,
+		TrustedMaterial: trustedRoot,
+		NewBundleFormat: true,
+	}
+
+	verifyCmd := cliverify.VerifyBlobCmd{
+		KeyOpts: verifyKO,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentityRegexp:   ".*",
+			CertOidcIssuerRegexp: ".*",
+		},
+		IgnoreTlog: true,
+	}
+	must(verifyCmd.Exec(context.Background(), blobPath), t)
+}
+
+func TestTSAMTLSWithSigningConfig(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-tsa-mtls-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	pemRootRef, pemLeafRef, pemKeyRef := generateSigningKeys(t, td)
+
+	// Set up TSA server with TLS
+	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
+	t.Cleanup(tsaCleanup)
+
+	// Create SigningConfig
+	tsaService := root.Service{
+		URL:                 timestampServerURL,
+		MajorAPIVersion:     1,
+		Operator:            "test-operator",
+		ValidityPeriodStart: time.Now().Add(-1 * time.Hour),
+	}
+
+	signingConfig, err := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil, nil, nil, root.ServiceConfiguration{},
+		[]root.Service{tsaService},
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+	)
+	must(err, t)
+
+	// Create TrustedRoot with TSA CA
+	chainBytes, err := os.ReadFile(timestampChainFile)
+	must(err, t)
+
+	var certs []*x509.Certificate
+	for block, rest := pem.Decode(chainBytes); block != nil; block, rest = pem.Decode(rest) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		must(err, t)
+		certs = append(certs, cert)
+	}
+
+	if len(certs) == 0 {
+		t.Fatal("no certs found in timestamp chain file")
+	}
+
+	var intermediates []*x509.Certificate
+	if len(certs) > 1 {
+		intermediates = certs[1 : len(certs)-1]
+	}
+
+	tsaAuth := &root.SigstoreTimestampingAuthority{
+		Root:                certs[len(certs)-1],
+		Leaf:                certs[0],
+		Intermediates:       intermediates,
+		ValidityPeriodStart: certs[0].NotBefore,
+		URI:                 timestampServerURL,
+	}
+
+	// Add CA from pemRootRef
+	caBytes, err := os.ReadFile(pemRootRef)
+	must(err, t)
+	var caCerts []*x509.Certificate
+	for block, rest := pem.Decode(caBytes); block != nil; block, rest = pem.Decode(rest) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		must(err, t)
+		caCerts = append(caCerts, cert)
+	}
+	if len(caCerts) == 0 {
+		t.Fatal("no certs in pemRootRef")
+	}
+	caAuth := &root.FulcioCertificateAuthority{
+		Root:                caCerts[0],
+		ValidityPeriodStart: caCerts[0].NotBefore,
+	}
+
+	trustedRoot, err := root.NewTrustedRoot(
+		root.TrustedRootMediaType01,
+		[]root.CertificateAuthority{caAuth},
+		nil,
+		[]root.TimestampingAuthority{tsaAuth},
+		nil,
+	)
+	must(err, t)
+
+	ko := options.KeyOpts{
+		KeyRef:          pemKeyRef,
+		PassFunc:        passFunc,
+		TSAClientCACert: timestampCACert,
+		TSAClientCert:   timestampClientCert,
+		TSAClientKey:    timestampClientKey,
+		TSAServerName:   "server.example.com",
+		SigningConfig:   signingConfig,
+		TrustedMaterial: trustedRoot,
+		NewBundleFormat: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		TlogUpload:      false,
+		Cert:            pemLeafRef,
+		CertChain:       pemRootRef,
+		NewBundleFormat: true,
+	}
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
+
+	trBytes, err := trustedRoot.MarshalJSON()
+	must(err, t)
+	trustedRootFile := mkfile(string(trBytes), td, t)
+
+	verifyCmd := cliverify.VerifyCommand{
+		IgnoreTlog:      true,
+		IgnoreSCT:       true,
+		CheckClaims:     true,
+		NewBundleFormat: true,
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootFile,
+		},
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentityRegexp:   ".*",
+			CertOidcIssuerRegexp: ".*",
+		},
+	}
+	must(verifyCmd.Exec(context.Background(), []string{imgName}), t)
 }
 
 func generateSigningKeys(t *testing.T, td string) (string, string, string) {
