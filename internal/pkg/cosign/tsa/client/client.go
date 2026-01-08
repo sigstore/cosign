@@ -54,7 +54,7 @@ type TimestampAuthorityClientImpl struct {
 
 const defaultTimeout = 10 * time.Second
 
-func getHTTPTransport(cacertFilename, certFilename, keyFilename, serverName string, timeout time.Duration) (http.RoundTripper, error) {
+func GetHTTPTransport(cacertFilename, certFilename, keyFilename, serverName string, timeout time.Duration) (http.RoundTripper, error) {
 	if timeout == 0 {
 		timeout = defaultTimeout
 	}
@@ -123,7 +123,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 
 	// if mTLS-related fields are set, create a custom Transport for the Client
 	if t.CACert != "" || t.Cert != "" {
-		tr, err := getHTTPTransport(t.CACert, t.Cert, t.Key, t.ServerName, t.Timeout)
+		tr, err := GetHTTPTransport(t.CACert, t.Cert, t.Key, t.ServerName, t.Timeout)
 		if err != nil {
 			return nil, err
 		}
