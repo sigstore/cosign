@@ -893,18 +893,29 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 
 func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string { //nolint: unparam
 	startTime := "2024-01-01T00:00:00Z"
-	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
+	fulcioSpecs := []string{}
+	if fulcioURL != "unused" {
+		fulcioSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)}
+	}
+
 	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
-	oidcSpec := fmt.Sprintf("url=%s,api-version=1,operator=oidc-op,start-time=%s", oidcURL, startTime)
-	tsaSpec := fmt.Sprintf("url=%s,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)
+
+	oidcSpecs := []string{}
+	if oidcURL != "unused" {
+		oidcSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=oidc-op,start-time=%s", oidcURL, startTime)}
+	}
+	tsaSpecs := []string{}
+	if tsaURL != "unused" {
+		tsaSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)}
+	}
 
 	downloadDirectory := t.TempDir()
 	out := filepath.Join(downloadDirectory, "signing_config.v0.2.json")
 	cmd := &signingconfig.CreateCmd{
-		FulcioSpecs:       []string{fulcioSpec},
+		FulcioSpecs:       fulcioSpecs,
 		RekorSpecs:        []string{rekorSpec},
-		OIDCProviderSpecs: []string{oidcSpec},
-		TSASpecs:          []string{tsaSpec},
+		OIDCProviderSpecs: oidcSpecs,
+		TSASpecs:          tsaSpecs,
 		RekorConfig:       "EXACT:1",
 		TSAConfig:         "ANY",
 		Out:               out,
