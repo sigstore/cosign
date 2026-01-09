@@ -4110,8 +4110,9 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	}
 
 	tsaURL := "https://tsa.example"
-	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
-	sc, err := root.NewSigningConfigFromJSON([]byte(signingConfigStr))
+	oidcURL := "https://oidc.example"
+	signingConfig := prepareSigningConfig(t, fulcioURL, rekorURL, oidcURL, tsaURL+"/api/v1/timestamp")
+	sc, err := root.NewSigningConfigFromPath(signingConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
