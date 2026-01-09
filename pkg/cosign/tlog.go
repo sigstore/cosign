@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -31,7 +32,8 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
+	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
@@ -39,7 +41,7 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/types"
-	"github.com/sigstore/rekor/pkg/types/dsse"
+	rekordsse "github.com/sigstore/rekor/pkg/types/dsse"
 	dsse_v001 "github.com/sigstore/rekor/pkg/types/dsse/v0.0.1"
 	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
 	"github.com/sigstore/rekor/pkg/types/intoto"
@@ -124,7 +126,7 @@ func dsseEntry(ctx context.Context, signature, pubKey []byte) (models.ProposedEn
 
 	pubKeyBytes = append(pubKeyBytes, pubKey)
 
-	return types.NewProposedEntry(ctx, dsse.KIND, dsse_v001.APIVERSION, types.ArtifactProperties{
+	return types.NewProposedEntry(ctx, rekordsse.KIND, dsse_v001.APIVERSION, types.ArtifactProperties{
 		ArtifactBytes:  signature,
 		PublicKeyBytes: pubKeyBytes,
 	})
@@ -211,7 +213,7 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature []byte
 func TLogUploadWithCustomHash(ctx context.Context, rekorClient *client.Rekor, signature []byte, checksum NamedHash, pemBytes []byte) (*models.LogEntryAnon, error) {
 	re := rekorEntry(checksum, signature, pemBytes)
 	returnVal := models.Hashedrekord{
-		APIVersion: swag.String(re.APIVersion()),
+		APIVersion: conv.Pointer(re.APIVersion()),
 		Spec:       re.HashedRekordObj,
 	}
 	return doUpload(ctx, rekorClient, &returnVal)
@@ -286,8 +288,8 @@ func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.
 		HashedRekordObj: models.HashedrekordV001Schema{
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Algorithm: swag.String(rekorEntryHashAlgorithm(checksum)),
-					Value:     swag.String(hex.EncodeToString(checksum.Sum(nil))),
+					Algorithm: conv.Pointer(rekorEntryHashAlgorithm(checksum)),
+					Value:     conv.Pointer(hex.EncodeToString(checksum.Sum(nil))),
 				},
 			},
 			Signature: &models.HashedrekordV001SchemaSignature{
@@ -430,6 +432,8 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 	// The fact that there's no signature (or empty rather), implies
 	// that this is an Attestation that we're verifying.
 	if len(signature) == 0 {
+		// For attestations, check DSSE, in-toto, and HashedRekord entries
+		// This allows verification of attestations uploaded as HashedRekord entries
 		intotoEntry, err := intotoEntry(context.Background(), payload, pubKey)
 		if err != nil {
 			return nil, err
@@ -438,7 +442,16 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 		if err != nil {
 			return nil, err
 		}
-		proposedEntry = []models.ProposedEntry{dsseEntry, intotoEntry}
+
+		hashedRekordEntry, err := createHashedRekordEntryForAttestation(payload, pubKey)
+		if err != nil {
+			// If we can't create HashedRekord entry (e.g., not a valid DSSE envelope),
+			// continue with just DSSE and in-toto entries
+			proposedEntry = []models.ProposedEntry{dsseEntry, intotoEntry}
+		} else {
+			// Include all three entry types
+			proposedEntry = []models.ProposedEntry{dsseEntry, intotoEntry, hashedRekordEntry}
+		}
 	} else {
 		sha256CheckSum := NewCryptoNamedHash(crypto.SHA256)
 		if _, err := sha256CheckSum.Write(payload); err != nil {
@@ -446,12 +459,61 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 		}
 		re := rekorEntry(sha256CheckSum, signature, pubKey)
 		entry := &models.Hashedrekord{
-			APIVersion: swag.String(re.APIVersion()),
+			APIVersion: conv.Pointer(re.APIVersion()),
 			Spec:       re.HashedRekordObj,
 		}
 		proposedEntry = []models.ProposedEntry{entry}
 	}
 	return proposedEntry, nil
+}
+
+// createHashedRekordEntryForAttestation creates a HashedRekord entry for DSSE attestations
+// This allows verification of attestations that were uploaded as HashedRekord entries
+//
+// This function:
+// - Parses the DSSE envelope from the payload
+// - Extracts the signature bytes from the DSSE envelope
+// - Creates a PAE-encoded payload (as per DSSE specification)
+// - Creates a HashedRekord entry with the signature and PAE-encoded payload hash
+func createHashedRekordEntryForAttestation(payload, pubKey []byte) (models.ProposedEntry, error) {
+	// Parse the payload as a DSSE envelope using the existing struct
+	var dsseEnvelope dsse.Envelope
+
+	if err := json.Unmarshal(payload, &dsseEnvelope); err != nil {
+		return nil, fmt.Errorf("payload is not a valid DSSE envelope: %w", err)
+	}
+
+	if len(dsseEnvelope.Signatures) == 0 {
+		return nil, fmt.Errorf("DSSE envelope has no signatures")
+	}
+
+	// Extract the signature bytes
+	signatureBytes, err := base64.StdEncoding.DecodeString(dsseEnvelope.Signatures[0].Sig)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 signature in DSSE envelope: %w", err)
+	}
+
+	// Extract the payload and create PAE-encoded payload
+	payloadBytes, err := base64.StdEncoding.DecodeString(dsseEnvelope.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base64 payload in DSSE envelope: %w", err)
+	}
+
+	// Create PAE-encoded payload using the existing DSSE library function
+	payloadType := "application/vnd.in-toto+json"
+	paePayload := dsse.PAE(payloadType, payloadBytes)
+
+	// Create HashedRekord entry
+	sha256CheckSum := NewCryptoNamedHash(crypto.SHA256)
+	sha256CheckSum.Write([]byte(paePayload))
+
+	re := rekorEntry(sha256CheckSum, signatureBytes, pubKey)
+	entry := &models.Hashedrekord{
+		APIVersion: conv.Pointer(re.APIVersion()),
+		Spec:       re.HashedRekordObj,
+	}
+
+	return entry, nil
 }
 
 func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
