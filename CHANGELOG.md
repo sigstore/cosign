@@ -1,3 +1,23 @@
+# v3.0.4
+
+v3.0.4 resolves https://github.com/sigstore/cosign/security/advisories/GHSA-whqx-f9j3-ch6m.
+
+## Changes
+
+* Fix bundle verify path for old bundle/trusted root (GHSA-whqx-f9j3-ch6m) (#4623)
+* Optimize cosign tree performance by caching digest resolution (#4612)
+* Don't require a trusted root to verify offline with a key (#4613)
+* Support default services for trusted-root and signing-config creation (#4592)
+
+# v2.6.2
+
+v2.6.2 resolves https://github.com/sigstore/cosign/security/advisories/GHSA-whqx-f9j3-ch6m.
+
+## Changes
+
+* Fix bundle verify path for old bundle/trusted root (GHSA-whqx-f9j3-ch6m) (#4624)
+* bump sigstore deps to resolve build errors (#4619)
+
 # v3.0.3
 
 Thank you for all of your feedback on Cosign v3! v3.0.3 fixes a number of bugs reported by
