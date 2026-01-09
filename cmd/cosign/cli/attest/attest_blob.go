@@ -72,7 +72,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return fmt.Errorf("one of --predicate or --statement must be set")
 	}
 
-	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
+	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" && c.RekorEntryType != "hashedrekord" {
 		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
@@ -147,7 +147,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial, c.RekorEntryType)
 	}
 
 	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, false, c.TlogUpload, payload, nil, c.RekorEntryType)

@@ -4044,11 +4044,11 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 
 	ctx := context.Background()
-	ko := options.KeyOpts{
+	verifyKo := options.KeyOpts{
 		KeyRef: pubKeyPath1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:       ko,
+		KeyOpts:       verifyKo,
 		SignaturePath: outputSignature,
 		PredicateType: predicateType,
 		IgnoreTlog:    true,
@@ -4058,7 +4058,7 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 
 	// Now attest the blob with the private key
-	ko = options.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
@@ -4092,11 +4092,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
 	// Test statement verification
-	ko = options.KeyOpts{
-		KeyRef: pubKeyPath1,
-	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:       ko,
+		KeyOpts:       verifyKo,
 		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
 		DigestAlg:     "alg",
 		SignaturePath: outputSignature,
@@ -4104,6 +4101,49 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		PredicateType: "something",
 	}
 	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Test hashedrekord with new bundle format
+	blobDir := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), blobDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingConfigStr := prepareSigningConfig(t, "", rekorURL, "", "")
+	sc, err := root.NewSigningConfigFromJSON([]byte(signingConfigStr))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+	ko.RekorURL = rekorURL
+	ko.SkipConfirmation = true
+	ko.SigningConfig = sc
+
+	attestBlobCmd = attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		StatementPath:  statementPath,
+		RekorEntryType: "hashedrekord",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	trustedRootPath := prepareTrustedRoot(t, "")
+	verifyKo.NewBundleFormat = true
+	verifyKo.BundlePath = bundlePath
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		TrustedRootPath: trustedRootPath,
+		KeyOpts:         verifyKo,
+	}
+	// Write out PAE
+	paePath := filepath.Join(blobDir, "pae.txt")
+	err = os.WriteFile(paePath, []byte(fmt.Sprintf("DSSEv1 28 application/vnd.in-toto+json %d %s", len(statement), statement)), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	must(verifyBlobCmd.Exec(ctx, paePath), t)
 }
 
 func TestOffline(t *testing.T) {

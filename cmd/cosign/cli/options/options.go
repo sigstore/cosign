@@ -59,4 +59,5 @@ var wasmExts = []string{
 var rekorEntryTypes = []string{
 	"dsse", // first one is the default
 	"intoto",
+	"hashedrekord",
 }

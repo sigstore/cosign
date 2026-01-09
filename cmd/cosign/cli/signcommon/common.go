@@ -508,16 +508,27 @@ func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.Log
 }
 
 // WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
-func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) error {
+func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, rekorEntryType string) error {
 	keypair, _, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
 		return fmt.Errorf("getting keypair and token: %w", err)
 	}
 
-	content := &sign.DSSEData{
+	var content sign.Content
+	content = &sign.DSSEData{
 		Data:        bundleOpts.Payload,
 		PayloadType: "application/vnd.in-toto+json",
 	}
+
+	// if we request haskedrekord type, put PAE into PlainData type
+	if rekorEntryType == "hashedrekord" {
+		pae := content.PreAuthEncoding()
+		ui.Infof(ctx, "Constructed PAE (which you will need for verifying): %s", string(pae))
+		content = &sign.PlainData{
+			Data: pae,
+		}
+	}
+
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial)
 	if err != nil {
 		return fmt.Errorf("signing bundle: %w", err)
@@ -591,6 +602,8 @@ func GetBundleComponents(ctx context.Context, cert, certChain string, ko options
 	bc.RekorEntry, err = UploadToTlog(ctx, ko, digest, tlogUpload, bc.SignerBytes, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
 		if rekorEntryType == "intoto" {
 			return cosign.TLogUploadInTotoAttestation(ctx, r, bc.SignedPayload, b)
+		} else if rekorEntryType == "hashedrekord" {
+			return nil, errors.New("hashedrekord type unsupported without signing config")
 		}
 		return cosign.TLogUploadDSSEEnvelope(ctx, r, bc.SignedPayload, b)
 	})
