@@ -98,56 +98,12 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if ko.SigningConfig == nil {
-		var fulcioServices []root.Service
-		if ko.FulcioURL != "" {
-			fulcioServices = append(fulcioServices, root.Service{
-				URL:                 ko.FulcioURL,
-				MajorAPIVersion:     1,
-				ValidityPeriodStart: time.Now(),
-			})
+		// TODO: Is this necessary? Or just enforce this in tests that call SignBlobCmd directly?
+		// Default RekorVersion is set by flag, but e2e tests call SignBlobCmd directly
+		if ko.RekorVersion == 0 {
+			ko.RekorVersion = 1
 		}
-
-		var rekorServices []root.Service
-		var rekorConfig root.ServiceConfiguration
-		if ko.RekorURL != "" && shouldUpload {
-			if ko.RekorVersion == 0 {
-				ko.RekorVersion = 1
-			}
-			rekorServices = append(rekorServices, root.Service{
-				URL:                 ko.RekorURL,
-				MajorAPIVersion:     ko.RekorVersion,
-				ValidityPeriodStart: time.Now(),
-			})
-			rekorConfig = root.ServiceConfiguration{
-				Selector: prototrustroot.ServiceSelector_ANY,
-				Count:    1,
-			}
-		}
-
-		var tsaServices []root.Service
-		var tsaConfig root.ServiceConfiguration
-		if ko.TSAServerURL != "" {
-			tsaServices = append(tsaServices, root.Service{
-				URL:                 ko.TSAServerURL,
-				MajorAPIVersion:     1,
-				ValidityPeriodStart: time.Now(),
-			})
-			tsaConfig = root.ServiceConfiguration{
-				Selector: prototrustroot.ServiceSelector_ANY,
-				Count:    1,
-			}
-		}
-
-		var err error
-		ko.SigningConfig, err = root.NewSigningConfig(
-			root.SigningConfigMediaType02,
-			fulcioServices,
-			nil,
-			rekorServices,
-			rekorConfig,
-			tsaServices,
-			tsaConfig,
-		)
+		ko.SigningConfig, err = newSigningConfigFromKeyOpts(ko, shouldUpload)
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
@@ -256,6 +212,55 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	return sig, nil
+}
+
+func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.SigningConfig, error) {
+	var fulcioServices []root.Service
+	if ko.FulcioURL != "" {
+		fulcioServices = append(fulcioServices, root.Service{
+			URL:                 ko.FulcioURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+	}
+
+	var rekorServices []root.Service
+	var rekorConfig root.ServiceConfiguration
+	if ko.RekorURL != "" && shouldUpload {
+		rekorServices = append(rekorServices, root.Service{
+			URL:                 ko.RekorURL,
+			MajorAPIVersion:     ko.RekorVersion,
+			ValidityPeriodStart: time.Now(),
+		})
+		rekorConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
+	}
+
+	var tsaServices []root.Service
+	var tsaConfig root.ServiceConfiguration
+	if ko.TSAServerURL != "" {
+		tsaServices = append(tsaServices, root.Service{
+			URL:                 ko.TSAServerURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+		tsaConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
+	}
+
+	return root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		fulcioServices,
+		nil,
+		rekorServices,
+		rekorConfig,
+		tsaServices,
+		tsaConfig,
+	)
 }
 
 func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
