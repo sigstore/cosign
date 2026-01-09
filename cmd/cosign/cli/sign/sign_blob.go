@@ -36,6 +36,7 @@ import (
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -125,44 +126,17 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
 		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
 	}
-
-	sig := bundle.GetMessageSignature().GetSignature()
-	var extractedCert *protocommon.X509Certificate
-	if bundle.VerificationMaterial.GetCertificate() != nil {
-		extractedCert = bundle.VerificationMaterial.GetCertificate()
-	}
+	
+	sig, extractedCert, rekorEntry := extractElementsFromProtoBundle(&bundle)
 
 	if ko.BundlePath != "" {
 		var contents []byte
 		if ko.NewBundleFormat {
 			contents = bundleBytes
 		} else {
-			signedPayload := cosign.LocalSignedPayload{
-				Base64Signature: base64.StdEncoding.EncodeToString(sig),
-			}
-			if extractedCert != nil {
-				pemBlock := &pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: extractedCert.GetRawBytes(),
-				}
-				certPem := pem.EncodeToMemory(pemBlock)
-				signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
-			}
-			if len(bundle.GetVerificationMaterial().GetTlogEntries()) > 0 {
-				entry := bundle.GetVerificationMaterial().GetTlogEntries()[0]
-				signedPayload.Bundle = &cbundle.RekorBundle{
-					SignedEntryTimestamp: entry.GetInclusionPromise().GetSignedEntryTimestamp(),
-					Payload: cbundle.RekorPayload{
-						Body:           entry.GetCanonicalizedBody(),
-						IntegratedTime: entry.GetIntegratedTime(),
-						LogIndex:       entry.GetLogIndex(),
-						LogID:          hex.EncodeToString(entry.GetLogId().GetKeyId()),
-					},
-				}
-			}
-			contents, err = json.Marshal(signedPayload)
+			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, rekorEntry)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("creating legacy bundle: %w", err)
 			}
 		}
 
@@ -262,6 +236,45 @@ func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.S
 		tsaConfig,
 	)
 }
+
+func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry) {
+	var extractedCert *protocommon.X509Certificate
+	if bundle.VerificationMaterial.GetCertificate() != nil {
+		extractedCert = bundle.VerificationMaterial.GetCertificate()
+	}
+	var rekorEntry *protorekor.TransparencyLogEntry
+	if len(bundle.VerificationMaterial.GetTlogEntries()) > 0 {
+		rekorEntry = bundle.VerificationMaterial.GetTlogEntries()[0]
+	}
+	return bundle.GetMessageSignature().GetSignature(), extractedCert, rekorEntry
+}
+
+func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
+	signedPayload := cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+	}
+	if cert != nil {
+		pemBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.GetRawBytes(),
+		}
+		certPem := pem.EncodeToMemory(pemBlock)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
+	}
+	if rekorEntry != nil {
+		signedPayload.Bundle = &cbundle.RekorBundle{
+			SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+			Payload: cbundle.RekorPayload{
+				Body:           rekorEntry.GetCanonicalizedBody(),
+				IntegratedTime: rekorEntry.GetIntegratedTime(),
+				LogIndex:       rekorEntry.GetLogIndex(),
+				LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+			},
+		}
+	}
+	return json.Marshal(signedPayload)
+}
+
 
 func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
 	switch hashFunc {
