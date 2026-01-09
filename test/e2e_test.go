@@ -893,18 +893,29 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 
 func prepareSigningConfig(t *testing.T, fulcioURL, rekorURL, oidcURL, tsaURL string) string { //nolint: unparam
 	startTime := "2024-01-01T00:00:00Z"
-	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
+	fulcioSpecs := []string{}
+	if fulcioURL != "unused" {
+		fulcioSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)}
+	}
+
 	rekorSpec := fmt.Sprintf("url=%s,api-version=1,operator=rekor-op,start-time=%s", rekorURL, startTime)
-	oidcSpec := fmt.Sprintf("url=%s,api-version=1,operator=oidc-op,start-time=%s", oidcURL, startTime)
-	tsaSpec := fmt.Sprintf("url=%s,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)
+
+	oidcSpecs := []string{}
+	if oidcURL != "unused" {
+		oidcSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=oidc-op,start-time=%s", oidcURL, startTime)}
+	}
+	tsaSpecs := []string{}
+	if tsaURL != "unused" {
+		tsaSpecs = []string{fmt.Sprintf("url=%s,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)}
+	}
 
 	downloadDirectory := t.TempDir()
 	out := filepath.Join(downloadDirectory, "signing_config.v0.2.json")
 	cmd := &signingconfig.CreateCmd{
-		FulcioSpecs:       []string{fulcioSpec},
+		FulcioSpecs:       fulcioSpecs,
 		RekorSpecs:        []string{rekorSpec},
-		OIDCProviderSpecs: []string{oidcSpec},
-		TSASpecs:          []string{tsaSpec},
+		OIDCProviderSpecs: oidcSpecs,
+		TSASpecs:          tsaSpecs,
 		RekorConfig:       "EXACT:1",
 		TSAConfig:         "ANY",
 		Out:               out,
@@ -4044,11 +4055,11 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 
 	ctx := context.Background()
-	ko := options.KeyOpts{
+	verifyKo := options.KeyOpts{
 		KeyRef: pubKeyPath1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:       ko,
+		KeyOpts:       verifyKo,
 		SignaturePath: outputSignature,
 		PredicateType: predicateType,
 		IgnoreTlog:    true,
@@ -4058,7 +4069,7 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, bp), t)
 
 	// Now attest the blob with the private key
-	ko = options.KeyOpts{
+	ko := options.KeyOpts{
 		KeyRef:   privKeyPath1,
 		PassFunc: passFunc,
 	}
@@ -4092,11 +4103,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
 	// Test statement verification
-	ko = options.KeyOpts{
-		KeyRef: pubKeyPath1,
-	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:       ko,
+		KeyOpts:       verifyKo,
 		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
 		DigestAlg:     "alg",
 		SignaturePath: outputSignature,
@@ -4104,6 +4112,50 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		PredicateType: "something",
 	}
 	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
+
+	// Test hashedrekord with new bundle format
+	blobDir := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), blobDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signingConfig := prepareSigningConfig(t, "unused", rekorURL, "unused", "unused")
+	fmt.Println(signingConfig)
+	sc, err := root.NewSigningConfigFromPath(signingConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bundlePath := filepath.Join(blobDir, "bundle.json")
+	ko.NewBundleFormat = true
+	ko.BundlePath = bundlePath
+	ko.RekorURL = rekorURL
+	ko.SkipConfirmation = true
+	ko.SigningConfig = sc
+
+	attestBlobCmd = attest.AttestBlobCommand{
+		KeyOpts:        ko,
+		StatementPath:  statementPath,
+		RekorEntryType: "hashedrekord",
+	}
+	must(attestBlobCmd.Exec(ctx, bp), t)
+
+	trustedRootPath := prepareTrustedRoot(t, "")
+	verifyKo.NewBundleFormat = true
+	verifyKo.BundlePath = bundlePath
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		TrustedRootPath: trustedRootPath,
+		KeyOpts:         verifyKo,
+	}
+	// Write out PAE
+	paePath := filepath.Join(blobDir, "pae.txt")
+	err = os.WriteFile(paePath, []byte(fmt.Sprintf("DSSEv1 28 application/vnd.in-toto+json %d %s", len(statement), statement)), 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	must(verifyBlobCmd.Exec(ctx, paePath), t)
 }
 
 func TestOffline(t *testing.T) {
