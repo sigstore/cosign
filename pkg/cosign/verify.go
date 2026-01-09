@@ -1213,49 +1213,12 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
 
-	if co.TrustedMaterial != nil {
-		payload := bundle.Payload
-		logID, err := hex.DecodeString(payload.LogID)
-		if err != nil {
-			return false, fmt.Errorf("decoding log ID: %w", err)
-		}
-		body, _ := base64.StdEncoding.DecodeString(payload.Body.(string))
-		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, logID, bundle.SignedEntryTimestamp, nil)
-		if err != nil {
-			return false, fmt.Errorf("converting tlog entry: %w", err)
-		}
-		if err := tlog.VerifySET(entry, co.TrustedMaterial.RekorLogs()); err != nil {
-			return false, fmt.Errorf("verifying bundle with trusted root: %w", err)
-		}
-		return true, nil
-	}
-	// Make sure all the rekorPubKeys are ecsda.PublicKeys
-	for k, v := range co.RekorPubKeys.Keys {
-		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
-			return false, fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
-		}
-	}
-
 	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
 		return false, err
 	}
 
 	if err := comparePublicKey(bundle.Payload.Body.(string), sig, co); err != nil {
 		return false, err
-	}
-
-	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
-	if !ok {
-		return false, &VerificationFailure{
-			fmt.Errorf("verifying bundle: rekor log public key not found for payload"),
-		}
-	}
-	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
-	if err != nil {
-		return false, err
-	}
-	if pubKey.Status != tuf.Active {
-		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
 	}
 
 	payload, err := sig.Payload()
@@ -1279,6 +1242,45 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	} else if bundlehash != payloadHash {
 		return false, fmt.Errorf("matching bundle to payload: bundle=%q, payload=%q", bundlehash, payloadHash)
 	}
+
+	if co.TrustedMaterial != nil {
+		payload := bundle.Payload
+		logID, err := hex.DecodeString(payload.LogID)
+		if err != nil {
+			return false, fmt.Errorf("decoding log ID: %w", err)
+		}
+		body, _ := base64.StdEncoding.DecodeString(payload.Body.(string))
+		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, logID, bundle.SignedEntryTimestamp, nil)
+		if err != nil {
+			return false, fmt.Errorf("converting tlog entry: %w", err)
+		}
+		if err := tlog.VerifySET(entry, co.TrustedMaterial.RekorLogs()); err != nil {
+			return false, fmt.Errorf("verifying bundle with trusted root: %w", err)
+		}
+
+		return true, nil
+	}
+	// Make sure all the rekorPubKeys are ecsda.PublicKeys
+	for k, v := range co.RekorPubKeys.Keys {
+		if _, ok := v.PubKey.(*ecdsa.PublicKey); !ok {
+			return false, fmt.Errorf("rekor Public key for LogID %s is not type ecdsa.PublicKey", k)
+		}
+	}
+
+	pubKey, ok := co.RekorPubKeys.Keys[bundle.Payload.LogID]
+	if !ok {
+		return false, &VerificationFailure{
+			fmt.Errorf("verifying bundle: rekor log public key not found for payload"),
+		}
+	}
+	err = VerifySET(bundle.Payload, bundle.SignedEntryTimestamp, pubKey.PubKey.(*ecdsa.PublicKey))
+	if err != nil {
+		return false, err
+	}
+	if pubKey.Status != tuf.Active {
+		fmt.Fprintf(os.Stderr, "**Info** Successfully verified Rekor entry using an expired verification key\n")
+	}
+
 	return true, nil
 }
 

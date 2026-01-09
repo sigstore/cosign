@@ -782,6 +782,84 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	}
 }
 
+func TestVerifyImageSignatureWithMismatchedBundleAndTrustedRoot(t *testing.T) {
+	ctx := context.Background()
+	var ca root.FulcioCertificateAuthority
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	ca.Root = rootCert
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature1, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	// Create a fake bundle
+	pe, _ := proposedEntries(base64.StdEncoding.EncodeToString(signature1), payload, pemLeaf)
+	entry, _ := rtypes.UnmarshalEntry(pe[0])
+	leaf, _ := entry.Canonicalize(ctx)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+
+	tlogs := make(map[string]*root.TransparencyLog)
+	for k, v := range rekorPubKeys.Keys {
+		tlogs[k] = &root.TransparencyLog{PublicKey: v.PubKey, HashFunc: crypto.SHA256, ValidityPeriodStart: time.Now().Add(-1 * time.Minute)}
+	}
+
+	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, []root.CertificateAuthority{&ca}, nil, nil, tlogs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a different bundle for a different signature
+	signature2, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	pe2, _ := proposedEntries(base64.StdEncoding.EncodeToString(signature2), payload, pemLeaf)
+	entry2, _ := rtypes.UnmarshalEntry(pe2[0])
+	leaf2, _ := entry2.Canonicalize(ctx)
+	rekorBundle2 := CreateTestBundle(ctx, t, sv, leaf2)
+
+	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle2)}
+	// Create a signed entity for the original signature but with the wrong bundle for that signature
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature1), opts...)
+
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:       rootPool,
+			IgnoreSCT:       true,
+			Identities:      []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			TrustedMaterial: trustedRoot})
+	if err == nil || !strings.Contains(err.Error(), "signature in bundle does not match signature being verified") {
+		t.Fatalf("expected error for mismatched signature and bundle, got %v", err)
+	}
+
+	// Create a signed entity with a different key from the bundle
+	leafCert2, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert2.Raw})
+
+	opts = []static.Option{static.WithCertChain(pemLeaf2, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ = static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature1), opts...)
+
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:       rootPool,
+			IgnoreSCT:       true,
+			Identities:      []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			TrustedMaterial: trustedRoot})
+	if err == nil || !strings.Contains(err.Error(), "error verifying bundle: comparing public key PEMs") {
+		t.Fatal(err)
+	}
+}
+
 func TestValidateAndUnpackCertSuccess(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"
