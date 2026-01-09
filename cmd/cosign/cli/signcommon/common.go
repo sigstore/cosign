@@ -600,12 +600,14 @@ func GetBundleComponents(ctx context.Context, cert, certChain string, ko options
 		return nil, nil, fmt.Errorf("converting signer to bytes: %w", err)
 	}
 	bc.RekorEntry, err = UploadToTlog(ctx, ko, digest, tlogUpload, bc.SignerBytes, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		if rekorEntryType == "intoto" {
+		switch rekorEntryType {
+		case "intoto":
 			return cosign.TLogUploadInTotoAttestation(ctx, r, bc.SignedPayload, b)
-		} else if rekorEntryType == "hashedrekord" {
+		case "hashedrekord":
 			return nil, errors.New("hashedrekord type unsupported without signing config")
+		default:
+			return cosign.TLogUploadDSSEEnvelope(ctx, r, bc.SignedPayload, b)
 		}
-		return cosign.TLogUploadDSSEEnvelope(ctx, r, bc.SignedPayload, b)
 	})
 	if err != nil {
 		closeSV()
