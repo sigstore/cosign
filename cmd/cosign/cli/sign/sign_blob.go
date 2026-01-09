@@ -110,6 +110,9 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		var rekorServices []root.Service
 		var rekorConfig root.ServiceConfiguration
 		if ko.RekorURL != "" && shouldUpload {
+			if ko.RekorVersion == 0 {
+				ko.RekorVersion = 1
+			}
 			rekorServices = append(rekorServices, root.Service{
 				URL:                 ko.RekorURL,
 				MajorAPIVersion:     ko.RekorVersion,
