@@ -78,7 +78,13 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 			TrustedMaterial:    opts.TrustedRoot,
 			keyTrustedMaterial: keyTrustedMaterial,
 		}
-		opts.TrustedRoot = trustedMaterial
+		if trustedMaterial.TrustedMaterial == nil {
+			fmt.Println("DEBUG: trustedMaterial.TrustedMaterial is nil, setting opts.TrustedRoot to nil")
+			opts.TrustedRoot = nil
+		} else {
+			fmt.Println("DEBUG: trustedMaterial.TrustedMaterial is NOT nil, setting opts.TrustedRoot to trustedMaterial")
+			opts.TrustedRoot = trustedMaterial
+		}
 	}
 
 	if len(signingConfig.TimestampAuthorityURLs()) != 0 {

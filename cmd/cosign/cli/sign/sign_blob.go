@@ -18,16 +18,15 @@ package sign
 import (
 	"context"
 	"crypto"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-
-	"google.golang.org/protobuf/encoding/protojson"
+	"time"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
@@ -37,12 +36,12 @@ import (
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
+	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Hash) (internal.HashReader, func() error, error) {
@@ -72,7 +71,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
-	keypair, sv, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
+	keypair, _, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
 	if err != nil {
 		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
@@ -83,25 +82,6 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
 	defer closePayload()
-
-	if ko.SigningConfig != nil {
-		data, err := io.ReadAll(&payload)
-		if err != nil {
-			return nil, fmt.Errorf("reading payload: %w", err)
-		}
-		content := &sign.PlainData{
-			Data: data,
-		}
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
-		if err != nil {
-			return nil, fmt.Errorf("signing bundle: %w", err)
-		}
-		if err := os.WriteFile(ko.BundlePath, bundle, 0600); err != nil {
-			return nil, fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
-		return bundle, nil
-	}
 
 	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 	if err != nil {
@@ -118,88 +98,45 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ui.Infof(ctx, "Continuing with non SHA256 hash function and old bundle format")
 	}
 
-	sig, err := sv.SignMessage(&payload, signatureoptions.WithContext(ctx))
-	if err != nil {
-		return nil, fmt.Errorf("signing blob: %w", err)
-	}
-	digest := payload.Sum(nil)
-
-	signedPayload := cosign.LocalSignedPayload{}
-
-	timestampBytes, _, err := signcommon.GetRFC3161Timestamp(sig, ko)
-	if err != nil {
-		return nil, fmt.Errorf("getting timestamp: %w", err)
-	}
-
-	signer, err := sv.Bytes(ctx)
-	if err != nil {
-		return nil, err
-	}
-	rekorEntry, err := signcommon.UploadToTlog(ctx, ko, nil, shouldUpload, signer, func(r *rekorclient.Rekor, b []byte) (*models.LogEntryAnon, error) {
-		return cosign.TLogUploadWithCustomHash(ctx, r, sig, &payload, b)
-	})
-	if err != nil {
-		return nil, err
-	}
-	if rekorEntry != nil {
-		signedPayload.Bundle = cbundle.EntryToBundle(rekorEntry)
+	if ko.SigningConfig == nil {
+		// TODO: Is this necessary? Or just enforce this in tests that call SignBlobCmd directly?
+		// Default RekorVersion is set by flag, but e2e tests call SignBlobCmd directly
+		if ko.RekorVersion == 0 {
+			ko.RekorVersion = 1
+		}
+		ko.SigningConfig, err = newSigningConfigFromKeyOpts(ko, shouldUpload)
+		if err != nil {
+			return nil, fmt.Errorf("creating signing config: %w", err)
+		}
 	}
 
-	// if bundle is specified, just do that and ignore the rest
+	data, err := io.ReadAll(&payload)
+	if err != nil {
+		return nil, fmt.Errorf("reading payload: %w", err)
+	}
+	content := &sign.PlainData{
+		Data: data,
+	}
+	bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
+	if err != nil {
+		return nil, fmt.Errorf("signing bundle: %w", err)
+	}
+
+	var bundle protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
+	}
+	
+	sig, extractedCert, rekorEntry := extractElementsFromProtoBundle(&bundle)
+
 	if ko.BundlePath != "" {
 		var contents []byte
 		if ko.NewBundleFormat {
-			// Determine if signature is certificate or not
-			var hint string
-			var rawCert []byte
-
-			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-			if err != nil || len(cert) == 0 {
-				pubKey, err := sv.PublicKey()
-				if err != nil {
-					return nil, err
-				}
-				pkixPubKey, err := x509.MarshalPKIXPublicKey(pubKey)
-				if err != nil {
-					return nil, err
-				}
-				hashedBytes := sha256.Sum256(pkixPubKey)
-				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
-			} else {
-				rawCert = cert[0].Raw
-			}
-
-			bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
-			if err != nil {
-				return nil, err
-			}
-
-			bundle.Content = &protobundle.Bundle_MessageSignature{
-				MessageSignature: &protocommon.MessageSignature{
-					MessageDigest: &protocommon.HashOutput{
-						Algorithm: hashFuncToProtoBundle(payload.HashFunc()),
-						Digest:    digest,
-					},
-					Signature: sig,
-				},
-			}
-
-			contents, err = protojson.Marshal(bundle)
-			if err != nil {
-				return nil, err
-			}
+			contents = bundleBytes
 		} else {
-			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-
-			certBytes, err := extractCertificate(ctx, sv)
+			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, rekorEntry)
 			if err != nil {
-				return nil, err
-			}
-			signedPayload.Cert = base64.StdEncoding.EncodeToString(certBytes)
-
-			contents, err = json.Marshal(signedPayload)
-			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("creating legacy bundle: %w", err)
 			}
 		}
 
@@ -210,7 +147,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if outputSignature != "" {
-		var bts = sig
+		bts := sig
 		if b64 {
 			bts = []byte(base64.StdEncoding.EncodeToString(sig))
 		}
@@ -219,61 +156,125 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		}
 		ui.Infof(ctx, "Wrote signature to file %s", outputSignature)
 	} else {
+		bts := sig
 		if b64 {
-			sig = []byte(base64.StdEncoding.EncodeToString(sig))
-			fmt.Println(string(sig))
-		} else if _, err := os.Stdout.Write(sig); err != nil {
-			// No newline if using the raw signature
-			return nil, err
+			bts = []byte(base64.StdEncoding.EncodeToString(sig))
+			fmt.Println(string(bts))
+		} else {
+			if _, err := os.Stdout.Write(bts); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	if outputCertificate != "" {
-		certBytes, err := extractCertificate(ctx, sv)
-		if err != nil {
-			return nil, err
+	if outputCertificate != "" && extractedCert != nil {
+		bts := extractedCert.GetRawBytes()
+		pemBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: extractedCert.GetRawBytes(),
 		}
-		if certBytes != nil {
-			bts := certBytes
-			if b64 {
-				bts = []byte(base64.StdEncoding.EncodeToString(certBytes))
-			}
-			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-				return nil, fmt.Errorf("create certificate file: %w", err)
-			}
-			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
+		certPem := pem.EncodeToMemory(pemBlock)
+		if b64 {
+			bts = []byte(base64.StdEncoding.EncodeToString(certPem))
+		} else {
+			bts = certPem
 		}
+		if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
+			return nil, fmt.Errorf("create certificate file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
 	}
 
 	return sig, nil
 }
 
-// Extract an encoded certificate from the SignerVerifier. Returns (nil, nil) if verifier is not a certificate.
-func extractCertificate(ctx context.Context, sv *signcommon.SignerVerifier) ([]byte, error) {
-	signer, err := sv.Bytes(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error getting signer: %w", err)
+func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.SigningConfig, error) {
+	var fulcioServices []root.Service
+	if ko.FulcioURL != "" {
+		fulcioServices = append(fulcioServices, root.Service{
+			URL:                 ko.FulcioURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
 	}
-	cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
-	// signer is a certificate
-	if err == nil && len(cert) == 1 {
-		return signer, nil
+
+	var rekorServices []root.Service
+	var rekorConfig root.ServiceConfiguration
+	if ko.RekorURL != "" && shouldUpload {
+		rekorServices = append(rekorServices, root.Service{
+			URL:                 ko.RekorURL,
+			MajorAPIVersion:     ko.RekorVersion,
+			ValidityPeriodStart: time.Now(),
+		})
+		rekorConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
 	}
-	return nil, nil
+
+	var tsaServices []root.Service
+	var tsaConfig root.ServiceConfiguration
+	if ko.TSAServerURL != "" {
+		tsaServices = append(tsaServices, root.Service{
+			URL:                 ko.TSAServerURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+		tsaConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
+	}
+
+	return root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		fulcioServices,
+		nil,
+		rekorServices,
+		rekorConfig,
+		tsaServices,
+		tsaConfig,
+	)
 }
 
-func hashFuncToProtoBundle(hashFunc crypto.Hash) protocommon.HashAlgorithm {
-	switch hashFunc {
-	case crypto.SHA256:
-		return protocommon.HashAlgorithm_SHA2_256
-	case crypto.SHA384:
-		return protocommon.HashAlgorithm_SHA2_384
-	case crypto.SHA512:
-		return protocommon.HashAlgorithm_SHA2_512
-	default:
-		return protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED
+func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry) {
+	var extractedCert *protocommon.X509Certificate
+	if bundle.VerificationMaterial.GetCertificate() != nil {
+		extractedCert = bundle.VerificationMaterial.GetCertificate()
 	}
+	var rekorEntry *protorekor.TransparencyLogEntry
+	if len(bundle.VerificationMaterial.GetTlogEntries()) > 0 {
+		rekorEntry = bundle.VerificationMaterial.GetTlogEntries()[0]
+	}
+	return bundle.GetMessageSignature().GetSignature(), extractedCert, rekorEntry
 }
+
+func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
+	signedPayload := cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+	}
+	if cert != nil {
+		pemBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.GetRawBytes(),
+		}
+		certPem := pem.EncodeToMemory(pemBlock)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
+	}
+	if rekorEntry != nil {
+		signedPayload.Bundle = &cbundle.RekorBundle{
+			SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+			Payload: cbundle.RekorPayload{
+				Body:           rekorEntry.GetCanonicalizedBody(),
+				IntegratedTime: rekorEntry.GetIntegratedTime(),
+				LogIndex:       rekorEntry.GetLogIndex(),
+				LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+			},
+		}
+	}
+	return json.Marshal(signedPayload)
+}
+
 
 func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
 	switch hashFunc {
