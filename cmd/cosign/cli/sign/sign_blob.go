@@ -274,6 +274,7 @@ func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protoc
 	if bundle.VerificationMaterial.GetCertificate() != nil {
 		extractedCert = bundle.VerificationMaterial.GetCertificate()
 	}
+	fmt.Println("DEBUG: extractedCert is ", extractedCert)
 	var rekorEntry *protorekor.TransparencyLogEntry
 	if len(bundle.VerificationMaterial.GetTlogEntries()) > 0 {
 		rekorEntry = bundle.VerificationMaterial.GetTlogEntries()[0]
@@ -286,12 +287,15 @@ func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Ce
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 	}
 	if cert != nil {
+		fmt.Println("DEBUG: cert is NOT nil")
 		pemBlock := &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.GetRawBytes(),
 		}
 		certPem := pem.EncodeToMemory(pemBlock)
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
+	} else {
+		fmt.Println("DEBUG: cert is nil")
 	}
 	if rekorEntry != nil {
 		signedPayload.Bundle = &cbundle.RekorBundle{

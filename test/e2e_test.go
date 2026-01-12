@@ -871,6 +871,12 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				must(gotErr, t)
 			}
 
+			bundleContent, err := os.ReadFile(bundlePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fmt.Println("Bundle content: ", string(bundleContent))
+
 			// Verify a blob
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
 				KeyOpts: ko,
