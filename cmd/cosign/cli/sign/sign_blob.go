@@ -273,6 +273,9 @@ func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protoc
 	var extractedCert *protocommon.X509Certificate
 	if bundle.VerificationMaterial.GetCertificate() != nil {
 		extractedCert = bundle.VerificationMaterial.GetCertificate()
+	} else if bundle.VerificationMaterial.GetX509CertificateChain() != nil &&
+		len(bundle.VerificationMaterial.GetX509CertificateChain().GetCertificates()) > 0 {
+		extractedCert = bundle.VerificationMaterial.GetX509CertificateChain().GetCertificates()[0]
 	}
 	fmt.Println("DEBUG: extractedCert is ", extractedCert)
 	var rekorEntry *protorekor.TransparencyLogEntry
