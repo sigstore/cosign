@@ -166,7 +166,15 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if ko.NewBundleFormat {
 			contents = bundleBytes
 		} else {
-			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, rekorEntry)
+			pubKeyPem, err := keypair.GetPublicKeyPem()
+			if err != nil {
+				return nil, fmt.Errorf("getting public key: %w", err)
+			}
+			block, _ := pem.Decode([]byte(pubKeyPem))
+			if block == nil {
+				return nil, fmt.Errorf("failed to decode public key pem")
+			}
+			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, block.Bytes, rekorEntry)
 			if err != nil {
 				return nil, fmt.Errorf("creating legacy bundle: %w", err)
 			}
@@ -285,7 +293,7 @@ func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protoc
 	return bundle.GetMessageSignature().GetSignature(), extractedCert, rekorEntry
 }
 
-func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
+func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, pubKey []byte, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
 	signedPayload := cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(sig),
 	}
@@ -297,8 +305,16 @@ func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Ce
 		}
 		certPem := pem.EncodeToMemory(pemBlock)
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
+	} else if len(pubKey) > 0 {
+		fmt.Println("DEBUG: using public key fallback for legacy bundle")
+		pemBlock := &pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: pubKey,
+		}
+		pubPem := pem.EncodeToMemory(pemBlock)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(pubPem)
 	} else {
-		fmt.Println("DEBUG: cert is nil")
+		fmt.Println("DEBUG: cert and pubKey are nil")
 	}
 	if rekorEntry != nil {
 		signedPayload.Bundle = &cbundle.RekorBundle{
