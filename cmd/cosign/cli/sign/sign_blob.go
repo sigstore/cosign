@@ -18,6 +18,11 @@ package sign
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -34,12 +39,14 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -108,6 +115,31 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
+	}
+
+	manualTM, err := newTrustedMaterialFromKeyOpts(ko)
+	if err != nil {
+		return nil, fmt.Errorf("composing trusted material: %w", err)
+	}
+
+	if manualTM != nil {
+		if ko.TrustedMaterial == nil {
+			ko.TrustedMaterial = manualTM
+		} else {
+			ko.TrustedMaterial = root.TrustedMaterialCollection{manualTM, ko.TrustedMaterial}
+		}
+		ui.Infof(ctx, "Augmented trusted material from service flags")
+	}
+
+	if ko.TrustedMaterial == nil {
+		fmt.Println("DEBUG: ko.TrustedMaterial is nil")
+	} else {
+		fmt.Println("DEBUG: ko.TrustedMaterial is NOT nil")
+		r, err := json.MarshalIndent(ko.TrustedMaterial, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshalling trusted material: %w", err)
+		}
+		fmt.Println("DEBUG: ko.TrustedMaterial: ", string(r))
 	}
 
 	data, err := io.ReadAll(&payload)
@@ -287,4 +319,252 @@ func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
 	default:
 		return crypto.Hash(0)
 	}
+}
+
+func newTrustedMaterialFromKeyOpts(ko options.KeyOpts) (root.TrustedMaterial, error) {
+	var collection root.TrustedMaterialCollection
+
+	if ko.TSAServerURL != "" && ko.TSACertChainPath != "" {
+		tsaTM, err := buildTsaTrustedMaterial(ko.TSACertChainPath, ko.TSAServerURL)
+		if err != nil {
+			return nil, fmt.Errorf("building TSA trusted material: %w", err)
+		}
+		collection = append(collection, tsaTM)
+	}
+
+	if fulcioRootPath := env.Getenv(env.VariableSigstoreRootFile); fulcioRootPath != "" {
+		fulcioTM, err := buildFulcioTrustedMaterial(fulcioRootPath, ko.FulcioURL)
+		if err != nil {
+			return nil, fmt.Errorf("building Fulcio trusted material: %w", err)
+		}
+		collection = append(collection, fulcioTM)
+	}
+
+	if ctLogKeyPath := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile); ctLogKeyPath != "" {
+		ctTM, err := buildCTLogTrustedMaterial(ctLogKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("building CT Log trusted material: %w", err)
+		}
+		collection = append(collection, ctTM)
+	}
+
+	if len(collection) == 0 {
+		return nil, nil
+	}
+
+	return collection, nil
+}
+
+func buildTsaTrustedMaterial(chainPath, tsaURI string) (root.TrustedMaterial, error) {
+	readCertsFromPEM := func(path string) ([]*x509.Certificate, error) {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		var certs []*x509.Certificate
+		for {
+			var block *pem.Block
+			block, b = pem.Decode(b)
+			if block == nil {
+				break
+			}
+			if block.Type != "CERTIFICATE" {
+				continue
+			}
+			c, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			certs = append(certs, c)
+		}
+		if len(certs) == 0 {
+			return nil, fmt.Errorf("no certificates found in %s", path)
+		}
+		return certs, nil
+	}
+
+	var leaf *x509.Certificate
+	var intermediates []*x509.Certificate
+	var rootCert *x509.Certificate
+
+	if chainPath != "" {
+		certs, err := readCertsFromPEM(chainPath)
+		if err != nil {
+			return nil, fmt.Errorf("reading chain file: %w", err)
+		}
+		chainLen := len(certs)
+		if chainLen < 1 {
+			return nil, fmt.Errorf("chain file %s contains no certs", chainPath)
+		}
+		for i, c := range certs {
+			switch {
+			case i == 0 && !c.IsCA:
+				leaf = c
+			case i < chainLen-1:
+				intermediates = append(intermediates, c)
+			case i == chainLen-1:
+				rootCert = c
+			}
+		}
+		if leaf == nil && len(certs) >= 1 && !certs[0].IsCA {
+			leaf = certs[0]
+		}
+	}
+
+	if rootCert == nil {
+		return nil, fmt.Errorf("no root certificate available in TSA chain")
+	}
+	if leaf == nil {
+		return nil, fmt.Errorf("no leaf certificate available in TSA chain")
+	}
+
+	tsa := &root.SigstoreTimestampingAuthority{
+		Root:                rootCert,
+		Intermediates:       intermediates,
+		Leaf:                leaf,
+		URI:                 tsaURI,
+		ValidityPeriodStart: leaf.NotBefore,
+		ValidityPeriodEnd:   leaf.NotAfter,
+	}
+
+	tm := &tsaMaterial{TSAs: []root.TimestampingAuthority{tsa}}
+	return tm, nil
+}
+
+type tsaMaterial struct {
+	root.BaseTrustedMaterial
+	TSAs []root.TimestampingAuthority
+}
+
+func (t *tsaMaterial) TimestampingAuthorities() []root.TimestampingAuthority {
+	return t.TSAs
+}
+
+func buildFulcioTrustedMaterial(rootPath, uri string) (root.TrustedMaterial, error) {
+	certs, err := parseCerts(rootPath)
+	if err != nil {
+		return nil, fmt.Errorf("parsing Fulcio root certs: %w", err)
+	}
+
+	ca := &root.FulcioCertificateAuthority{
+		Root:                certs[len(certs)-1],
+		ValidityPeriodStart: certs[len(certs)-1].NotBefore,
+		ValidityPeriodEnd:   certs[len(certs)-1].NotAfter,
+		URI:                 uri,
+	}
+	if len(certs) > 1 {
+		ca.Intermediates = certs[:len(certs)-1]
+	}
+
+	return &fulcioMaterial{fulcios: []root.CertificateAuthority{ca}}, nil
+}
+
+type fulcioMaterial struct {
+	root.BaseTrustedMaterial
+	fulcios []root.CertificateAuthority
+}
+
+func (f *fulcioMaterial) FulcioCertificateAuthorities() []root.CertificateAuthority {
+	return f.fulcios
+}
+
+func buildCTLogTrustedMaterial(keyPath string) (root.TrustedMaterial, error) {
+	pubKey, id, idBytes, err := getPubKey(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("parsing CT Log public key: %w", err)
+	}
+
+	tlog := &root.TransparencyLog{
+		HashFunc:            crypto.SHA256,
+		ID:                  idBytes,
+		ValidityPeriodStart: time.Unix(0, 0),
+		PublicKey:           pubKey,
+		SignatureHashFunc:   getSignatureHashAlgo(pubKey),
+	}
+
+	return &ctLogMaterial{ctlogs: map[string]*root.TransparencyLog{id: tlog}}, nil
+}
+
+type ctLogMaterial struct {
+	root.BaseTrustedMaterial
+	ctlogs map[string]*root.TransparencyLog
+}
+
+func (c *ctLogMaterial) CTLogs() map[string]*root.TransparencyLog {
+	return c.ctlogs
+}
+
+func parseCerts(path string) ([]*x509.Certificate, error) {
+	var certs []*x509.Certificate
+
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	for block, contents := pem.Decode(contents); block != nil; block, contents = pem.Decode(contents) {
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		certs = append(certs, cert)
+
+		if len(contents) == 0 {
+			break
+		}
+	}
+
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no certificates in file %s", path)
+	}
+
+	return certs, nil
+}
+
+func getPubKey(path string) (crypto.PublicKey, string, []byte, error) {
+	pemBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pemBytes)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	keyID, err := cosign.GetTransparencyLogID(pubKey)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	idBytes, err := hex.DecodeString(keyID)
+	if err != nil {
+		return nil, "", []byte{}, err
+	}
+
+	return pubKey, keyID, idBytes, nil
+}
+
+func getSignatureHashAlgo(pubKey crypto.PublicKey) crypto.Hash {
+	var h crypto.Hash
+	switch pk := pubKey.(type) {
+	case *rsa.PublicKey:
+		h = crypto.SHA256
+	case *ecdsa.PublicKey:
+		switch pk.Curve {
+		case elliptic.P256():
+			h = crypto.SHA256
+		case elliptic.P384():
+			h = crypto.SHA384
+		case elliptic.P521():
+			h = crypto.SHA512
+		default:
+			h = crypto.SHA256
+		}
+	case ed25519.PublicKey:
+		h = crypto.SHA512
+	default:
+		h = crypto.SHA256
+	}
+	return h
 }
