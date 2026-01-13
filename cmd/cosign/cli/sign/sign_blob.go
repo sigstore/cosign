@@ -159,7 +159,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
 	}
 	
-	sig, extractedCert, rekorEntry := extractElementsFromProtoBundle(&bundle)
+	sig, extractedCert, rekorEntry, rfc3161Timestamp := extractElementsFromProtoBundle(&bundle)
 
 	if ko.BundlePath != "" {
 		var contents []byte
@@ -177,6 +177,15 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, block.Bytes, rekorEntry)
 			if err != nil {
 				return nil, fmt.Errorf("creating legacy bundle: %w", err)
+			}
+			if rfc3161Timestamp != nil && ko.RFC3161TimestampPath != "" {
+				ts, err := json.Marshal(rfc3161Timestamp)
+				if err != nil {
+					return nil, fmt.Errorf("marshalling timestamp: %w", err)
+				}
+				if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
+					return nil, fmt.Errorf("create timestamp file: %w", err)
+				}
 			}
 		}
 
@@ -277,7 +286,11 @@ func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.S
 	)
 }
 
-func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry) {
+func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry, *protocommon.RFC3161SignedTimestamp) {
+	var sig []byte
+	if bundle.GetMessageSignature().GetSignature() != nil {
+		sig = bundle.GetMessageSignature().GetSignature()
+	}
 	var extractedCert *protocommon.X509Certificate
 	if bundle.VerificationMaterial.GetCertificate() != nil {
 		extractedCert = bundle.VerificationMaterial.GetCertificate()
@@ -290,7 +303,12 @@ func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protoc
 	if len(bundle.VerificationMaterial.GetTlogEntries()) > 0 {
 		rekorEntry = bundle.VerificationMaterial.GetTlogEntries()[0]
 	}
-	return bundle.GetMessageSignature().GetSignature(), extractedCert, rekorEntry
+	var timestamp *protocommon.RFC3161SignedTimestamp
+	if bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps() != nil &&
+		len(bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps()) > 0 {
+		timestamp = bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps()[0]
+	}
+	return sig, extractedCert, rekorEntry, timestamp
 }
 
 func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, pubKey []byte, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
