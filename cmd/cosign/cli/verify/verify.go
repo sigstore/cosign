@@ -135,8 +135,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
-	// Check to see if we are using the new bundle format or not
-	if !c.LocalImage {
+	// Auto-detect bundle format for local images
+	if c.LocalImage {
+		hasBundles, err := cosign.HasLocalBundles(images[0])
+		if err != nil {
+			return fmt.Errorf("checking local image format: %w", err)
+		}
+		co.NewBundleFormat = hasBundles
+	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
 			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
