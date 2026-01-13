@@ -264,6 +264,20 @@ func TestVerifyCertMissingIssuer(t *testing.T) {
 	}
 }
 
+func TestVerifyKeyAndCertIdentity(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		KeyRef: "key.pub",
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity: "hello@foo.com",
+		},
+	}
+	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
+	if err == nil {
+		t.Fatalf("verify expected 'provide either --key or --certificate-identity, not both'")
+	}
+}
+
 func TestLoadCertsKeylessVerification(t *testing.T) {
 	certs := getTestCerts(t)
 	certChainFile := makeCertChainFile(t, certs.RootCertPEM, certs.SubCertPEM, certs.LeafCertPEM)
