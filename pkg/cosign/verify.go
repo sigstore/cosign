@@ -800,7 +800,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 
 	var acceptableRFC3161Timestamp *timestamp.Timestamp
 	if co.UseSignedTimestamps {
-		acceptableRFC3161Timestamp, err = VerifyRFC3161Timestamp(sig, co)
+		acceptableRFC3161Timestamp, err = VerifyRFC3161Timestamp(sig, co) // DEBUG: Issue here
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
@@ -1321,21 +1321,29 @@ func (s *sigContent) MessageSignatureContent() verify.MessageSignatureContent {
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
 // no root is provided with a timestamp.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
+	println("DEBUG: Verifying RFC3161 timestamp...")
+	println("DEBUG: Obtaining RFC3161 timestamp...")
 	ts, err := sig.RFC3161Timestamp()
+	println("DEBUG: Obtained RFC3161 timestamp without error: %v", ts)
 	switch {
 	case err != nil:
 		return nil, err
 	case ts == nil:
+		println("DEBUG: No RFC3161 timestamp found")
 		return nil, nil
 	case co.TSARootCertificates == nil && co.TrustedMaterial == nil:
 		return nil, errors.New("no TSA root certificate(s) provided to verify timestamp")
 	}
+	println("DEBUG: Verifying RFC3161 timestamp with root certificate(s)...")
 
+	println("DEBUG: Obtaining base64 signature...")
 	b64Sig, err := sig.Base64Signature()
 	if err != nil {
 		return nil, fmt.Errorf("reading base64signature: %w", err)
 	}
+	println("DEBUG: Obtained base64 signature: %v", b64Sig)
 
+	println("DEBUG: Obtaining timestamp bytes...")
 	var tsBytes []byte
 	if len(b64Sig) == 0 {
 		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
@@ -1352,8 +1360,10 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		}
 		tsBytes = rawSig
 	}
+	println("DEBUG: Obtained timestamp bytes: %v", tsBytes)
 
 	if co.TrustedMaterial != nil {
+		println("DEBUG: Trusted material is present. Verifying timestamp with trusted root...")
 		entity := &signedEntityForTimestamp{
 			timestamp:  ts,
 			sigContent: &sigContent{rawSig: tsBytes},
@@ -1365,9 +1375,11 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		if len(verifyErrs) > 0 {
 			log.Printf("Warning: subset of signed timestamps failed to verify: %v", verifyErrs)
 		}
+		println("DEBUG: Verified timestamp with trusted root.")
 		return &timestamp.Timestamp{Time: verifiedTimestamps[0].Time}, nil
 	}
 
+	println("DEBUG: Verifying timestamp with TSA root certificate(s)...")
 	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
 		tsaverification.VerifyOpts{
 			TSACertificate: co.TSACertificate,
