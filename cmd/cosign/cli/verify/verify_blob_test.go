@@ -630,6 +630,7 @@ func TestVerifyBlob(t *testing.T) {
 			if tt.key != nil {
 				keyPath := writeBlobFile(t, td, string(tt.key), "key.pem")
 				cmd.KeyRef = keyPath
+				cmd.CertVerifyOptions = options.CertVerifyOptions{}
 			}
 			if tt.newBundle {
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
@@ -672,6 +673,22 @@ func TestVerifyBlobCertMissingIssuer(t *testing.T) {
 	err := verifyBlob.Exec(ctx, "blob")
 	if err == nil {
 		t.Fatalf("verifyBlob() expected '--certificate-oidc-issuer required'")
+	}
+}
+
+func TestVerifyBlobKeyAndCertIdentity(t *testing.T) {
+	ctx := context.Background()
+	verifyBlob := VerifyBlobCmd{
+		KeyOpts: options.KeyOpts{
+			KeyRef: "key.pub",
+		},
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertIdentity: "hello@foo.com",
+		},
+	}
+	err := verifyBlob.Exec(ctx, "blob")
+	if err == nil {
+		t.Fatalf("verifyBlob() expected 'provide either --key or --certificate-identity, not both'")
 	}
 }
 
