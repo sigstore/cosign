@@ -76,6 +76,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return flag.ErrHelp
 	}
 
+	// key and cert identity are mutually exclusive
+	if options.NOf(c.KeyRef, c.CertIdentity, c.CertIdentityRegexp) > 1 {
+		return &options.KeyAndIdentityParseError{}
+	}
+
 	// always default to sha256 if the algorithm hasn't been explicitly set
 	if c.HashAlgorithm == 0 {
 		c.HashAlgorithm = crypto.SHA256

@@ -27,6 +27,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -264,17 +265,52 @@ func TestVerifyCertMissingIssuer(t *testing.T) {
 	}
 }
 
-func TestVerifyKeyAndCertIdentity(t *testing.T) {
+func TestVerifyMutuallyExclusiveFlags(t *testing.T) {
 	ctx := context.Background()
-	verifyCommand := VerifyCommand{
-		KeyRef: "key.pub",
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentity: "hello@foo.com",
+	tts := []struct {
+		name          string
+		cmd           VerifyCommand
+		expectedError error
+	}{
+		{
+			name: "both key and cert identity",
+			cmd: VerifyCommand{
+				KeyRef: "key.pub",
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity: "hello@foo.com",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and cert identity regexp",
+			cmd: VerifyCommand{
+				KeyRef: "key.pub",
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both cert identity and cert identity regexp",
+			cmd: VerifyCommand{
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity:       "hello@foo.com",
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
 		},
 	}
-	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
-	if err == nil {
-		t.Fatalf("verify expected 'provide either --key or --certificate-identity, not both'")
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cmd.Exec(ctx, []string{"foo", "bar", "baz"})
+			if !errors.Is(err, tt.expectedError) {
+				t.Fatalf("expected %T, got: %T, %v", tt.expectedError, err, err)
+			}
+		})
 	}
 }
 

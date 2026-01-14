@@ -84,8 +84,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
 	}
 
-	if c.KeyRef != "" && c.CertIdentity != "" {
-		return fmt.Errorf("provide either --key or --certificate-identity, not both")
+	// key and cert identity are mutually exclusive
+	if options.NOf(c.KeyRef, c.CertIdentity, c.CertIdentityRegexp) > 1 {
+		return &options.KeyAndIdentityParseError{}
 	}
 
 	// Key, sk, and cert are mutually exclusive.

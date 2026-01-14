@@ -98,8 +98,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
-	if c.KeyRef != "" && c.CertIdentity != "" {
-		return fmt.Errorf("provide either --key or --certificate-identity, not both")
+	// key and cert identity are mutually exclusive
+	if options.NOf(c.KeyRef, c.CertIdentity, c.CertIdentityRegexp) > 1 {
+		return &options.KeyAndIdentityParseError{}
 	}
 
 	var identities []cosign.Identity
