@@ -179,13 +179,14 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 				return nil, fmt.Errorf("creating legacy bundle: %w", err)
 			}
 			if rfc3161Timestamp != nil && ko.RFC3161TimestampPath != "" {
-				ts, err := json.Marshal(rfc3161Timestamp)
+				legacyTimestamp := cbundle.TimestampToRFC3161Timestamp(rfc3161Timestamp.SignedTimestamp)
+				ts, err := json.Marshal(legacyTimestamp)
 				if err != nil {
 					return nil, fmt.Errorf("marshalling timestamp: %w", err)
 				}
 				if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
 					return nil, fmt.Errorf("create timestamp file: %w", err)
-				}
+    		}
 			}
 		}
 
