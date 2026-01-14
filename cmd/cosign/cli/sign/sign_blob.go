@@ -148,7 +148,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 			sctTrustedMaterial, err = cosign.TrustedRoot()
 		}
 		if err != nil {
-			return nil, fmt.Errorf("composing trusted material: %w", err)
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Skipping client-side SCT verification. Error from TUF: %v", err)
 		}
 	}
 	if sctTrustedMaterial != nil && !ko.InsecureSkipFulcioVerify && len(chains) > 0 {
