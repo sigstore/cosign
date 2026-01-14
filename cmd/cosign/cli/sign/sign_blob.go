@@ -46,6 +46,7 @@ import (
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -117,31 +118,6 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		}
 	}
 
-	manualTM, err := newTrustedMaterialFromKeyOpts(ko)
-	if err != nil {
-		return nil, fmt.Errorf("composing trusted material: %w", err)
-	}
-
-	if manualTM != nil {
-		if ko.TrustedMaterial == nil {
-			ko.TrustedMaterial = manualTM
-		} else {
-			ko.TrustedMaterial = root.TrustedMaterialCollection{manualTM, ko.TrustedMaterial}
-		}
-		ui.Infof(ctx, "Augmented trusted material from service flags")
-	}
-
-	if ko.TrustedMaterial == nil {
-		fmt.Println("DEBUG: ko.TrustedMaterial is nil")
-	} else {
-		fmt.Println("DEBUG: ko.TrustedMaterial is NOT nil")
-		r, err := json.MarshalIndent(ko.TrustedMaterial, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("marshalling trusted material: %w", err)
-		}
-		fmt.Println("DEBUG: ko.TrustedMaterial: ", string(r))
-	}
-
 	data, err := io.ReadAll(&payload)
 	if err != nil {
 		return nil, fmt.Errorf("reading payload: %w", err)
@@ -158,8 +134,35 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
 		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
 	}
-	
-	sig, extractedCert, rekorEntry, rfc3161Timestamp := extractElementsFromProtoBundle(&bundle)
+
+	sig, extractedCert, chains, rekorEntry, rfc3161Timestamp, err := extractElementsFromProtoBundle(&bundle)
+	if err != nil {
+		return nil, fmt.Errorf("extracting elements from bundle: %w", err)
+	}
+
+	var sctTrustedMaterial root.TrustedMaterial
+	if ko.TrustedMaterial == nil {
+		if ctLogKeyPath := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile); ctLogKeyPath != "" {
+			sctTrustedMaterial, err = buildCTLogTrustedMaterial(ctLogKeyPath)
+		} else {
+			sctTrustedMaterial, err = cosign.TrustedRoot()
+		}
+		if err != nil {
+			return nil, fmt.Errorf("composing trusted material: %w", err)
+		}
+	}
+	if sctTrustedMaterial != nil && !ko.InsecureSkipFulcioVerify && len(chains) > 0 {
+		threshold := 0
+		if ko.KeyRef == "" || ko.IssueCertificateForExistingKey {
+			threshold = 1
+		}
+		if err := verify.VerifySignedCertificateTimestamp(chains, threshold, sctTrustedMaterial); err != nil {
+			return nil, fmt.Errorf("verifying SCT: %w", err)
+		}
+		if threshold > 0 {
+			ui.Infof(ctx, "SCT verified successfully")
+		}
+	}
 
 	if ko.BundlePath != "" {
 		var contents []byte
@@ -287,29 +290,47 @@ func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.S
 	)
 }
 
-func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry, *protocommon.RFC3161SignedTimestamp) {
+func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, [][]*x509.Certificate, *protorekor.TransparencyLogEntry, *protocommon.RFC3161SignedTimestamp, error) {
 	var sig []byte
 	if bundle.GetMessageSignature().GetSignature() != nil {
 		sig = bundle.GetMessageSignature().GetSignature()
 	}
+
 	var extractedCert *protocommon.X509Certificate
-	if bundle.VerificationMaterial.GetCertificate() != nil {
-		extractedCert = bundle.VerificationMaterial.GetCertificate()
-	} else if bundle.VerificationMaterial.GetX509CertificateChain() != nil &&
-		len(bundle.VerificationMaterial.GetX509CertificateChain().GetCertificates()) > 0 {
-		extractedCert = bundle.VerificationMaterial.GetX509CertificateChain().GetCertificates()[0]
+	var chains [][]*x509.Certificate
+	if chain := bundle.VerificationMaterial.GetX509CertificateChain(); chain != nil && len(chain.GetCertificates()) > 0 {
+		certs := chain.GetCertificates()
+		extractedCert = certs[0]
+		var parsedChain []*x509.Certificate
+		for _, cert := range certs {
+			parsed, err := x509.ParseCertificate(cert.RawBytes)
+			if err != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("parsing certificate from bundle: %w", err)
+			}
+			parsedChain = append(parsedChain, parsed)
+		}
+		chains = append(chains, parsedChain)
+	} else if cert := bundle.VerificationMaterial.GetCertificate(); cert != nil {
+		extractedCert = cert
+		parsed, err := x509.ParseCertificate(cert.RawBytes)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("parsing certificate from bundle: %w", err)
+		}
+		chains = append(chains, []*x509.Certificate{parsed})
 	}
-	fmt.Println("DEBUG: extractedCert is ", extractedCert)
+
 	var rekorEntry *protorekor.TransparencyLogEntry
 	if len(bundle.VerificationMaterial.GetTlogEntries()) > 0 {
 		rekorEntry = bundle.VerificationMaterial.GetTlogEntries()[0]
 	}
+
 	var timestamp *protocommon.RFC3161SignedTimestamp
 	if bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps() != nil &&
 		len(bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps()) > 0 {
 		timestamp = bundle.GetVerificationMaterial().TimestampVerificationData.GetRfc3161Timestamps()[0]
 	}
-	return sig, extractedCert, rekorEntry, timestamp
+
+	return sig, extractedCert, chains, rekorEntry, timestamp, nil
 }
 
 func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, pubKey []byte, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
@@ -363,153 +384,6 @@ func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
 	}
 }
 
-func newTrustedMaterialFromKeyOpts(ko options.KeyOpts) (root.TrustedMaterial, error) {
-	var collection root.TrustedMaterialCollection
-
-	if ko.TSAServerURL != "" && ko.TSACertChainPath != "" {
-		tsaTM, err := buildTsaTrustedMaterial(ko.TSACertChainPath, ko.TSAServerURL)
-		if err != nil {
-			return nil, fmt.Errorf("building TSA trusted material: %w", err)
-		}
-		collection = append(collection, tsaTM)
-	}
-
-	if fulcioRootPath := env.Getenv(env.VariableSigstoreRootFile); fulcioRootPath != "" {
-		fulcioTM, err := buildFulcioTrustedMaterial(fulcioRootPath, ko.FulcioURL)
-		if err != nil {
-			return nil, fmt.Errorf("building Fulcio trusted material: %w", err)
-		}
-		collection = append(collection, fulcioTM)
-	}
-
-	if ctLogKeyPath := env.Getenv(env.VariableSigstoreCTLogPublicKeyFile); ctLogKeyPath != "" {
-		ctTM, err := buildCTLogTrustedMaterial(ctLogKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("building CT Log trusted material: %w", err)
-		}
-		collection = append(collection, ctTM)
-	}
-
-	if len(collection) == 0 {
-		return nil, nil
-	}
-
-	return collection, nil
-}
-
-func buildTsaTrustedMaterial(chainPath, tsaURI string) (root.TrustedMaterial, error) {
-	readCertsFromPEM := func(path string) ([]*x509.Certificate, error) {
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		var certs []*x509.Certificate
-		for {
-			var block *pem.Block
-			block, b = pem.Decode(b)
-			if block == nil {
-				break
-			}
-			if block.Type != "CERTIFICATE" {
-				continue
-			}
-			c, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
-			certs = append(certs, c)
-		}
-		if len(certs) == 0 {
-			return nil, fmt.Errorf("no certificates found in %s", path)
-		}
-		return certs, nil
-	}
-
-	var leaf *x509.Certificate
-	var intermediates []*x509.Certificate
-	var rootCert *x509.Certificate
-
-	if chainPath != "" {
-		certs, err := readCertsFromPEM(chainPath)
-		if err != nil {
-			return nil, fmt.Errorf("reading chain file: %w", err)
-		}
-		chainLen := len(certs)
-		if chainLen < 1 {
-			return nil, fmt.Errorf("chain file %s contains no certs", chainPath)
-		}
-		for i, c := range certs {
-			switch {
-			case i == 0 && !c.IsCA:
-				leaf = c
-			case i < chainLen-1:
-				intermediates = append(intermediates, c)
-			case i == chainLen-1:
-				rootCert = c
-			}
-		}
-		if leaf == nil && len(certs) >= 1 && !certs[0].IsCA {
-			leaf = certs[0]
-		}
-	}
-
-	if rootCert == nil {
-		return nil, fmt.Errorf("no root certificate available in TSA chain")
-	}
-	if leaf == nil {
-		return nil, fmt.Errorf("no leaf certificate available in TSA chain")
-	}
-
-	tsa := &root.SigstoreTimestampingAuthority{
-		Root:                rootCert,
-		Intermediates:       intermediates,
-		Leaf:                leaf,
-		URI:                 tsaURI,
-		ValidityPeriodStart: leaf.NotBefore,
-		ValidityPeriodEnd:   leaf.NotAfter,
-	}
-
-	tm := &tsaMaterial{TSAs: []root.TimestampingAuthority{tsa}}
-	return tm, nil
-}
-
-type tsaMaterial struct {
-	root.BaseTrustedMaterial
-	TSAs []root.TimestampingAuthority
-}
-
-func (t *tsaMaterial) TimestampingAuthorities() []root.TimestampingAuthority {
-	return t.TSAs
-}
-
-func buildFulcioTrustedMaterial(rootPath, uri string) (root.TrustedMaterial, error) {
-	certs, err := parseCerts(rootPath)
-	if err != nil {
-		return nil, fmt.Errorf("parsing Fulcio root certs: %w", err)
-	}
-
-	ca := &root.FulcioCertificateAuthority{
-		Root:                certs[len(certs)-1],
-		ValidityPeriodStart: certs[len(certs)-1].NotBefore,
-		ValidityPeriodEnd:   certs[len(certs)-1].NotAfter,
-		URI:                 uri,
-	}
-	if len(certs) > 1 {
-		ca.Intermediates = certs[:len(certs)-1]
-	}
-
-	return &fulcioMaterial{fulcios: []root.CertificateAuthority{ca}}, nil
-}
-
-type fulcioMaterial struct {
-	root.BaseTrustedMaterial
-	fulcios []root.CertificateAuthority
-}
-
-func (f *fulcioMaterial) FulcioCertificateAuthorities() []root.CertificateAuthority {
-	return f.fulcios
-}
-
 func buildCTLogTrustedMaterial(keyPath string) (root.TrustedMaterial, error) {
 	pubKey, id, idBytes, err := getPubKey(keyPath)
 	if err != nil {
@@ -534,33 +408,6 @@ type ctLogMaterial struct {
 
 func (c *ctLogMaterial) CTLogs() map[string]*root.TransparencyLog {
 	return c.ctlogs
-}
-
-func parseCerts(path string) ([]*x509.Certificate, error) {
-	var certs []*x509.Certificate
-
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	for block, contents := pem.Decode(contents); block != nil; block, contents = pem.Decode(contents) {
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		certs = append(certs, cert)
-
-		if len(contents) == 0 {
-			break
-		}
-	}
-
-	if len(certs) == 0 {
-		return nil, fmt.Errorf("no certificates in file %s", path)
-	}
-
-	return certs, nil
 }
 
 func getPubKey(path string) (crypto.PublicKey, string, []byte, error) {
