@@ -23,10 +23,21 @@ type KeyParseError struct{}
 // flags are parsed by the CLI
 type PubKeyParseError struct{}
 
+// KeyAndIdentityParseError is an error returned when both
+// key and identity flags are parsed by the CLI
+type KeyAndIdentityParseError struct{}
+
 func (e *KeyParseError) Error() string {
 	return "exactly one of: key reference (--key), or hardware token (--sk) must be provided"
 }
 
 func (e *PubKeyParseError) Error() string {
 	return "exactly one of: key reference (--key), certificate (--cert) or hardware token (--sk) must be provided"
+}
+
+func (e *KeyAndIdentityParseError) Error() string {
+	return "exactly one of: key reference (--key) or certificate identity " +
+		"(--certificate-identity or --certificate-identity-regexp), must be provided. " +
+		"Bundles signed with identity will have a 'certificate' field under 'verificationMaterial.' " +
+		"Bundles signed by key will have a 'publicKey' field under 'verificationMaterial'"
 }

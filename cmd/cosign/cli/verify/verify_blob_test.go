@@ -26,6 +26,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -662,17 +663,71 @@ func TestVerifyBlobCertMissingSubject(t *testing.T) {
 	}
 }
 
-func TestVerifyBlobCertMissingIssuer(t *testing.T) {
+func TestVerifyBlobMutuallyExclusiveFlags(t *testing.T) {
 	ctx := context.Background()
-	verifyBlob := VerifyBlobCmd{
-		CertRef: "cert.pem",
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentity: "subject",
+	tts := []struct {
+		name          string
+		cmd           VerifyBlobCmd
+		expectedError error
+	}{
+		{
+			name: "both key and cert identity",
+			cmd: VerifyBlobCmd{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     "key.pub",
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity: "hello@foo.com",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and cert identity regex",
+			cmd: VerifyBlobCmd{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     "key.pub",
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both cert identity and cert identity regex",
+			cmd: VerifyBlobCmd{
+				KeyOpts: options.KeyOpts{
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity:       "hello@foo.com",
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and secret key",
+			cmd: VerifyBlobCmd{
+				KeyOpts: options.KeyOpts{
+					KeyRef: "key.pub",
+					Sk:     true,
+				},
+			},
+			expectedError: &options.PubKeyParseError{},
 		},
 	}
-	err := verifyBlob.Exec(ctx, "blob")
-	if err == nil {
-		t.Fatalf("verifyBlob() expected '--certificate-oidc-issuer required'")
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cmd.Exec(ctx, "foo")
+			if !errors.Is(err, tt.expectedError) {
+				t.Fatalf("expected %T, got: %T, %v", tt.expectedError, err, err)
+			}
+		})
 	}
 }
 
@@ -686,9 +741,10 @@ func TestVerifyBlobKeyAndCertIdentity(t *testing.T) {
 			CertIdentity: "hello@foo.com",
 		},
 	}
+	var expectedErr *options.KeyAndIdentityParseError
 	err := verifyBlob.Exec(ctx, "blob")
-	if err == nil {
-		t.Fatalf("verifyBlob() expected 'provide either --key or --certificate-identity, not both'")
+	if !errors.As(err, &expectedErr) {
+		t.Fatalf("expected KeyAndIdentityParseError, got: %T, %v", err, err)
 	}
 }
 
