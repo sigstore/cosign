@@ -125,12 +125,8 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 	}
 
 	verifyCmd := cliverify.VerifyBlobCmd{
-		KeyOpts: verifyKO,
-		SigRef:  string(sig),
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
-		},
+		KeyOpts:    verifyKO,
+		SigRef:     string(sig),
 		IgnoreTlog: true,
 	}
 	must(verifyCmd.Exec(context.Background(), blobPath), t)
