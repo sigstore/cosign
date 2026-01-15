@@ -125,7 +125,11 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	content := &sign.PlainData{
 		Data: data,
 	}
-	bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
+	certIdToken := idToken
+	if len(certBytes) > 0 {
+		certIdToken = ""
+	}
+	bundleBytes, err := cbundle.SignData(ctx, content, keypair, certIdToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
 	if err != nil {
 		return nil, fmt.Errorf("signing bundle: %w", err)
 	}
