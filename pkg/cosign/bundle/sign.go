@@ -20,6 +20,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -29,7 +30,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
+func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, tsaClientTransport http.RoundTripper) ([]byte, error) {
 	var opts sign.BundleOptions
 
 	if trustedMaterial != nil {
@@ -92,6 +93,9 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 				URL:     tsaSvc.URL,
 				Timeout: 30 * time.Second,
 				Retries: 1,
+			}
+			if tsaClientTransport != nil {
+				tsaOpts.Transport = tsaClientTransport
 			}
 			opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(tsaOpts))
 		}
