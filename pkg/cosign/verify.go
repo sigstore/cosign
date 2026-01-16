@@ -1322,6 +1322,9 @@ func (s *sigContent) MessageSignatureContent() verify.MessageSignatureContent {
 // returns the timestamp value.
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
 // no root is provided with a timestamp.
+//
+// Note: This function does not perform CRL/OCSP certificate revocation checks.
+// Callers are responsible for validating the TSA certificate and trusted material provided via CheckOpts according to their policy.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
 	switch {
