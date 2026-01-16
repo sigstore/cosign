@@ -127,6 +127,11 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 		if err != nil {
 			return nil, nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
 		}
+		keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+		if err != nil {
+			return nil, nil, nil, "", fmt.Errorf("creating updated signerverifier keypair: %w", err)
+		}
+		certBytes = sv.Cert
 	}
 
 	return keypair, sv, certBytes, idToken, nil
