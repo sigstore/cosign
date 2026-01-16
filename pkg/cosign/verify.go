@@ -41,6 +41,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	ggcrlayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/nozzle/throttler"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -1677,6 +1678,58 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 	}
 
 	return bundles, &h, nil
+}
+
+// HasLocalBundles checks if a local OCI layout has v3 sigstore bundles.
+// V3 bundles are stored as separate images with layers having
+// media type "application/vnd.dev.sigstore.bundle".
+func HasLocalBundles(path string) (bool, error) {
+	return hasLocalSigstoreBundles(path)
+}
+
+// HasLocalAttestationBundles checks if a local OCI layout has v3 sigstore bundles for attestations.
+// For v3, both signatures and attestations use the same bundle format.
+func HasLocalAttestationBundles(path string) (bool, error) {
+	return hasLocalSigstoreBundles(path)
+}
+
+func hasLocalSigstoreBundles(path string) (bool, error) {
+	p, err := ggcrlayout.FromPath(path)
+	if err != nil {
+		return false, fmt.Errorf("loading OCI layout from %s: %w", path, err)
+	}
+
+	ii, err := p.ImageIndex()
+	if err != nil {
+		return false, fmt.Errorf("getting image index: %w", err)
+	}
+
+	manifest, err := ii.IndexManifest()
+	if err != nil {
+		return false, fmt.Errorf("getting index manifest: %w", err)
+	}
+
+	// Check each image in the index for sigstore bundle layers
+	for _, m := range manifest.Manifests {
+		img, err := ii.Image(m.Digest)
+		if err != nil {
+			continue
+		}
+		layers, err := img.Layers()
+		if err != nil {
+			continue
+		}
+		for _, layer := range layers {
+			mt, err := layer.MediaType()
+			if err != nil {
+				continue
+			}
+			if strings.HasPrefix(string(mt), "application/vnd.dev.sigstore.bundle") {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
