@@ -89,44 +89,32 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 	td := t.TempDir()
 	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
 	blobPath := mkfile(blob, td, t)
-	timestampPath := filepath.Join(td, "timestamp.txt")
 	bundlePath := filepath.Join(td, "cosign.bundle")
 
 	_, privKey, pubKey := keypair(t, td)
 
 	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
+	timestampCACert, timestampServerCert, timestampServerKey, _, _ := generateMTLSKeys(t, td)
 	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
 	t.Cleanup(tsaCleanup)
 
 	signingKO := options.KeyOpts{
 		KeyRef:               privKey,
 		PassFunc:             passFunc,
-		TSAServerURL:         timestampServerURL,
-		TSAClientCACert:      timestampCACert,
-		TSAClientCert:        timestampClientCert,
-		TSAClientKey:         timestampClientKey,
-		TSAServerName:        "server.example.com",
-		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
+		TSACertChainPath:     timestampChainFile,
+		TSAServerURL:         timestampServerURL,
 	}
-	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
+	_, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
 	must(err, t)
 
 	verifyKO := options.KeyOpts{
 		KeyRef:               pubKey,
-		TSACertChainPath:     timestampChainFile,
-		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
 	}
 
 	verifyCmd := cliverify.VerifyBlobCmd{
 		KeyOpts: verifyKO,
-		SigRef:  string(sig),
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
-		},
 		IgnoreTlog: true,
 	}
 	must(verifyCmd.Exec(context.Background(), blobPath), t)
@@ -198,3 +186,4 @@ func setUpTSAServerWithTLS(t *testing.T, td, timestampCACert, timestampServerKey
 	timestampChainFile := mkfile(tsaChain.Payload, td, t)
 	return timestampServerURL, timestampChainFile, tsaServer.Close
 }
+

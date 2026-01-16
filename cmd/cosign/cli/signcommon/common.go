@@ -127,6 +127,11 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 		if err != nil {
 			return nil, nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
 		}
+		keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+		if err != nil {
+			return nil, nil, nil, "", fmt.Errorf("creating updated signerverifier keypair: %w", err)
+		}
+		certBytes = sv.Cert
 	}
 
 	return keypair, sv, certBytes, idToken, nil
@@ -647,19 +652,28 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	}
 	// Fetch a trusted root when:
 	// * requesting a certificate and no CT log key is provided to verify an SCT
-	// * using a signing config and signing using sigstore-go
+	// * using a signing config
 	if ((keyRef == "" || issueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
 		(useSigningConfig || signingConfigPath != "") {
 		if trustedRootPath != "" {
+			fmt.Println("DEBUG: Loading trusted root from path: ", trustedRootPath)
 			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
 			if err != nil {
 				return fmt.Errorf("loading trusted root: %w", err)
 			}
-		} else {
+		} else if useSigningConfig || signingConfigPath != "" {
+			fmt.Println("DEBUG: Fetching trusted root from TUF because...")
+			fmt.Println("DEBUG: keyRef: ", keyRef)
+			fmt.Println("DEBUG: issueCertificate: ", issueCertificate)
+			fmt.Println("DEBUG: env.Getenv(env.VariableSigstoreCTLogPublicKeyFile): ", env.Getenv(env.VariableSigstoreCTLogPublicKeyFile))
+			fmt.Println("DEBUG: useSigningConfig: ", useSigningConfig)
+			fmt.Println("DEBUG: signingConfigPath: ", signingConfigPath)
 			ko.TrustedMaterial, err = cosign.TrustedRoot()
 			if err != nil {
 				ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 			}
+		} else {
+			ko.TrustedMaterial = nil
 		}
 	}
 	if signingConfigPath != "" {

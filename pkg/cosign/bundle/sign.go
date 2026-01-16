@@ -74,11 +74,13 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		keyTrustedMaterial := root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
 			return key, nil
 		})
-		trustedMaterial := &verifyTrustedMaterial{
-			TrustedMaterial:    opts.TrustedRoot,
-			keyTrustedMaterial: keyTrustedMaterial,
+		if opts.TrustedRoot != nil && keyTrustedMaterial != nil {
+			trustedMaterial := &verifyTrustedMaterial{
+				TrustedMaterial:    opts.TrustedRoot,
+				keyTrustedMaterial: keyTrustedMaterial,
+			}
+			opts.TrustedRoot = trustedMaterial
 		}
-		opts.TrustedRoot = trustedMaterial
 	}
 
 	if len(signingConfig.TimestampAuthorityURLs()) != 0 {
