@@ -242,6 +242,9 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
 	}
 
+	if b64 {
+		return []byte(base64.StdEncoding.EncodeToString(sig)), nil
+	}
 	return sig, nil
 }
 
