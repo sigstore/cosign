@@ -1322,6 +1322,10 @@ func (s *sigContent) MessageSignatureContent() verify.MessageSignatureContent {
 // returns the timestamp value.
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
 // no root is provided with a timestamp.
+//
+// Note: This function does not perform CRL/OCSP certificate revocation checks.
+// Sigstore's default workflow relies on TUF-distributed trust material + validity metadata for revocation.
+// Private PKI deployments should enforce additional revocation policy as needed.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
 	switch {
