@@ -1612,7 +1612,7 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 			ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", numResults, artifactType)
 		}
 		// TODO: do this smarter using "created" annotations
-		lastResult := results[numResults-1]
+		lastResult := deterministicLastDescriptorByDigest(results)
 		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
 		if err != nil {
 			return nil, false, err
