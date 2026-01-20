@@ -22,10 +22,12 @@ func TestReplaceOpRejectsNonStringPayloadWithoutPanic(t *testing.T) {
 	tests := []struct {
 		name       string
 		payloadDoc string
+		wantSubstr string
 	}{
-		{name: "null payload", payloadDoc: `{"payload":null}`},
-		{name: "object payload", payloadDoc: `{"payload":{}}`},
-		{name: "number payload", payloadDoc: `{"payload":123}`},
+		{name: "missing payload", payloadDoc: `{}`, wantSubstr: "could not find 'payload'"},
+		{name: "null payload", payloadDoc: `{"payload":null}`, wantSubstr: "'payload' field is not a string"},
+		{name: "object payload", payloadDoc: `{"payload":{}}`, wantSubstr: "'payload' field is not a string"},
+		{name: "number payload", payloadDoc: `{"payload":123}`, wantSubstr: "'payload' field is not a string"},
 	}
 
 	for _, tt := range tests {
@@ -55,7 +57,7 @@ func TestReplaceOpRejectsNonStringPayloadWithoutPanic(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error, got nil")
 			}
-			if !strings.Contains(err.Error(), "'payload' field is not a string") {
+			if !strings.Contains(err.Error(), tt.wantSubstr) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 		})
