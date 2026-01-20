@@ -32,6 +32,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -1063,6 +1064,11 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 		return nil, false, errors.New("one of verifier, root certs, or trusted root is required")
 	}
 
+	// Check for v3 bundles first (if NewBundleFormat is enabled)
+	if co.NewBundleFormat {
+		return verifyLocalImageAttestationsSigstoreBundle(ctx, path, co)
+	}
+
 	se, err := layout.SignedImageIndex(path)
 	if err != nil {
 		return nil, false, err
@@ -1680,6 +1686,12 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 	return bundles, &h, nil
 }
 
+// bundleDescriptor holds the digest and path to a bundle blob in a local OCI layout
+type bundleDescriptor struct {
+	digest   v1.Hash
+	blobPath string
+}
+
 // HasLocalBundles checks if a local OCI layout has v3 sigstore bundles.
 // V3 bundles are stored as separate images with layers having
 // media type "application/vnd.dev.sigstore.bundle".
@@ -1693,43 +1705,125 @@ func HasLocalAttestationBundles(path string) (bool, error) {
 	return hasLocalSigstoreBundles(path)
 }
 
+// GetLocalBundles retrieves v3 sigstore bundles from a local OCI layout.
+// Returns bundles, target image hash, and error. Invalid bundles are logged and skipped.
+func GetLocalBundles(path string) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	descriptors, hash, err := getLocalBundleDescriptors(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bundles := make([]*sgbundle.Bundle, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		bundleBytes, err := os.ReadFile(filepath.Join(path, descriptor.blobPath))
+		if err != nil {
+			ui.Warnf(context.Background(), "Failed to read bundle blob %s: %v", descriptor.digest.Hex, err)
+			continue
+		}
+
+		bundle := &sgbundle.Bundle{}
+		if err := bundle.UnmarshalJSON(bundleBytes); err != nil {
+			ui.Warnf(context.Background(), "Failed to unmarshal bundle %s: %v", descriptor.digest.Hex, err)
+			continue
+		}
+
+		if !bundle.MinVersion("v0.3") {
+			ui.Warnf(context.Background(), "Bundle %s version too old (requires v0.3+)", descriptor.digest.Hex)
+			continue
+		}
+
+		bundles = append(bundles, bundle)
+	}
+
+	if len(bundles) == 0 {
+		return nil, nil, &ErrNoMatchingAttestations{
+			fmt.Errorf("no valid bundles found in local layout"),
+		}
+	}
+
+	return bundles, hash, nil
+}
+
 func hasLocalSigstoreBundles(path string) (bool, error) {
+	descriptors, _, err := getLocalBundleDescriptors(path)
+	if err != nil {
+		return false, err
+	}
+	return len(descriptors) > 0, nil
+}
+
+func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error) {
 	p, err := ggcrlayout.FromPath(path)
 	if err != nil {
-		return false, fmt.Errorf("loading OCI layout from %s: %w", path, err)
+		return nil, nil, fmt.Errorf("loading OCI layout from %s: %w", path, err)
 	}
 
 	ii, err := p.ImageIndex()
 	if err != nil {
-		return false, fmt.Errorf("getting image index: %w", err)
+		return nil, nil, fmt.Errorf("getting image index: %w", err)
 	}
 
 	manifest, err := ii.IndexManifest()
 	if err != nil {
-		return false, fmt.Errorf("getting index manifest: %w", err)
+		return nil, nil, fmt.Errorf("getting index manifest: %w", err)
 	}
 
-	// Check each image in the index for sigstore bundle layers
+	// Find the target image digest from the index manifest
+	var targetDigest v1.Hash
 	for _, m := range manifest.Manifests {
-		img, err := ii.Image(m.Digest)
+		if val, ok := m.Annotations["kind"]; ok && val == "dev.cosignproject.cosign/image" {
+			targetDigest = m.Digest
+			break
+		}
+	}
+	if targetDigest.String() == "" {
+		return nil, nil, nil
+	}
+
+	// Scan blobs/sha256 directory for referrer manifests
+	blobsDir := filepath.Join(path, "blobs", "sha256")
+	entries, err := os.ReadDir(blobsDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil, nil
+		}
+		return nil, nil, fmt.Errorf("reading blobs directory: %w", err)
+	}
+
+	var descriptors []bundleDescriptor
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		blobPath := filepath.Join(blobsDir, entry.Name())
+		data, err := os.ReadFile(blobPath)
 		if err != nil {
 			continue
 		}
-		layers, err := img.Layers()
+
+		// Try to parse as manifest (skip blobs that aren't manifests)
+		blobManifest, err := v1.ParseManifest(bytes.NewReader(data))
 		if err != nil {
 			continue
 		}
-		for _, layer := range layers {
-			mt, err := layer.MediaType()
-			if err != nil {
-				continue
-			}
-			if strings.HasPrefix(string(mt), "application/vnd.dev.sigstore.bundle") {
-				return true, nil
+
+		// Check if this is a referrer manifest pointing to our target
+		if blobManifest.Subject != nil && blobManifest.Subject.Digest == targetDigest {
+			// Collect bundle layer descriptors from this referrer manifest
+			for _, layer := range blobManifest.Layers {
+				if strings.HasPrefix(string(layer.MediaType), "application/vnd.dev.sigstore.bundle") {
+					// layer.Digest.Hex is validated by go-containerregistry to be a valid hex hash,
+					// but use filepath.Clean for defense-in-depth against path traversal
+					descriptors = append(descriptors, bundleDescriptor{
+						digest:   layer.Digest,
+						blobPath: filepath.Clean(filepath.Join("blobs", "sha256", layer.Digest.Hex)),
+					})
+				}
 			}
 		}
 	}
-	return false, nil
+
+	return descriptors, &targetDigest, nil
 }
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
@@ -1816,6 +1910,75 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 	if len(checkedAttestations) == 0 {
 		return nil, false, &ErrNoMatchingAttestations{
 			fmt.Errorf("no matching attestations: %w", errors.Join(t.Errs()...)),
+		}
+	}
+
+	return checkedAttestations, atLeastOneBundleVerified, nil
+}
+
+// verifyLocalImageAttestationsSigstoreBundle verifies attestations from local sigstore bundles
+func verifyLocalImageAttestationsSigstoreBundle(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	bundles, hash, err := GetLocalBundles(path)
+	if err != nil {
+		return nil, false, err
+	}
+
+	digestBytes, err := hex.DecodeString(hash.Hex)
+	if err != nil {
+		return nil, false, err
+	}
+
+	artifactPolicyOption := verify.WithArtifactDigest(hash.Algorithm, digestBytes)
+
+	// For local bundles, we verify sequentially (local I/O is fast, no need for parallel throttler)
+	var atLeastOneBundleVerified bool
+	var errs []error
+	for _, bundle := range bundles {
+		_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
+		if err != nil {
+			// Log error and accumulate for final error message
+			errs = append(errs, err)
+			ui.Warnf(ctx, "Failed to verify bundle: %v", err)
+			continue
+		}
+
+		dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
+		if !ok {
+			err := fmt.Errorf("bundle does not contain a DSSE envelope")
+			errs = append(errs, err)
+			ui.Warnf(ctx, "%v", err)
+			continue
+		}
+
+		payload, err := json.Marshal(dsse.DsseEnvelope)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("marshaling DSSE envelope: %w", err))
+			ui.Warnf(ctx, "Failed to marshal DSSE envelope: %v", err)
+			continue
+		}
+
+		att, err := static.NewAttestation(payload)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("creating attestation: %w", err))
+			ui.Warnf(ctx, "Failed to create attestation: %v", err)
+			continue
+		}
+
+		if co.ClaimVerifier != nil {
+			if err := co.ClaimVerifier(att, *hash, co.Annotations); err != nil {
+				errs = append(errs, fmt.Errorf("claim verification: %w", err))
+				ui.Warnf(ctx, "Claim verification failed: %v", err)
+				continue
+			}
+		}
+
+		checkedAttestations = append(checkedAttestations, att)
+		atLeastOneBundleVerified = true
+	}
+
+	if len(checkedAttestations) == 0 {
+		return nil, false, &ErrNoMatchingAttestations{
+			fmt.Errorf("no matching attestations: %w", errors.Join(errs...)),
 		}
 	}
 
