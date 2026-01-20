@@ -30,10 +30,12 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -46,7 +48,7 @@ import (
 	ggcrlayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	gcrMutate "github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
@@ -1992,28 +1994,68 @@ func createV3BundleLayout(t *testing.T) string {
 	require.NoError(t, err)
 	si := signed.Image(img)
 
-	// Write the signed image
+	// Write the signed image with proper annotations
 	if err := layout.WriteSignedImage(tmp, si); err != nil {
 		t.Fatalf("WriteSignedImage() = %v", err)
 	}
 
-	// Now manually append an image with a sigstore bundle layer
+	// Get the layout and image index
 	p, err := ggcrlayout.FromPath(tmp)
 	require.NoError(t, err)
 
-	// Create a layer with the sigstore bundle media type
+	ii, err := p.ImageIndex()
+	require.NoError(t, err)
+
+	manifest, err := ii.IndexManifest()
+	require.NoError(t, err)
+
+	// Find the target digest
+	var targetDigest v1.Hash
+	for _, m := range manifest.Manifests {
+		// Look for the image entry
+		if m.Annotations["kind"] == "dev.cosignproject.cosign/image" {
+			targetDigest = m.Digest
+			break
+		}
+	}
+	require.NotEmpty(t, targetDigest.String(), "target digest should be found")
+
+	// Create a bundle layer with the sigstore bundle media type
 	bundleContent := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
-	bundleLayer, err := tarball.LayerFromReader(bytes.NewReader(bundleContent),
-		tarball.WithMediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+	bundleLayer := stream.NewLayer(io.NopCloser(bytes.NewReader(bundleContent)),
+		stream.WithMediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+
+	// Build the referrer manifest
+	referrerImg := empty.Image
+	referrerImg, err = gcrMutate.AppendLayers(referrerImg, bundleLayer)
 	require.NoError(t, err)
 
-	// Create an empty image and add the bundle layer
-	emptyImg := empty.Image
-	bundleImg, err := gcrMutate.AppendLayers(emptyImg, bundleLayer)
+	// Append image to materialize stream layers before calling Manifest()
+	err = p.AppendImage(referrerImg)
 	require.NoError(t, err)
 
-	// Append the bundle image to the layout
-	err = p.AppendImage(bundleImg)
+	// Get the manifest and add Subject field
+	referrerManifest, err := referrerImg.Manifest()
+	require.NoError(t, err)
+
+	// Set Subject to point to target image
+	referrerManifest.Subject = &v1.Descriptor{
+		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		Digest:    targetDigest,
+		Size:      0,
+	}
+
+	// Write the referrer manifest to blobs/sha256
+	blobsDir := tmp + "/blobs/sha256"
+	err = os.MkdirAll(blobsDir, 0755)
+	require.NoError(t, err)
+
+	manifestBytes, err := json.Marshal(referrerManifest)
+	require.NoError(t, err)
+
+	manifestHash := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(manifestBytes))}
+	manifestPath := filepath.Join(blobsDir, manifestHash.Hex)
+	err = os.WriteFile(manifestPath, manifestBytes, 0644)
 	require.NoError(t, err)
 
 	return tmp
@@ -2038,4 +2080,254 @@ func TestHasLocalAttestationBundles_V3Bundles(t *testing.T) {
 	hasBundles, err := HasLocalAttestationBundles(tmp)
 	require.NoError(t, err)
 	assert.True(t, hasBundles, "expected true for v3 attestations with bundles")
+}
+
+func TestHasLocalSigstoreBundles_OCIReferrers(t *testing.T) {
+	// Create a layout with OCI referrers pointing to target image with bundle layers
+	tmp := t.TempDir()
+
+	// Create base image
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	// Write the signed image with proper annotations
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	// Get the layout and image index
+	p, err := ggcrlayout.FromPath(tmp)
+	require.NoError(t, err)
+
+	ii, err := p.ImageIndex()
+	require.NoError(t, err)
+
+	manifest, err := ii.IndexManifest()
+	require.NoError(t, err)
+
+	// Find the target digest
+	var targetDigest v1.Hash
+	for _, m := range manifest.Manifests {
+		// Look for the image entry
+		if m.Annotations["kind"] == "dev.cosignproject.cosign/image" {
+			targetDigest = m.Digest
+			break
+		}
+	}
+	require.NotEmpty(t, targetDigest.String(), "target digest should be found")
+
+	// Create a referrer manifest with Subject pointing to target
+	bundleContent := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
+	bundleLayer := stream.NewLayer(io.NopCloser(bytes.NewReader(bundleContent)),
+		stream.WithMediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+
+	// Build the referrer manifest
+	referrerImg := empty.Image
+	referrerImg, err = gcrMutate.AppendLayers(referrerImg, bundleLayer)
+	require.NoError(t, err)
+
+	// Append image to materialize stream layers before calling Manifest()
+	err = p.AppendImage(referrerImg)
+	require.NoError(t, err)
+
+	// Get the manifest and add Subject field
+	referrerManifest, err := referrerImg.Manifest()
+	require.NoError(t, err)
+
+	// Set Subject to point to target image
+	referrerManifest.Subject = &v1.Descriptor{
+		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		Digest:    targetDigest,
+		Size:      0,
+	}
+
+	// Write the referrer manifest to blobs/sha256
+	blobsDir := tmp + "/blobs/sha256"
+	err = os.MkdirAll(blobsDir, 0755)
+	require.NoError(t, err)
+
+	manifestBytes, err := json.Marshal(referrerManifest)
+	require.NoError(t, err)
+
+	manifestHash := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(manifestBytes))}
+	manifestPath := filepath.Join(blobsDir, manifestHash.Hex)
+	err = os.WriteFile(manifestPath, manifestBytes, 0644)
+	require.NoError(t, err)
+
+	// Test that hasLocalSigstoreBundles detects the referrer
+	hasBundles, err := hasLocalSigstoreBundles(tmp)
+	require.NoError(t, err)
+	assert.True(t, hasBundles, "expected true for OCI referrers with bundle layers")
+}
+
+func TestHasLocalSigstoreBundles_NoBlobsDir(t *testing.T) {
+	// Create a layout without blobs/sha256 directory
+	tmp := t.TempDir()
+
+	// Create base image
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	// Remove blobs directory to simulate missing directory
+	blobsDir := tmp + "/blobs/sha256"
+	err = os.RemoveAll(blobsDir)
+	require.NoError(t, err)
+
+	// Should return false without error
+	hasBundles, err := hasLocalSigstoreBundles(tmp)
+	require.NoError(t, err)
+	assert.False(t, hasBundles, "expected false when blobs/sha256 directory missing")
+}
+
+func TestHasLocalSigstoreBundles_ReferrerDifferentSubject(t *testing.T) {
+	// Create a layout with a referrer pointing to a different subject
+	tmp := t.TempDir()
+
+	// Create base image
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	// Create a referrer manifest with Subject pointing to different digest
+	bundleContent := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
+
+	// Calculate the bundle layer descriptor
+	bundleDigest := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(bundleContent))}
+	bundleDescriptor := v1.Descriptor{
+		MediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		Digest:    bundleDigest,
+		Size:      int64(len(bundleContent)),
+	}
+
+	// Create a minimal config
+	configContent := []byte("{}")
+	configDigest := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(configContent))}
+	configDescriptor := v1.Descriptor{
+		MediaType: "application/vnd.oci.image.config.v1+json",
+		Digest:    configDigest,
+		Size:      int64(len(configContent)),
+	}
+
+	// Set Subject to a different digest
+	differentDigest := v1.Hash{Algorithm: "sha256", Hex: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+
+	// Build the manifest structure directly
+	referrerManifest := &v1.Manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config:        configDescriptor,
+		Layers:        []v1.Descriptor{bundleDescriptor},
+		Subject: &v1.Descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Digest:    differentDigest,
+			Size:      0,
+		},
+	}
+
+	// Write the referrer manifest to blobs/sha256
+	blobsDir := tmp + "/blobs/sha256"
+
+	manifestBytes, err := json.Marshal(referrerManifest)
+	require.NoError(t, err)
+
+	manifestHash := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(manifestBytes))}
+	manifestPath := filepath.Join(blobsDir, manifestHash.Hex)
+	err = os.WriteFile(manifestPath, manifestBytes, 0644)
+	require.NoError(t, err)
+
+	// Should return false since referrer points to different subject
+	hasBundles, err := hasLocalSigstoreBundles(tmp)
+	require.NoError(t, err)
+	assert.False(t, hasBundles, "expected false when referrer points to different subject")
+}
+
+func TestHasLocalSigstoreBundles_EmptyBlobsDir(t *testing.T) {
+	// Create a layout with empty blobs/sha256 directory
+	tmp := t.TempDir()
+
+	// Create base image
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	// Clear the blobs directory (but keep it existing)
+	blobsDir := tmp + "/blobs/sha256"
+	entries, err := os.ReadDir(blobsDir)
+	require.NoError(t, err)
+
+	for _, entry := range entries {
+		err = os.Remove(filepath.Join(blobsDir, entry.Name()))
+		require.NoError(t, err)
+	}
+
+	// Should return false without error
+	hasBundles, err := hasLocalSigstoreBundles(tmp)
+	require.NoError(t, err)
+	assert.False(t, hasBundles, "expected false for empty blobs directory")
+}
+
+func TestGetLocalBundles_MissingBlobsDir(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Create base image
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	// Remove blobs directory
+	blobsDir := tmp + "/blobs/sha256"
+	err = os.RemoveAll(blobsDir)
+	require.NoError(t, err)
+
+	bundles, hash, err := GetLocalBundles(tmp)
+	assert.Error(t, err, "expected ErrNoMatchingAttestations when no bundles exist")
+	assert.Nil(t, hash)
+	assert.Nil(t, bundles)
+	var noMatchErr *ErrNoMatchingAttestations
+	assert.ErrorAs(t, err, &noMatchErr, "expected ErrNoMatchingAttestations")
+}
+
+func TestGetLocalBundles_ZeroBundles(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Create base image without any bundles
+	img, err := random.Image(100, 3)
+	require.NoError(t, err)
+	si := signed.Image(img)
+
+	if err := layout.WriteSignedImage(tmp, si); err != nil {
+		t.Fatalf("WriteSignedImage() = %v", err)
+	}
+
+	bundles, hash, err := GetLocalBundles(tmp)
+	assert.Error(t, err, "expected error when zero bundles exist")
+	assert.Nil(t, hash)
+	assert.Nil(t, bundles)
+	var noMatchErr *ErrNoMatchingAttestations
+	assert.ErrorAs(t, err, &noMatchErr, "expected ErrNoMatchingAttestations")
+}
+
+func TestGetLocalBundles_InvalidPath(t *testing.T) {
+	bundles, hash, err := GetLocalBundles("/nonexistent/path")
+	require.Error(t, err)
+	assert.Nil(t, hash)
+	assert.Nil(t, bundles)
 }

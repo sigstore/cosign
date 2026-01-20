@@ -3652,11 +3652,10 @@ func TestSaveLoadAutoDetectFormat(t *testing.T) {
 		must(verifyCmd.Exec(ctx, []string{imageDir}), t)
 	})
 
-	// For v3 bundles, local verification is not currently supported.
-	// The existing TestSaveLoad shows that v3 bundles must be loaded back
-	// to a registry for verification. This test verifies the auto-detection
-	// correctly identifies v3 bundles.
-	t.Run("auto-detect v3 bundle format and load", func(t *testing.T) {
+	// For v3 bundles, we now support full local verification. The bundles are stored as
+	// OCI referrers and can be verified directly from the local layout without loading
+	// back to a registry.
+	t.Run("auto-detect v3 bundle format and verify locally", func(t *testing.T) {
 		repo, stop := reg(t)
 		defer stop()
 		keysDir := t.TempDir()
@@ -3687,21 +3686,19 @@ func TestSaveLoadAutoDetectFormat(t *testing.T) {
 		imageDir := t.TempDir()
 		must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
 
-		// Load the image back to a registry and verify from there
-		// (local verification of v3 bundles is not currently supported)
-		imgName2 := path.Join(repo, "auto-detect-v3-loaded")
-		must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
-
+		// Verify locally with NewBundleFormat enabled
 		trustedRootPath := prepareTrustedRoot(t, "")
 		verifyCmd := cliverify.VerifyCommand{
 			CommonVerifyOptions: options.CommonVerifyOptions{
 				TrustedRootPath: trustedRootPath,
 			},
 			KeyRef:              pubKeyPath,
+			LocalImage:          true,
 			NewBundleFormat:     true,
 			UseSignedTimestamps: false,
+			MaxWorkers:          10,
 		}
-		must(verifyCmd.Exec(ctx, []string{imgName2}), t)
+		must(verifyCmd.Exec(ctx, []string{imageDir}), t)
 	})
 }
 
