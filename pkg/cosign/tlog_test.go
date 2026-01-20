@@ -240,6 +240,35 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 }
 
+func TestComputeLeafHashRejectsNonStringBodyWithoutPanic(t *testing.T) {
+	tests := []struct {
+		name string
+		body interface{}
+	}{
+		{name: "nil body", body: nil},
+		{name: "bytes body", body: []byte("not a string")},
+		{name: "object body", body: map[string]interface{}{"k": "v"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("unexpected panic: %v", r)
+				}
+			}()
+
+			lea := &models.LogEntryAnon{
+				Body: tt.body,
+			}
+
+			if _, err := ComputeLeafHash(lea); err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+		})
+	}
+}
+
 func TestVerifyTLogEntryOfflineRejectsMalformedEntryWithoutPanic(t *testing.T) {
 	t.Setenv("TUF_ROOT", t.TempDir())
 
