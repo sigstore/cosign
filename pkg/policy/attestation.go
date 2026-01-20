@@ -77,13 +77,17 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	}
 
 	var decodedPayload []byte
-	if val, ok := payloadData["payload"]; ok {
-		decodedPayload, err = base64.StdEncoding.DecodeString(val.(string))
-		if err != nil {
-			return nil, "", fmt.Errorf("decoding payload: %w", err)
-		}
-	} else {
+	val, ok := payloadData["payload"]
+	if !ok {
 		return nil, "", fmt.Errorf("could not find payload in payload data")
+	}
+	payloadStr, ok := val.(string)
+	if !ok {
+		return nil, "", fmt.Errorf("invalid payload: payload field is not a string (got %T)", val)
+	}
+	decodedPayload, err = base64.StdEncoding.DecodeString(payloadStr)
+	if err != nil {
+		return nil, "", fmt.Errorf("decoding payload: %w", err)
 	}
 
 	// Only apply the policy against the requested predicate type
