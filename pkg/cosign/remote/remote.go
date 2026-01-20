@@ -141,7 +141,11 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 		if !ok {
 			return nil, fmt.Errorf("could not find 'payload' in payload data")
 		}
-		decodedPayload, err := base64.StdEncoding.DecodeString(val.(string))
+		payloadStr, ok := val.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid payload: 'payload' field is not a string (got %T)", val)
+		}
+		decodedPayload, err := base64.StdEncoding.DecodeString(payloadStr)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode 'payload': %w", err)
 		}
