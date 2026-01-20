@@ -1213,11 +1213,16 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, errors.New("no trusted rekor public keys provided")
 	}
 
-	if err := compareSigs(bundle.Payload.Body.(string), sig); err != nil {
+	bundleBody, ok := bundle.Payload.Body.(string)
+	if !ok {
+		return false, errors.New("bundle payload body is not a string")
+	}
+
+	if err := compareSigs(bundleBody, sig); err != nil {
 		return false, err
 	}
 
-	if err := comparePublicKey(bundle.Payload.Body.(string), sig, co); err != nil {
+	if err := comparePublicKey(bundleBody, sig, co); err != nil {
 		return false, err
 	}
 
@@ -1230,7 +1235,7 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		return false, fmt.Errorf("reading base64signature: %w", err)
 	}
 
-	alg, bundlehash, err := bundleHash(bundle.Payload.Body.(string), signature)
+	alg, bundlehash, err := bundleHash(bundleBody, signature)
 	if err != nil {
 		return false, fmt.Errorf("computing bundle hash: %w", err)
 	}
@@ -1249,7 +1254,7 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("decoding log ID: %w", err)
 		}
-		body, _ := base64.StdEncoding.DecodeString(payload.Body.(string))
+		body, _ := base64.StdEncoding.DecodeString(bundleBody)
 		entry, err := tlog.NewEntry(body, payload.IntegratedTime, payload.LogIndex, logID, bundle.SignedEntryTimestamp, nil)
 		if err != nil {
 			return false, fmt.Errorf("converting tlog entry: %w", err)

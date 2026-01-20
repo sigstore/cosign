@@ -444,6 +444,53 @@ func TestVerifyImageSignatureWithInvalidPublicKeyType(t *testing.T) {
 	}
 }
 
+func TestVerifyImageSignatureWithInvalidBundleBodyType(t *testing.T) {
+	ctx := context.Background()
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	// Create a fake bundle
+	pe, _ := proposedEntries(base64.StdEncoding.EncodeToString(signature), payload, pemLeaf)
+	entry, _ := rtypes.UnmarshalEntry(pe[0])
+	leaf, _ := entry.Canonicalize(ctx)
+	rekorBundle := CreateTestBundle(ctx, t, sv, leaf)
+	// Set Body to an invalid type
+	rekorBundle.Payload.Body = 12345
+
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+
+	opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+	ociSig, _ := static.NewSignature(payload, base64.StdEncoding.EncodeToString(signature), opts...)
+
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+			RekorPubKeys: &rekorPubKeys})
+	if err == nil {
+		t.Fatal("expected error got none")
+	}
+	if !strings.Contains(err.Error(), "bundle payload body is not a string") {
+		t.Errorf("did not get expected failure message, wanted 'bundle payload body is not a string' got: %v", err)
+	}
+}
+
 func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
