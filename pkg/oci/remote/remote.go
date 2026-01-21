@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -42,12 +41,6 @@ var (
 	remoteWriteLayer = remote.WriteLayer
 	remotePut        = remote.Put
 )
-
-func deterministicLastDescriptorByDigest(descriptors []v1.Descriptor) v1.Descriptor {
-	sorted := append([]v1.Descriptor(nil), descriptors...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Digest.String() < sorted[j].Digest.String() })
-	return sorted[len(sorted)-1]
-}
 
 // EntityNotFoundError is the error that SignedEntity returns when the
 // provided ref does not exist.
@@ -282,7 +275,7 @@ func attachmentExperimentalOCI(digestable oci.SignedEntity, attName string, o *o
 		fmt.Printf("WARNING: there were a total of %d references with artifactType %s\n", numResults, artifactType)
 	}
 	// TODO: do this smarter using "created" annotations
-	lastResult := deterministicLastDescriptorByDigest(results)
+	lastResult := results[numResults-1]
 
 	img, err := SignedImage(o.TargetRepository.Digest(lastResult.Digest.String()), o.OriginalOptions...)
 	if err != nil {
