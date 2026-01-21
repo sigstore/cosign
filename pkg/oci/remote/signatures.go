@@ -17,6 +17,7 @@ package remote
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -32,6 +33,7 @@ import (
 )
 
 const maxLayers = 1000
+const maxBundleLayerBytes = 10 << 20
 
 // Signatures fetches the signatures image represented by the named reference.
 // If the tag is not found, this returns an empty oci.Signatures.
@@ -76,9 +78,15 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	bundleBytes, err := io.ReadAll(layer0)
+	defer layer0.Close()
+
+	limited := io.LimitReader(layer0, maxBundleLayerBytes+1)
+	bundleBytes, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, err
+	}
+	if len(bundleBytes) > maxBundleLayerBytes {
+		return nil, fmt.Errorf("bundle layer exceeded max bytes: got=%d max=%d", len(bundleBytes), maxBundleLayerBytes)
 	}
 	b := &sgbundle.Bundle{}
 	err = b.UnmarshalJSON(bundleBytes)

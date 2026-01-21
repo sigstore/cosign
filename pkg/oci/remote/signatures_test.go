@@ -16,8 +16,10 @@
 package remote
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,6 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 func TestSignaturesErrors(t *testing.T) {
@@ -95,6 +99,55 @@ func TestSignaturesErrors(t *testing.T) {
 		_, err = sigs.Get()
 		if err == nil || want.Error() != err.Error() {
 			t.Fatalf("Get() = %v", err)
+		}
+	})
+}
+
+func TestBundleLayerSizeIsBounded(t *testing.T) {
+	ri := remote.Image
+	t.Cleanup(func() {
+		remoteImage = ri
+	})
+
+	ref := name.MustParseReference("gcr.io/distroless/static:sha256-deadbeef.bundle")
+
+	t.Run("over limit fails before unmarshal", func(t *testing.T) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+			tooBig := bytes.Repeat([]byte("a"), maxBundleLayerBytes+1)
+			layer := static.NewLayer(tooBig, types.MediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+			return &fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{layer}, nil
+				},
+			}, nil
+		}
+
+		_, err := Bundle(ref)
+		if err == nil {
+			t.Fatalf("Bundle() = nil, wanted error")
+		}
+		if want := "bundle layer exceeded max bytes"; !strings.Contains(err.Error(), want) {
+			t.Fatalf("Bundle() = %v, wanted %q", err, want)
+		}
+	})
+
+	t.Run("valid small bundle parses", func(t *testing.T) {
+		remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+			ok := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{"publicKey":{}},"messageSignature":{"messageDigest":{"algorithm":"SHA2_256","digest":"AA=="},"signature":"AA=="}}`)
+			layer := static.NewLayer(ok, types.MediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+			return &fake.FakeImage{
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{layer}, nil
+				},
+			}, nil
+		}
+
+		b, err := Bundle(ref)
+		if err != nil {
+			t.Fatalf("Bundle() = %v", err)
+		}
+		if b == nil {
+			t.Fatalf("Bundle() = nil, wanted bundle")
 		}
 	})
 }
