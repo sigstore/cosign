@@ -43,6 +43,7 @@ func TestReplaceOpRejectsNonStringPayloadWithoutPanic(t *testing.T) {
 		{name: "null payload", payloadDoc: `{"payload":null}`, wantSubstr: "'payload' field is not a string"},
 		{name: "object payload", payloadDoc: `{"payload":{}}`, wantSubstr: "'payload' field is not a string"},
 		{name: "number payload", payloadDoc: `{"payload":123}`, wantSubstr: "'payload' field is not a string"},
+		{name: "invalid base64 payload", payloadDoc: `{"payload":"%%%"}`, wantSubstr: "could not decode 'payload'"},
 	}
 
 	for _, tt := range tests {
