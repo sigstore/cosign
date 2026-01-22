@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2026 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,12 +48,6 @@ func TestReplaceOpRejectsNonStringPayloadWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r != nil {
-					t.Fatalf("unexpected panic: %v", r)
-				}
-			}()
-
 			existing, err := static.NewSignature([]byte(tt.payloadDoc), "")
 			if err != nil {
 				t.Fatalf("static.NewSignature() = %v", err)
