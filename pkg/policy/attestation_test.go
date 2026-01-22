@@ -107,6 +107,7 @@ func TestFailures(t *testing.T) {
 	}{{payload: "", wantErrSubstring: "unmarshaling payload data"}, {payload: "{badness", wantErrSubstring: "unmarshaling payload data"},
 		{payload: `{"payloadType":"notmarshallable}`, wantErrSubstring: "unmarshaling payload data"},
 		{payload: `{"payload":"shou!ln'twork"}`, wantErrSubstring: "decoding payload"},
+		{payload: `{"payload":null}`, wantErrSubstring: "payload field is not a string"},
 		{payload: `{"payloadType":"finebutnopayload"}`, wantErrSubstring: "could not find payload"},
 		{payload: invalidTotoStatement, wantErrSubstring: "decoding payload: illegal base64"},
 	}
