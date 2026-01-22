@@ -240,30 +240,60 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 }
 
-func TestComputeLeafHashRejectsNonStringBodyWithoutPanic(t *testing.T) {
+func TestComputeLeafHash(t *testing.T) {
+	payload := []byte("hello")
+	expected := sha256.Sum256(append([]byte{0}, payload...))
+
 	tests := []struct {
-		name string
-		body interface{}
+		name          string
+		body          interface{}
+		wantHash      []byte
+		wantErrSubstr string
 	}{
-		{name: "nil body", body: nil},
-		{name: "bytes body", body: []byte("not a string")},
-		{name: "object body", body: map[string]interface{}{"k": "v"}},
+		{
+			name:     "success",
+			body:     base64.StdEncoding.EncodeToString(payload),
+			wantHash: expected[:],
+		},
+		{
+			name:          "invalid base64",
+			body:          "%%%",
+			wantErrSubstr: "illegal base64 data",
+		},
+		{
+			name:          "nil body",
+			body:          nil,
+			wantErrSubstr: "invalid body type",
+		},
+		{
+			name:          "bytes body",
+			body:          []byte("not a string"),
+			wantErrSubstr: "invalid body type",
+		},
+		{
+			name:          "object body",
+			body:          map[string]interface{}{"k": "v"},
+			wantErrSubstr: "invalid body type",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				if r := recover(); r != nil {
-					t.Fatalf("unexpected panic: %v", r)
+			got, err := ComputeLeafHash(&models.LogEntryAnon{Body: tt.body})
+			if tt.wantErrSubstr != "" {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
 				}
-			}()
-
-			lea := &models.LogEntryAnon{
-				Body: tt.body,
+				if !strings.Contains(err.Error(), tt.wantErrSubstr) {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
 			}
-
-			if _, err := ComputeLeafHash(lea); err == nil {
-				t.Fatalf("expected error, got nil")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !bytes.Equal(got, tt.wantHash) {
+				t.Fatalf("unexpected hash")
 			}
 		})
 	}
