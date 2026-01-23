@@ -333,16 +333,18 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 // certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
 // Optionally verifies the subject and issuer of the certificate.
 func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Verifier, error) {
-	return ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
+	verifier, _, err := ValidateAndUnpackCertWithIntermediates(cert, co, co.IntermediateCerts)
+	return verifier, err
 }
 
 // ValidateAndUnpackCertWithIntermediates creates a Verifier from a certificate. Verifies that the
 // certificate chains up to a trusted root using intermediate cert passed as separate argument.
-// Optionally verifies the subject and issuer of the certificate.
-func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, error) {
+// Optionally verifies the subject and issuer of the certificate. Returns the chain built from the
+// certificate pools. Clients must verify the validity of this chain against a provided timestamp.
+func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, []*x509.Certificate, error) {
 	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
 	if err != nil {
-		return nil, fmt.Errorf("invalid certificate found on signature: %w", err)
+		return nil, nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
 
 	// Handle certificates where the Subject Alternative Name is not set to a supported
@@ -365,31 +367,37 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	var chains [][]*x509.Certificate
 	if co.TrustedMaterial != nil {
 		if chains, err = verify.VerifyLeafCertificate(cert.NotBefore, cert, co.TrustedMaterial); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		// If the trusted root is not available, use the verifiers from cosign (legacy).
 		chains, err = TrustedCert(cert, co.RootCerts, intermediateCerts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
+	// handle if chains has more than one chain - grab first and print message
+	if len(chains) > 1 {
+		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first for further verification.\n")
+	}
+	chain := chains[0]
+
 	err = CheckCertificatePolicy(cert, co)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// If IgnoreSCT is set, skip the SCT check
 	if co.IgnoreSCT {
-		return verifier, nil
+		return verifier, chains[0], nil
 	}
 	contains, err := ContainsSCT(cert.Raw)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !contains && len(co.SCT) == 0 {
-		return nil, &VerificationFailure{
+		return nil, nil, &VerificationFailure{
 			fmt.Errorf("certificate does not include required embedded SCT and no detached SCT was set"),
 		}
 	}
@@ -397,38 +405,33 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 	// If trusted root is available and the SCT is embedded, use the verifiers from sigstore-go (preferred).
 	if co.TrustedMaterial != nil && contains {
 		if err := verify.VerifySignedCertificateTimestamp(chains, 1, co.TrustedMaterial); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return verifier, nil
+		return verifier, chain, nil
 	}
 
-	// handle if chains has more than one chain - grab first and print message
-	if len(chains) > 1 {
-		fmt.Fprintf(os.Stderr, "**Info** Multiple valid certificate chains found. Selecting the first to verify the SCT.\n")
+	if len(chain) < 2 {
+		return nil, nil, errors.New("certificate chain must contain at least a certificate and its issuer")
 	}
 	if contains {
-		if err := VerifyEmbeddedSCT(context.Background(), chains[0], co.CTLogPubKeys); err != nil {
-			return nil, err
+		if err := VerifyEmbeddedSCT(context.Background(), chain, co.CTLogPubKeys); err != nil {
+			return nil, nil, err
 		}
-		return verifier, nil
-	}
-	chain := chains[0]
-	if len(chain) < 2 {
-		return nil, errors.New("certificate chain must contain at least a certificate and its issuer")
+		return verifier, chain, nil
 	}
 	certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	chainPEM, err := cryptoutils.MarshalCertificatesToPEM(chain[1:])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := VerifySCT(context.Background(), certPEM, chainPEM, co.SCT, co.CTLogPubKeys); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return verifier, nil
+	return verifier, chain, nil
 }
 
 // CheckCertificatePolicy checks that the certificate subject and issuer match
@@ -852,6 +855,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	}
 
 	verifier := co.SigVerifier
+	var verifierChain []*x509.Certificate
 	if verifier == nil {
 		// If we don't have a public key to check against, we can try a root cert.
 		cert, err := sig.Cert()
@@ -883,10 +887,12 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if pool == nil {
 			pool = co.IntermediateCerts
 		}
-		verifier, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
+		verifier, chain, err = ValidateAndUnpackCertWithIntermediates(cert, co, pool)
 		if err != nil {
 			return false, err
 		}
+		// Remove the end-entity certificate from the chain, as that will come from sig.Cert()
+		verifierChain = chain[1:]
 	}
 
 	// 1. Perform cryptographic verification of the signature using the certificate's public key.
@@ -912,14 +918,14 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 
 		if acceptableRFC3161Time != nil {
 			// Verify the cert against the timestamp time.
-			if err := CheckExpiry(cert, *acceptableRFC3161Time); err != nil {
+			if err := CheckExpiry(cert, verifierChain, *acceptableRFC3161Time); err != nil {
 				return false, fmt.Errorf("checking expiry on certificate with timestamp: %w", err)
 			}
 			expirationChecked = true
 		}
 
 		if acceptableRekorBundleTime != nil {
-			if err := CheckExpiry(cert, *acceptableRekorBundleTime); err != nil {
+			if err := CheckExpiry(cert, verifierChain, *acceptableRekorBundleTime); err != nil {
 				return false, fmt.Errorf("checking expiry on certificate with bundle: %w", err)
 			}
 			expirationChecked = true
@@ -927,7 +933,7 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 
 		// if no timestamp has been provided, use the current time
 		if !expirationChecked {
-			if err := CheckExpiry(cert, time.Now()); err != nil {
+			if err := CheckExpiry(cert, verifierChain, time.Now()); err != nil {
 				// If certificate is expired and not signed timestamp was provided then error the following message. Otherwise throw an expiration error.
 				if co.IgnoreTlog && acceptableRFC3161Time == nil {
 					return false, &VerificationFailure{
@@ -1176,21 +1182,36 @@ func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash,
 	return checkedAttestations, bundleVerified, nil
 }
 
-// CheckExpiry confirms the time provided is within the valid period of the cert
-func CheckExpiry(cert *x509.Certificate, it time.Time) error {
+// CheckExpiry confirms the time provided is within the valid period of the certificate and optionally
+// all issuing CA certificates.
+func CheckExpiry(cert *x509.Certificate, issuingChain []*x509.Certificate, it time.Time) error {
 	ft := func(t time.Time) string {
 		return t.Format(time.RFC3339)
 	}
 	if cert.NotAfter.Before(it) {
 		return &VerificationFailure{
-			fmt.Errorf("certificate expired before signatures were entered in log: %s is before %s",
+			fmt.Errorf("certificate expired before observed time: %s is before %s",
 				ft(cert.NotAfter), ft(it)),
 		}
 	}
 	if cert.NotBefore.After(it) {
 		return &VerificationFailure{
-			fmt.Errorf("certificate was issued after signatures were entered in log: %s is after %s",
-				ft(cert.NotAfter), ft(it)),
+			fmt.Errorf("certificate was issued after observed time: %s is after %s",
+				ft(cert.NotBefore), ft(it)),
+		}
+	}
+	for _, c := range issuingChain {
+		if c.NotAfter.Before(it) {
+			return &VerificationFailure{
+				fmt.Errorf("issuing CA certificate expired before observed time: %s is before %s",
+					ft(c.NotAfter), ft(it)),
+			}
+		}
+		if c.NotBefore.After(it) {
+			return &VerificationFailure{
+				fmt.Errorf("issuing CA certificate was issued after observed time: %s is after %s",
+					ft(c.NotBefore), ft(it)),
+			}
 		}
 	}
 	return nil
