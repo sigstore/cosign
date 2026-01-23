@@ -301,7 +301,11 @@ func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.
 }
 
 func ComputeLeafHash(e *models.LogEntryAnon) ([]byte, error) {
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	bodyStr, ok := e.Body.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid body type: expected string, got %T", e.Body)
+	}
+	entryBytes, err := base64.StdEncoding.DecodeString(bodyStr)
 	if err != nil {
 		return nil, err
 	}
