@@ -25,12 +25,14 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"io"
+	"math/big"
 	"net"
 	"net/url"
 	"os"
@@ -1540,9 +1542,12 @@ func TestValidateAndUnpackCertWithIntermediatesSuccess(t *testing.T) {
 		Identities: []Identity{{Subject: subject, Issuer: oidcIssuer}},
 	}
 
-	_, err := ValidateAndUnpackCertWithIntermediates(leafCert, co, subPool)
+	_, chain, err := ValidateAndUnpackCertWithIntermediates(leafCert, co, subPool)
 	if err != nil {
 		t.Errorf("ValidateAndUnpackCertWithIntermediates expected no error, got err = %v", err)
+	}
+	if len(chain) == 0 {
+		t.Errorf("expected certificate chain")
 	}
 	err = CheckCertificatePolicy(leafCert, co)
 	if err != nil {
@@ -1756,7 +1761,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
 	}
-	if err := CheckExpiry(leafCert, ts.Time); err != nil {
+	if err := CheckExpiry(leafCert, nil, ts.Time); err != nil {
 		t.Fatalf("unexpected error using time from timestamp to verify certificate: %v", err)
 	}
 
@@ -1822,6 +1827,170 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
 		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
 	}
+}
+
+// This test verifies that artifact verification rejects signatures
+// where a CA certificate in the issuing chain is expired. This is a contrived
+// example because CAs shouldn't issue certificates where the leaf's validity
+// outlives any certificate in the chain, but this is checked for thoroughness.
+func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
+	now := time.Now().UTC()
+
+	rootCert, rootKey, _ := test.GenerateRootCa() // Valid +/- 5 hours
+
+	subTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName:   "sigstore-sub-expired",
+			Organization: []string{"sigstore.dev"},
+		},
+		NotBefore:             now.Add(-2 * time.Hour), // Valid during root validity
+		NotAfter:              now.Add(-5 * time.Minute),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	subKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generating subordinate key: %v", err)
+	}
+	subBytes, err := x509.CreateCertificate(rand.Reader, subTemplate, rootCert, &subKey.PublicKey, rootKey)
+	if err != nil {
+		t.Fatalf("creating subordinate cert: %v", err)
+	}
+	subCert, err := x509.ParseCertificate(subBytes)
+	if err != nil {
+		t.Fatalf("parsing subordinate cert: %v", err)
+	}
+
+	leafTemplate := &x509.Certificate{
+		SerialNumber:   big.NewInt(2),
+		EmailAddresses: []string{"subject@mail.com"},
+		NotBefore:      now.Add(-30 * time.Minute), // Valid during intermediate...
+		NotAfter:       now.Add(30 * time.Minute),  // but is valid past intermediate expiration
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		IsCA:           false,
+		ExtraExtensions: []pkix.Extension{{
+			Id:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1},
+			Critical: false,
+			Value:    []byte("oidc-issuer"),
+		}},
+	}
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generating leaf key: %v", err)
+	}
+	leafBytes, err := x509.CreateCertificate(rand.Reader, leafTemplate, subCert, &leafKey.PublicKey, subKey)
+	if err != nil {
+		t.Fatalf("creating leaf cert: %v", err)
+	}
+	leafCert, err := x509.ParseCertificate(leafBytes)
+	if err != nil {
+		t.Fatalf("parsing leaf cert: %v", err)
+	}
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sigBytes, _ := leafKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(sigBytes),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+
+	co := &CheckOpts{
+		RootCerts:  rootPool,
+		IgnoreSCT:  true,
+		IgnoreTlog: true,
+		Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+	}
+
+	// Verify expected failure, where the current time is used
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, co)
+	if err == nil {
+		t.Fatalf("expected error verifying signature with expired intermediate")
+	}
+	var vf *VerificationFailure
+	if !errors.As(err, &vf) {
+		t.Fatalf("expected %T, got %T (%v)", &VerificationFailure{}, err, err)
+	}
+
+	// Verify expected failure with time provided by a signed timestamp
+	client, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsBytes, err := tsa.GetTimestampedSignature(payload, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
+	if err != nil {
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+	}
+
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
+	}
+	co.TSACertificate = leaves[0]
+	co.TSAIntermediateCertificates = intermediates
+	co.TSARootCertificates = roots
+
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(sigBytes),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, co)
+	if err == nil {
+		t.Fatalf("expected error verifying signature with expired intermediate")
+	}
+	if !errors.As(err, &vf) {
+		t.Fatalf("expected %T, got %T (%v)", &VerificationFailure{}, err, err)
+	}
+
+	// Verify expected failure where the chain is provided via trusted material
+	// rather than bundled with the image
+	tm := &trustedMaterialWithFulcioCAs{
+		cas: []root.CertificateAuthority{
+			&root.FulcioCertificateAuthority{
+				Root:          rootCert,
+				Intermediates: []*x509.Certificate{subCert},
+			},
+		},
+	}
+	co.TrustedMaterial = tm
+	co.RootCerts = nil
+
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(sigBytes),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, co)
+	if err == nil {
+		t.Fatalf("expected error verifying signature with expired intermediate")
+	}
+	if !errors.As(err, &vf) {
+		t.Fatalf("expected %T, got %T (%v)", &VerificationFailure{}, err, err)
+	}
+}
+
+type trustedMaterialWithFulcioCAs struct {
+	root.BaseTrustedMaterial
+	cas []root.CertificateAuthority
+}
+
+func (tm *trustedMaterialWithFulcioCAs) FulcioCertificateAuthorities() []root.CertificateAuthority {
+	return tm.cas
 }
 
 func TestVerifyImageAttestation(t *testing.T) {
