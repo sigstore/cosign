@@ -81,6 +81,7 @@ cosign attest [flags]
       --registry-username string                                                                 registry basic auth username
       --rekor-entry-type string                                                                  specifies the type to be used for a rekor entry upload (dsse|intoto) (default "dsse")
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rekor-version uint32                                                                     version of rekor API (default 1)
       --replace                                                                                  
       --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
       --sk                                                                                       whether to use a hardware security key
