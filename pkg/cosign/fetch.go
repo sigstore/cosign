@@ -67,6 +67,7 @@ const (
 	SBOM        = "sbom"
 	Attestation = "attestation"
 	Digest      = "digest"
+	Referrer    = "referrer"
 )
 
 func FetchSignaturesForReference(_ context.Context, ref name.Reference, opts ...ociremote.Option) ([]SignedPayload, error) {

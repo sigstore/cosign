@@ -31,6 +31,6 @@ var _ Interface = (*TriangulateOptions)(nil)
 func (o *TriangulateOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
-	cmd.Flags().StringVar(&o.Type, "type", "signature",
-		"related attachment to triangulate (attestation|sbom|signature|digest), default signature (sbom is deprecated)")
+	cmd.Flags().StringVar(&o.Type, "type", "referrer",
+		"related attachment to triangulate (attestation|referrer|sbom|signature|digest), default referrer (sbom is deprecated)")
 }

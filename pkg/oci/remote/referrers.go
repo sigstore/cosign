@@ -16,9 +16,12 @@
 package remote
 
 import (
+	"fmt"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 )
 
 // Referrers fetches references using registry options.
@@ -33,4 +36,39 @@ func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexMan
 		return nil, err
 	}
 	return idx.IndexManifest()
+}
+
+func BundlesReferrers(d name.Digest, remoteOpts []remote.Option, opts []Option) ([]string, error) {
+	var refs []string
+
+	idxManifest, err := Referrers(d, "", opts...)
+	if err != nil {
+		return refs, err
+	}
+	if idxManifest == nil {
+		return refs, nil
+	}
+
+	for _, manifest := range idxManifest.Manifests {
+		layerDigestStr := fmt.Sprintf("%s@%s", d.Context().Name(), manifest.Digest.String())
+		layerDigest, err := name.NewDigest(layerDigestStr)
+		if err != nil {
+			return refs, err
+		}
+		layerImage, err := remote.Image(layerDigest, remoteOpts...)
+		if err != nil {
+			return refs, err
+		}
+		layerManifest, err := layerImage.Manifest()
+		if err != nil {
+			return refs, err
+		}
+		if layerManifest != nil {
+			if layerManifest.Config.ArtifactType == bundle.BundleV03MediaType {
+				refs = append(refs, layerDigestStr)
+			}
+		}
+	}
+
+	return refs, nil
 }

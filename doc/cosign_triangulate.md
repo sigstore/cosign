@@ -27,7 +27,7 @@ cosign triangulate [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --type string                                                                              related attachment to triangulate (attestation|sbom|signature|digest), default signature (sbom is deprecated) (default "signature")
+      --type string                                                                              related attachment to triangulate (attestation|referrer|sbom|signature|digest), default referrer (sbom is deprecated) (default "referrer")
 ```
 
 ### Options inherited from parent commands

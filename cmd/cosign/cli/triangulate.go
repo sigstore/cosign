@@ -35,7 +35,7 @@ func Triangulate() *cobra.Command {
 			if len(args) != 1 {
 				return flag.ErrHelp
 			}
-			return triangulate.MungeCmd(cmd.Context(), o.Registry, args[0], o.Type)
+			return triangulate.MungeCmd(cmd.Context(), o.Registry, args[0], o.Type, cmd.OutOrStdout())
 		},
 	}
 
