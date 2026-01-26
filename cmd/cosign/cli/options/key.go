@@ -27,6 +27,7 @@ type KeyOpts struct {
 	KeyRef               string
 	FulcioURL            string
 	RekorURL             string
+	RekorVersion         uint32
 	IDToken              string
 	PassFunc             cosign.PassFunc
 	OIDCIssuer           string
