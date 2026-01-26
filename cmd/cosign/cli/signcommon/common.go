@@ -24,6 +24,9 @@ import (
 	"fmt"
 	"os"
 
+	"net/http"
+	"time"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
@@ -518,7 +521,17 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 		Data:        bundleOpts.Payload,
 		PayloadType: "application/vnd.in-toto+json",
 	}
-	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial)
+
+	var tsaClientTransport http.RoundTripper
+	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
+		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
+		if err != nil {
+			return fmt.Errorf("getting TSA client transport: %w", err)
+		}
+	}
+	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+
+	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
 		return fmt.Errorf("signing bundle: %w", err)
 	}
