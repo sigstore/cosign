@@ -38,6 +38,6 @@ func (e *PubKeyParseError) Error() string {
 func (e *KeyAndIdentityParseError) Error() string {
 	return "exactly one of: key reference (--key) or certificate identity " +
 		"(--certificate-identity or --certificate-identity-regexp), must be provided. " +
-		"Bundles signed with identity will have a 'certificate' field under 'verificationMaterial.' " +
-		"Bundles signed by key will have a 'publicKey' field under 'verificationMaterial'"
+		"To determine which to use, inspect the bundle's 'verificationMaterial' field: " +
+		"if 'publicKey' is present, use key reference; if 'certificate' or 'x509CertificateChain' is present, use certificate identity"
 }
