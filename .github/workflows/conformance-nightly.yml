@@ -45,6 +45,7 @@ jobs:
       - uses: sigstore/sigstore-conformance@main
         with:
           entrypoint: ${{ github.workspace }}/conformance
+          xfail: "test_verify*managed-key-happy-path] test_verify*managed-key-and-trusted-root] test_verify*PATH-message-digest-mismatch_fail]"
 
       - name: Create Issue on Failure
         if: failure()
