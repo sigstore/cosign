@@ -311,6 +311,7 @@ func importECDSAPrivateKey(t *testing.T, privKey *ecdsa.PrivateKey, td, fname st
 	return cosignKeyPath
 }
 
+//nolint:unparam // KeyBytes incorrectly detected as not used
 func importSampleKeyPair(t *testing.T, td string) (*cosign.KeysBytes, string, string) {
 	//nolint: gosec
 	const validrsa1 = `-----BEGIN RSA PRIVATE KEY-----
