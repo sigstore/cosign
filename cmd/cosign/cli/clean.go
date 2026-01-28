@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/spf13/cobra"
 )
@@ -62,20 +61,23 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 		return err
 	}
 
+	ociRemoteOpts, err := regOpts.ClientOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("constructing client options: %w", err)
+	}
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	ociRemoteOpts := ociremote.WithRemoteOptions(remoteOpts...)
 
-	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts)
+	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts)
+	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts)
+	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -84,55 +86,21 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	digest, ok := ref.(name.Digest)
 	if !ok {
 		var err error
-		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts)
+		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts...)
 		if err != nil {
 			return fmt.Errorf("resolving digest: %w", err)
 		}
 	}
-	idx, err := remote.Referrers(digest, remoteOpts...)
+	refStrings, err := ociremote.BundlesReferrers(digest, remoteOpts, ociRemoteOpts)
 	if err != nil {
 		return err
 	}
-	if idx != nil {
-		// Delete manifest
-		imgDigest, err := idx.Digest()
+	for _, refString := range refStrings {
+		ref, err := name.NewDigest(refString)
 		if err != nil {
 			return err
 		}
-		referrerDigestStr := fmt.Sprintf("%s@%s", ref.Context().Name(), imgDigest.String())
-		referrerDigest, err := name.NewDigest(referrerDigestStr)
-		if err != nil {
-			return err
-		}
-		referrerRefs = append(referrerRefs, referrerDigest)
-
-		// Delete layers in the manifest
-		idxManifest, err := idx.IndexManifest()
-		if err != nil {
-			return err
-		}
-		if idxManifest != nil {
-			for _, manifest := range idxManifest.Manifests {
-				layerDigestStr := fmt.Sprintf("%s@%s", ref.Context().Name(), manifest.Digest.String())
-				layerDigest, err := name.NewDigest(layerDigestStr)
-				if err != nil {
-					return err
-				}
-				layerImage, err := remote.Image(layerDigest, remoteOpts...)
-				if err != nil {
-					return err
-				}
-				layerManifest, err := layerImage.Manifest()
-				if err != nil {
-					return err
-				}
-				if layerManifest != nil {
-					if layerManifest.Config.ArtifactType == bundle.BundleV03MediaType {
-						referrerRefs = append(referrerRefs, layerDigest)
-					}
-				}
-			}
-		}
+		referrerRefs = append(referrerRefs, ref)
 	}
 
 	var cleanTags []name.Reference

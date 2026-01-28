@@ -69,6 +69,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signingconfig"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/triangulate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
@@ -4923,4 +4924,40 @@ func selfSignedCertificate() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 	return cert, priv, nil
+}
+
+func TestTriangulate(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "triangulate")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// Triangulate shouldn't return any referrers before we sign
+	ctx := context.Background()
+	regOpts := options.RegistryOptions{}
+	out := bytes.Buffer{}
+	must(triangulate.MungeCmd(ctx, regOpts, imgName, cosign.Referrer, &out), t)
+	assert.Len(t, out.Bytes(), 0, "expected no output before signing")
+
+	// Sign image
+	td := t.TempDir()
+	_, privKeyPath, _ := importSampleKeyPair(t, td)
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		TlogUpload:      false,
+		NewBundleFormat: true,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Triangulate should now have output
+	must(triangulate.MungeCmd(ctx, regOpts, imgName, cosign.Referrer, &out), t)
+	assert.True(t, len(out.Bytes()) > 0)
 }
