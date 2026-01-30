@@ -119,7 +119,6 @@ func New() *cobra.Command {
 	cmd.AddCommand(VerifyAttestation())
 	cmd.AddCommand(VerifyBlob())
 	cmd.AddCommand(VerifyBlobAttestation())
-	cmd.AddCommand(Triangulate())
 	cmd.AddCommand(TrustedRoot())
 	cmd.AddCommand(SigningConfig())
 	cmd.AddCommand(Env())
