@@ -121,6 +121,7 @@ func TestSignVerify(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -187,6 +188,7 @@ func TestSignVerifyCertBundle(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -241,6 +243,7 @@ func TestSignVerifyClean(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -283,6 +286,7 @@ func TestImportSignVerifyClean(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -814,6 +818,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			ko := options.KeyOpts{
 				FulcioURL:        fulcioURL,
 				RekorURL:         rekorURL,
+				RekorVersion:     1,
 				IDToken:          identityToken,
 				SkipConfirmation: true,
 				TSAServerURL:     tsaServer.URL + "/api/v1/timestamp",
@@ -1364,6 +1369,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -1422,6 +1428,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		IDToken:          identityToken,
 		FulcioURL:        fulcioURL,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so = options.SignOptions{
@@ -1451,6 +1458,7 @@ func TestSignVerifyBundle(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so = options.SignOptions{
@@ -2694,6 +2702,7 @@ func TestRekorBundle(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -2729,10 +2738,11 @@ func TestRekorOutput(t *testing.T) {
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 
 	ko := options.KeyOpts{
-		KeyRef:     privKeyPath,
-		PassFunc:   passFunc,
-		RekorURL:   rekorURL,
-		BundlePath: bundlePath,
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		RekorURL:     rekorURL,
+		RekorVersion: 1,
+		BundlePath:   bundlePath,
 	}
 	so := options.SignOptions{
 		Upload:     true,
@@ -2777,6 +2787,7 @@ func TestFulcioBundle(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		FulcioURL:        fulcioURL,
 		SkipConfirmation: true,
 	}
@@ -2900,6 +2911,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 		PassFunc:         passFunc,
 		TSAServerURL:     server.URL + "/api/v1/timestamp",
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -2938,8 +2950,9 @@ func TestDuplicateSign(t *testing.T) {
 
 	// Now sign the image
 	ko := options.KeyOpts{
-		KeyRef:   privKeyPath,
-		PassFunc: passFunc,
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		RekorVersion: 1,
 	}
 	so := options.SignOptions{
 		Upload: true,
@@ -3062,6 +3075,7 @@ func TestMultipleSignatures(t *testing.T) {
 		KeyRef:           priv1,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -3174,6 +3188,7 @@ func TestSignBlobBundle(t *testing.T) {
 		PassFunc:         passFunc,
 		BundlePath:       bundlePath,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
@@ -3189,6 +3204,7 @@ func TestSignBlobBundle(t *testing.T) {
 
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	verifyBlobCmd.RekorURL = "notreal"
+	verifyBlobCmd.RekorVersion = 1
 	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
@@ -3348,6 +3364,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 				KeyOpts: options.KeyOpts{
 					FulcioURL:        fulcioURL,
 					RekorURL:         rekorURL,
+					RekorVersion:     1,
 					PassFunc:         passFunc,
 					BundlePath:       bundlePath,
 					NewBundleFormat:  true,
@@ -3366,6 +3383,7 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 			ko := options.KeyOpts{
 				FulcioURL:                      fulcioURL,
 				RekorURL:                       rekorURL,
+				RekorVersion:                   1,
 				IDToken:                        identityToken,
 				KeyRef:                         privKeyPath,
 				PassFunc:                       passFunc,
@@ -3462,6 +3480,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		RFC3161TimestampPath: tsPath,
 		TSAServerURL:         server.URL + "/api/v1/timestamp",
 		RekorURL:             rekorURL,
+		RekorVersion:         1,
 		SkipConfirmation:     true,
 	}
 	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
@@ -3476,6 +3495,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 	}
 	// Point to a fake rekor server to make sure offline verification of the tlog entry works
 	verifyBlobCmd.RekorURL = "notreal"
+	verifyBlobCmd.RekorVersion = 1
 	verifyBlobCmd.IgnoreTlog = false
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
@@ -3552,6 +3572,7 @@ func TestSaveLoad(t *testing.T) {
 				KeyRef:           privKeyPath,
 				PassFunc:         passFunc,
 				RekorURL:         rekorURL,
+				RekorVersion:     1,
 				SkipConfirmation: true,
 			}
 			so := options.SignOptions{
@@ -3628,6 +3649,7 @@ func TestSaveLoadAutoDetectFormat(t *testing.T) {
 			KeyRef:           privKeyPath,
 			PassFunc:         passFunc,
 			RekorURL:         rekorURL,
+			RekorVersion:     1,
 			SkipConfirmation: true,
 		}
 		so := options.SignOptions{
@@ -3673,6 +3695,7 @@ func TestSaveLoadAutoDetectFormat(t *testing.T) {
 			KeyRef:           privKeyPath,
 			PassFunc:         passFunc,
 			RekorURL:         rekorURL,
+			RekorVersion:     1,
 			SkipConfirmation: true,
 		}
 		so := options.SignOptions{
@@ -3725,6 +3748,7 @@ func TestSaveLoadAttestation(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -3937,9 +3961,10 @@ func TestAttachSBOM(t *testing.T) {
 
 	// Now sign the sbom with one key
 	ko1 := options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
-		RekorURL: rekorURL,
+		KeyRef:       privKeyPath1,
+		PassFunc:     passFunc,
+		RekorURL:     rekorURL,
+		RekorVersion: 1,
 	}
 	so := options.SignOptions{
 		Upload:     true,
@@ -3970,9 +3995,10 @@ func TestNoTlog(t *testing.T) {
 
 	// Now sign the image without the tlog
 	ko := options.KeyOpts{
-		KeyRef:   privKeyPath,
-		PassFunc: passFunc,
-		RekorURL: rekorURL,
+		KeyRef:       privKeyPath,
+		PassFunc:     passFunc,
+		RekorURL:     rekorURL,
+		RekorVersion: 1,
 	}
 	so := options.SignOptions{
 		Upload: true,
@@ -4031,7 +4057,7 @@ func TestInvalidBundle(t *testing.T) {
 	// Sign image1 and store the entry in rekor
 	// (we're just using it for its bundle)
 	remoteOpts := ociremote.WithRemoteOptions(registryClientOpts(ctx)...)
-	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL, RekorVersion: 1}
 	so := options.SignOptions{
 		Upload:           true,
 		TlogUpload:       true,
@@ -4149,7 +4175,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	ctx := context.Background()
 	ko := options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:       pubKeyPath1,
+		RekorVersion: 1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
@@ -4163,8 +4190,9 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	// Now attest the blob with the private key
 	ko = options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
+		KeyRef:       privKeyPath1,
+		PassFunc:     passFunc,
+		RekorVersion: 1,
 	}
 	attestBlobCmd := attest.AttestBlobCommand{
 		KeyOpts:         ko,
@@ -4197,7 +4225,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	// Test statement verification
 	ko = options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:       pubKeyPath1,
+		RekorVersion: 1,
 	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
@@ -4230,7 +4259,7 @@ func TestOffline(t *testing.T) {
 	ctx := context.Background()
 
 	// Sign image1 and store the entry in rekor
-	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL}
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc, RekorURL: rekorURL, RekorVersion: 1}
 	so := options.SignOptions{
 		Upload:           true,
 		TlogUpload:       true,
@@ -4323,6 +4352,7 @@ func TestDockerfileVerify(t *testing.T) {
 	ko := options.KeyOpts{
 		FulcioURL:        fulcioURL,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		IDToken:          identityToken,
 		SkipConfirmation: true,
 	}
@@ -4469,6 +4499,7 @@ func TestManifestVerify(t *testing.T) {
 	ko := options.KeyOpts{
 		FulcioURL:        fulcioURL,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		IDToken:          identityToken,
 		SkipConfirmation: true,
 	}
@@ -4592,6 +4623,7 @@ func TestSignVerifyWithRepoOverride(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 
@@ -4669,6 +4701,7 @@ func TestSignVerifyMultipleIdentities(t *testing.T) {
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{

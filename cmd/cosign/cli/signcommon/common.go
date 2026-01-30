@@ -660,7 +660,7 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	}
 	// Fetch a trusted root when:
 	// * requesting a certificate and no CT log key is provided to verify an SCT
-	// * using a signing config and signing using sigstore-go
+	// * using a signing config
 	if ((keyRef == "" || issueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
 		(useSigningConfig || signingConfigPath != "") {
 		if trustedRootPath != "" {
