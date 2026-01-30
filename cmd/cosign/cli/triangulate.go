@@ -27,6 +27,7 @@ func Triangulate() *cobra.Command {
 	o := &options.TriangulateOptions{}
 
 	cmd := &cobra.Command{
+		Deprecated:       "use \"tree\" instead",
 		Use:              "triangulate",
 		Short:            "Outputs the located cosign image reference. This is the location where cosign stores the specified artifact type.",
 		Example:          "  cosign triangulate <IMAGE>",
