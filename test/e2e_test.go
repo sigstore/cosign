@@ -1479,6 +1479,249 @@ func TestSignVerifyBundle(t *testing.T) {
 	mustErr(cmd.Exec(ctx, args), t)
 }
 
+// TestSignVerifyBundleOffline tests that signing
+// with a key and not verifying with Rekor or the TSA
+// is entirely offline and doesn't try to request the TUF repo.
+func TestSignVerifyBundleOffline(t *testing.T) {
+	td := t.TempDir()
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	// To simulate offline verification, we'll set the TUF repo
+	// env vars to invalid values. If signing were online, verification
+	// would err out when trying to request the TUF repo contents.
+	t.Setenv("TUF_ROOT", td)
+	t.Setenv("TUF_MIRROR", td)
+
+	_, privKeyPath, pubKeyPath := keypair(t, td)
+
+	ctx := context.Background()
+
+	// Sign image with key in bundle format
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      false,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Verify bundle offline
+	cmd := cliverify.VerifyCommand{
+		KeyRef:              pubKeyPath,
+		NewBundleFormat:     true,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: false,
+	}
+	args := []string{imgName}
+	must(cmd.Exec(ctx, args), t)
+}
+
+func TestTrustedRootCreateFromDefaults(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	t.Cleanup(tufServer.Close)
+	mirror := tufServer.URL
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	// Create trusted root
+	td := t.TempDir()
+	outPath := filepath.Join(td, "trustedroot.json")
+	trustedrootCreate := trustedroot.CreateCmd{
+		WithDefaultServices: true,
+		Out:                 outPath,
+	}
+	must(trustedrootCreate.Exec(context.Background()), t)
+
+	// Verify trusted root was populated from TUF repo
+	tr, err := root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.FulcioCertificateAuthorities()) != 1 {
+		t.Fatal("expected default Fulcio certificate authority")
+	}
+	if len(tr.RekorLogs()) != 1 {
+		t.Fatal("expected default Rekor log")
+	}
+	if len(tr.CTLogs()) != 1 {
+		t.Fatal("expected default CT log")
+	}
+	if len(tr.TimestampingAuthorities()) != 1 {
+		t.Fatal("expected default timestamp authority")
+	}
+
+	// Skip Fulcio
+	trustedrootCreate.NoDefaultFulcio = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.FulcioCertificateAuthorities()) != 0 {
+		t.Fatal("expected no Fulcio certificate authorities")
+	}
+
+	// Skip Rekor
+	trustedrootCreate.NoDefaultRekor = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.RekorLogs()) != 0 {
+		t.Fatal("expected no Rekor logs")
+	}
+
+	// Skip CT log
+	trustedrootCreate.NoDefaultCTFE = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.CTLogs()) != 0 {
+		t.Fatal("expected no CT logs")
+	}
+
+	// Skip TSA
+	trustedrootCreate.NoDefaultTSA = true
+	err = trustedrootCreate.Exec(ctx)
+	must(err, t)
+	tr, err = root.NewTrustedRootFromPath(outPath)
+	must(err, t)
+	if len(tr.TimestampingAuthorities()) != 0 {
+		t.Fatal("expected no timestamp authorities")
+	}
+}
+
+func TestSigningConfigCreateFromDefaults(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	t.Cleanup(tufServer.Close)
+	mirror := tufServer.URL
+	tsaURL := "https://tsa.example"
+	oidcURL := "https://oidc.example"
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, oidcURL, tsaURL+"/api/v1/timestamp")
+	// Trusted root is needed as well for initialization
+	viper.Set("timestamp-signer", "memory")
+	viper.Set("timestamp-signer-hash", "sha256")
+	tsaAPIServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
+	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
+	t.Cleanup(tsaServer.Close)
+	trustedRoot := prepareTrustedRoot(t, tsaServer.URL)
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	// Create signing config
+	td := t.TempDir()
+	outPath := filepath.Join(td, "signingconfig.json")
+	signingConfigCreate := signingconfig.CreateCmd{
+		WithDefaultServices: true,
+		Out:                 outPath,
+	}
+	must(signingConfigCreate.Exec(context.Background()), t)
+
+	// Verify signing root was populated from TUF repo
+	sc, err := root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.FulcioCertificateAuthorityURLs()) != 1 || sc.FulcioCertificateAuthorityURLs()[0].URL != fulcioURL {
+		t.Fatal("expected default Fulcio certificate authority service")
+	}
+	if len(sc.RekorLogURLs()) != 1 || sc.RekorLogURLs()[0].URL != rekorURL {
+		t.Fatal("expected default Rekor log service")
+	}
+	if len(sc.OIDCProviderURLs()) != 1 || sc.OIDCProviderURLs()[0].URL != oidcURL {
+		t.Fatal("expected default OIDC provider service")
+	}
+	if len(sc.TimestampAuthorityURLs()) != 1 || sc.TimestampAuthorityURLs()[0].URL != tsaURL+"/api/v1/timestamp" {
+		t.Fatal("expected default timestamp authority service")
+	}
+
+	// Skip Fulcio
+	signingConfigCreate.NoDefaultFulcio = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.FulcioCertificateAuthorityURLs()) != 0 {
+		t.Fatal("expected no Fulcio certificate authority services")
+	}
+
+	// Skip Rekor
+	signingConfigCreate.NoDefaultRekor = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.RekorLogURLs()) != 0 {
+		t.Fatal("expected no Rekor log services")
+	}
+
+	// Skip OIDC
+	signingConfigCreate.NoDefaultOIDC = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.OIDCProviderURLs()) != 0 {
+		t.Fatal("expected no OIDC provider services")
+	}
+
+	// Skip TSA
+	signingConfigCreate.NoDefaultTSA = true
+	err = signingConfigCreate.Exec(ctx)
+	must(err, t)
+	sc, err = root.NewSigningConfigFromPath(outPath)
+	must(err, t)
+	if len(sc.TimestampAuthorityURLs()) != 0 {
+		t.Fatal("expected no timestamp authority services")
+	}
+}
+
 func TestAttestVerify(t *testing.T) {
 	for _, newBundleFormat := range []bool{false, true} {
 		attestVerify(t,
@@ -3353,6 +3596,110 @@ func TestSaveLoad(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSaveLoadAutoDetectFormat verifies that local image verification auto-detects
+// the signature format (v2 attached signatures vs v3 bundles) without requiring
+// explicit --new-bundle-format flag. This tests the fix for sigstore/cosign#4621.
+func TestSaveLoadAutoDetectFormat(t *testing.T) {
+	td := t.TempDir()
+	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test v2 attached signatures - this is the main use case for #4621
+	// where users have v2 signatures but cosign v3 defaults to --new-bundle-format=true
+	t.Run("auto-detect v2 attached signatures", func(t *testing.T) {
+		repo, stop := reg(t)
+		defer stop()
+		keysDir := t.TempDir()
+
+		imgName := path.Join(repo, "auto-detect-v2")
+
+		_, _, cleanup := mkimage(t, imgName)
+		defer cleanup()
+
+		_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+
+		ctx := context.Background()
+		// Sign the image with v2 format (no bundle)
+		ko := options.KeyOpts{
+			KeyRef:           privKeyPath,
+			PassFunc:         passFunc,
+			RekorURL:         rekorURL,
+			SkipConfirmation: true,
+		}
+		so := options.SignOptions{
+			Upload:          true,
+			TlogUpload:      true,
+			NewBundleFormat: false, // v2 format
+		}
+		must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+		// Save the image to a temp dir
+		imageDir := t.TempDir()
+		must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+		// Verify the local image WITHOUT specifying --new-bundle-format
+		// The format should be auto-detected as v2, allowing verification to succeed
+		verifyCmd := cliverify.VerifyCommand{
+			KeyRef:     pubKeyPath,
+			LocalImage: true,
+			MaxWorkers: 10,
+			// Explicitly NOT setting NewBundleFormat - should auto-detect as v2
+		}
+		must(verifyCmd.Exec(ctx, []string{imageDir}), t)
+	})
+
+	// For v3 bundles, we now support full local verification. The bundles are stored as
+	// OCI referrers and can be verified directly from the local layout without loading
+	// back to a registry.
+	t.Run("auto-detect v3 bundle format and verify locally", func(t *testing.T) {
+		repo, stop := reg(t)
+		defer stop()
+		keysDir := t.TempDir()
+
+		imgName := path.Join(repo, "auto-detect-v3")
+
+		_, _, cleanup := mkimage(t, imgName)
+		defer cleanup()
+
+		_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+
+		ctx := context.Background()
+		// Sign the image with v3 format (bundle)
+		ko := options.KeyOpts{
+			KeyRef:           privKeyPath,
+			PassFunc:         passFunc,
+			RekorURL:         rekorURL,
+			SkipConfirmation: true,
+		}
+		so := options.SignOptions{
+			Upload:          true,
+			TlogUpload:      true,
+			NewBundleFormat: true, // v3 format
+		}
+		must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+		// Save the image to a temp dir
+		imageDir := t.TempDir()
+		must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+		// Verify locally with NewBundleFormat enabled
+		trustedRootPath := prepareTrustedRoot(t, "")
+		verifyCmd := cliverify.VerifyCommand{
+			CommonVerifyOptions: options.CommonVerifyOptions{
+				TrustedRootPath: trustedRootPath,
+			},
+			KeyRef:              pubKeyPath,
+			LocalImage:          true,
+			NewBundleFormat:     true,
+			UseSignedTimestamps: false,
+			MaxWorkers:          10,
+		}
+		must(verifyCmd.Exec(ctx, []string{imageDir}), t)
+	})
 }
 
 func TestSaveLoadAttestation(t *testing.T) {

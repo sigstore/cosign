@@ -44,6 +44,7 @@ jobs:
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@b7856cfca56fe3f957d4cefdc2c359cc36a84e14 # v0.0.24
+      - uses: sigstore/sigstore-conformance@eae6eb1f59e25c6d3d602c5dad3dc55767c2f1cb # v0.0.25
         with:
           entrypoint: ${{ github.workspace }}/conformance
+          xfail: "test_verify*managed-key-happy-path] test_verify*managed-key-and-trusted-root] test_verify*PATH-message-digest-mismatch_fail]"

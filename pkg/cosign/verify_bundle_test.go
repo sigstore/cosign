@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosign_test
+package cosign
 
 import (
 	"bytes"
@@ -25,11 +25,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"testing"
 
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/testing/ca"
 	"github.com/sigstore/sigstore-go/pkg/tlog"
@@ -89,7 +90,7 @@ func TestVerifyBundle(t *testing.T) {
 
 	identity := "foo@example.com"
 	issuer := "example issuer"
-	standardIdentities := []cosign.Identity{
+	standardIdentities := []Identity{
 		{
 			Issuer:  issuer,
 			Subject: identity,
@@ -108,14 +109,14 @@ func TestVerifyBundle(t *testing.T) {
 
 	for _, tc := range []struct {
 		name                 string
-		checkOpts            *cosign.CheckOpts
+		checkOpts            *CheckOpts
 		artifactPolicyOption verify.ArtifactPolicyOption
 		entity               verify.SignedEntity
 		wantErr              bool
 	}{
 		{
 			name: "valid",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -127,7 +128,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "valid blob signature",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -139,7 +140,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "invalid, wrong artifact",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -151,7 +152,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "invalid blob signature, wrong artifact",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -163,8 +164,8 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "valid, pattern match issuer",
-			checkOpts: &cosign.CheckOpts{
-				Identities: []cosign.Identity{
+			checkOpts: &CheckOpts{
+				Identities: []Identity{
 					{
 						IssuerRegExp: ".*issuer",
 						Subject:      "foo@example.com",
@@ -180,8 +181,8 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "valid, pattern match subject",
-			checkOpts: &cosign.CheckOpts{
-				Identities: []cosign.Identity{
+			checkOpts: &CheckOpts{
+				Identities: []Identity{
 					{
 						Issuer:        "example issuer",
 						SubjectRegExp: ".*@example.com",
@@ -197,8 +198,8 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "invalid, pattern match issuer",
-			checkOpts: &cosign.CheckOpts{
-				Identities: []cosign.Identity{
+			checkOpts: &CheckOpts{
+				Identities: []Identity{
 					{
 						IssuerRegExp: ".* not my issuer",
 						Subject:      "foo@example.com",
@@ -214,8 +215,8 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "invalid, pattern match subject",
-			checkOpts: &cosign.CheckOpts{
-				Identities: []cosign.Identity{
+			checkOpts: &CheckOpts{
+				Identities: []Identity{
 					{
 						Issuer:        "example issuer",
 						SubjectRegExp: ".*@otherexample.com",
@@ -231,7 +232,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "invalid trusted material",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:      standardIdentities,
 				IgnoreSCT:       true,
 				TrustedMaterial: virtualSigstore2,
@@ -242,7 +243,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "do not require tlog, missing tlog",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				IgnoreTlog:          true,
@@ -255,7 +256,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "do not require tsa, missing tsa",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				IgnoreTlog:          false,
@@ -268,7 +269,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "require tlog, missing tlog",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -280,7 +281,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "require SET, missing set",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				IgnoreTlog:          false,
@@ -293,7 +294,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 		{
 			name: "require tsa, missing tsa",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
 				IgnoreSCT:           true,
 				UseSignedTimestamps: true,
@@ -305,7 +306,7 @@ func TestVerifyBundle(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err = cosign.VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
+			_, err = VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -362,14 +363,14 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 
 	for _, tc := range []struct {
 		name                 string
-		checkOpts            *cosign.CheckOpts
+		checkOpts            *CheckOpts
 		artifactPolicyOption verify.ArtifactPolicyOption
 		entity               verify.SignedEntity
 		wantErr              bool
 	}{
 		{
 			name: "valid",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				UseSignedTimestamps: true,
 				IgnoreTlog:          true,
 				TrustedMaterial:     virtualSigstore,
@@ -381,7 +382,7 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 		},
 		{
 			name: "invalid, wrong artifact",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				UseSignedTimestamps: true,
 				IgnoreTlog:          true,
 				TrustedMaterial:     virtualSigstore,
@@ -393,7 +394,7 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 		},
 		{
 			name: "invalid, sigverifier not set",
-			checkOpts: &cosign.CheckOpts{
+			checkOpts: &CheckOpts{
 				UseSignedTimestamps: true,
 				IgnoreTlog:          true,
 				TrustedMaterial:     virtualSigstore,
@@ -404,7 +405,7 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err = cosign.VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
+			_, err = VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -414,3 +415,106 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 	}
 }
 
+type mockSignedEntity struct {
+	verify.SignedEntity
+	tlogEntries []*tlog.Entry
+}
+
+func (m *mockSignedEntity) TlogEntries() ([]*tlog.Entry, error) {
+	return m.tlogEntries, nil
+}
+
+type mockVerifierForBundle struct{}
+
+func (m *mockVerifierForBundle) PublicKey(_ ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+	return nil, nil
+}
+
+func (m *mockVerifierForBundle) VerifySignature(_, _ io.Reader, _ ...signature.VerifyOption) error {
+	return nil
+}
+
+func makeTlogEntry(t *testing.T, integratedTime int64) *tlog.Entry {
+	body := []byte(`{}`)
+	tle := &v1.TransparencyLogEntry{
+		LogIndex: 1,
+		LogId: &protocommon.LogId{
+			KeyId: []byte("ignored"),
+		},
+		KindVersion: &v1.KindVersion{
+			Kind:    "ignored",
+			Version: "ignored",
+		},
+		IntegratedTime:    integratedTime,
+		CanonicalizedBody: body,
+	}
+	entry, err := tlog.NewTlogEntry(tle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return entry
+}
+
+func TestRekorV2Bundle(t *testing.T) {
+	rekorV1Entry := makeTlogEntry(t, 1234567890)
+	rekorV2Entry := makeTlogEntry(t, 0)
+
+	tests := []struct {
+		name                        string
+		co                          *CheckOpts
+		entries                     []*tlog.Entry
+		expectedUseSignedTimestamps bool
+	}{
+		{
+			name: "IgnoreTlog true",
+			co: &CheckOpts{
+				IgnoreTlog: true,
+			},
+			entries:                     []*tlog.Entry{rekorV2Entry},
+			expectedUseSignedTimestamps: false,
+		},
+		{
+			name: "SigVerifier set",
+			co: &CheckOpts{
+				SigVerifier: &mockVerifierForBundle{},
+			},
+			entries:                     []*tlog.Entry{rekorV2Entry},
+			expectedUseSignedTimestamps: false,
+		},
+		{
+			name:                        "Rekor v1 entry",
+			co:                          &CheckOpts{},
+			entries:                     []*tlog.Entry{rekorV1Entry},
+			expectedUseSignedTimestamps: false,
+		},
+		{
+			name:                        "Rekor v2 entry",
+			co:                          &CheckOpts{},
+			entries:                     []*tlog.Entry{rekorV2Entry},
+			expectedUseSignedTimestamps: true,
+		},
+		{
+			name:                        "Mixed entries",
+			co:                          &CheckOpts{},
+			entries:                     []*tlog.Entry{rekorV1Entry, rekorV2Entry},
+			expectedUseSignedTimestamps: false,
+		},
+		{
+			name: "Already set with Rekor v1",
+			co: &CheckOpts{
+				UseSignedTimestamps: true,
+			},
+			entries:                     []*tlog.Entry{rekorV1Entry},
+			expectedUseSignedTimestamps: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bundle := &mockSignedEntity{tlogEntries: tc.entries}
+			err := rekorV2Bundle(bundle, tc.co)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedUseSignedTimestamps, tc.co.UseSignedTimestamps)
+		})
+	}
+}

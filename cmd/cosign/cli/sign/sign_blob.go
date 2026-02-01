@@ -29,9 +29,13 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"net/http"
+	"time"
+
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
+	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -92,7 +96,17 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		content := &sign.PlainData{
 			Data: data,
 		}
-		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial)
+
+		var tsaClientTransport http.RoundTripper
+		if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
+			tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
+			if err != nil {
+				return nil, fmt.Errorf("getting TSA client transport: %w", err)
+			}
+		}
+		signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+
+		bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, signOpts)
 		if err != nil {
 			return nil, fmt.Errorf("signing bundle: %w", err)
 		}

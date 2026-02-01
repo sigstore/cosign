@@ -133,9 +133,16 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
 	}
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
-	// Check to see if we are using the new bundle format or not
-	if !c.LocalImage {
+	// Auto-detect bundle format for local images
+	if c.LocalImage {
+		hasBundles, err := cosign.HasLocalBundles(images[0])
+		if err != nil {
+			return fmt.Errorf("checking local image format: %w", err)
+		}
+		co.NewBundleFormat = hasBundles
+	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
 			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
@@ -145,12 +152,12 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 	}
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, co)
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
-	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
+	if err = CheckSigstoreBundleUnsupportedOptions(*c, vOfflineKey, co); err != nil {
 		return err
 	}
 
@@ -167,7 +174,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return fmt.Errorf("setting up clients and keys: %w", err)
 	}
 
-	// Keys are optional!
+	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
+	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
+	// after initializing trust material in order to verify certificate chain.
 	var closeSV func()
 	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
 	if err != nil {

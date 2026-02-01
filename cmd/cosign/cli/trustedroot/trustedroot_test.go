@@ -151,12 +151,13 @@ func TestCreateCmd(t *testing.T) {
 	rekorV1Spec := fmt.Sprintf("url=https://rekor.sigstore.example,public-key=%s,start-time=%s,end-time=%s", rekorV1KeyPath, startTime, endTime)
 	rekorV2Spec := fmt.Sprintf("url=https://rekor.sigstore.example,public-key=%s,start-time=%s,origin=rekor-v2.sigstore.example", rekorV2KeyPath, startTime)
 	ctfeSpec := fmt.Sprintf("url=https://ctfe.sigstore.example,public-key=%s,start-time=%s", ctfeKeyPath, startTime)
+	ctfeV2Spec := fmt.Sprintf("url=https://ctfe.sigstore.example,public-key=%s,start-time=%s,origin=ctfe.sigstore.example", ctfeKeyPath, startTime)
 
 	trustedrootCreate := CreateCmd{
 		FulcioSpecs: []string{fulcioSpec},
 		RekorSpecs:  []string{rekorV1Spec, rekorV2Spec},
 		TSASpecs:    []string{tsaSpec},
-		CTFESpecs:   []string{ctfeSpec},
+		CTFESpecs:   []string{ctfeSpec, ctfeV2Spec},
 		Out:         outPath,
 	}
 
@@ -186,7 +187,7 @@ func TestCreateCmd(t *testing.T) {
 	}
 
 	ctfeLogs := tr.CTLogs()
-	if len(ctfeLogs) != 1 {
+	if len(ctfeLogs) != 2 {
 		t.Fatalf("unexpected number of ctfe logs: %d", len(ctfeLogs))
 	}
 

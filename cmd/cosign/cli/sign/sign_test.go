@@ -16,11 +16,16 @@
 package sign
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
+	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/pkg/types"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestSignCmdLocalKeyAndSk verifies the SignCmd returns an error
@@ -41,5 +46,44 @@ func TestSignCmdLocalKeyAndSk(t *testing.T) {
 		if (errors.Is(err, &options.KeyParseError{}) == false) {
 			t.Fatal("expected KeyParseError")
 		}
+	}
+}
+
+func TestInTotoStatementHasPredicate(t *testing.T) {
+	annoStruct, _ := structpb.NewStruct(map[string]any{})
+	subject := intotov1.ResourceDescriptor{
+		Digest:      map[string]string{"sha256": "deadbeef"},
+		Annotations: annoStruct,
+	}
+
+	statement := &intotov1.Statement{
+		Type:          intotov1.StatementTypeUri,
+		Subject:       []*intotov1.ResourceDescriptor{&subject},
+		PredicateType: types.CosignSignPredicateType,
+		Predicate:     &structpb.Struct{},
+	}
+
+	payload, err := protojson.Marshal(statement)
+	if err != nil {
+		t.Fatalf("failed to marshal statement: %v", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(payload, &result); err != nil {
+		t.Fatalf("failed to unmarshal payload: %v", err)
+	}
+
+	if _, ok := result["predicate"]; !ok {
+		t.Error("in-toto statement must contain a 'predicate' field to comply with the in-toto specification")
+	}
+
+	if _, ok := result["_type"]; !ok {
+		t.Error("in-toto statement must contain a '_type' field")
+	}
+	if _, ok := result["subject"]; !ok {
+		t.Error("in-toto statement must contain a 'subject' field")
+	}
+	if _, ok := result["predicateType"]; !ok {
+		t.Error("in-toto statement must contain a 'predicateType' field")
 	}
 }

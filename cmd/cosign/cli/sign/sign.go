@@ -170,6 +170,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		Type:          intotov1.StatementTypeUri,
 		Subject:       []*intotov1.ResourceDescriptor{&subject},
 		PredicateType: types.CosignSignPredicateType,
+		Predicate:     &structpb.Struct{},
 	}
 
 	payload, err := protojson.Marshal(statement)

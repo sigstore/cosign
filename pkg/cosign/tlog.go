@@ -301,7 +301,11 @@ func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.
 }
 
 func ComputeLeafHash(e *models.LogEntryAnon) ([]byte, error) {
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	bodyStr, ok := e.Body.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid body type: expected string, got %T", e.Body)
+	}
+	entryBytes, err := base64.StdEncoding.DecodeString(bodyStr)
 	if err != nil {
 		return nil, err
 	}
@@ -495,6 +499,9 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 	if e.Verification == nil || e.Verification.InclusionProof == nil {
 		return errors.New("inclusion proof not provided")
 	}
+	if e.Verification.InclusionProof.RootHash == nil || e.Verification.InclusionProof.LogIndex == nil || e.Verification.InclusionProof.TreeSize == nil {
+		return errors.New("inclusion proof fields not provided")
+	}
 
 	if trustedMaterial == nil && (rekorPubKeys == nil || rekorPubKeys.Keys == nil) {
 		return errors.New("no trusted rekor public keys provided")
@@ -507,7 +514,11 @@ func VerifyTLogEntryOffline(ctx context.Context, e *models.LogEntryAnon, rekorPu
 	}
 
 	rootHash, _ := hex.DecodeString(*e.Verification.InclusionProof.RootHash)
-	entryBytes, err := base64.StdEncoding.DecodeString(e.Body.(string))
+	bodyStr, ok := e.Body.(string)
+	if !ok {
+		return fmt.Errorf("invalid body type: expected string, got %T", e.Body)
+	}
+	entryBytes, err := base64.StdEncoding.DecodeString(bodyStr)
 	if err != nil {
 		return err
 	}

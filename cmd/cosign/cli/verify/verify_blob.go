@@ -111,8 +111,10 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
 	}
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
-	// Keys are optional!
+	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
+	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
 	var cert *x509.Certificate
 	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
@@ -121,12 +123,12 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 	defer closeSV()
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, co)
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
-	if err = CheckSigstoreBundleUnsupportedOptions(*c, co); err != nil {
+	if err = CheckSigstoreBundleUnsupportedOptions(*c, vOfflineKey, co); err != nil {
 		return err
 	}
 
