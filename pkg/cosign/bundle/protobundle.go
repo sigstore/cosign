@@ -34,19 +34,11 @@ import (
 )
 
 const (
-	BundleV02MediaType = "application/vnd.dev.sigstore.bundle.v0.2+json"
 	BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
 )
 
 func MakeProtobufBundle(hint string, rawCertChain [][]byte, rekorEntry *models.LogEntryAnon, timestampBytes []byte) (*protobundle.Bundle, error) {
-	mediaType := BundleV03MediaType
-	// Certificate Chains Not Supported in >= v0.3
-	// https://github.com/sigstore/sigstore-go/blob/cc06490446765e67a0e63797659f1439c3f53cc0/pkg/bundle/bundle.go#L111-L118
-	if len(rawCertChain) > 0 {
-		mediaType = BundleV02MediaType
-	}
-
-	bundle := &protobundle.Bundle{MediaType: mediaType}
+	bundle := &protobundle.Bundle{MediaType: BundleV03MediaType}
 	if hint != "" {
 		bundle.VerificationMaterial = &protobundle.VerificationMaterial{
 			Content: &protobundle.VerificationMaterial_PublicKey{
