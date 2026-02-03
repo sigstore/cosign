@@ -105,6 +105,7 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		}
 	}
 
+	var usingRekorV2 bool
 	if len(signingConfig.RekorLogURLs()) != 0 {
 		rekorSvcs, err := root.SelectServices(signingConfig.RekorLogURLs(),
 			signingConfig.RekorLogURLsConfig(), sign.RekorAPIVersions, time.Now())
@@ -112,6 +113,9 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 			return nil, err
 		}
 		for _, rekorSvc := range rekorSvcs {
+			if rekorSvc.MajorAPIVersion == 2 {
+				usingRekorV2 = true
+			}
 			rekorOpts := &sign.RekorOptions{
 				BaseURL: rekorSvc.URL,
 				Timeout: 90 * time.Second,
@@ -120,6 +124,14 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 			}
 			bundleOpts.TransparencyLogs = append(bundleOpts.TransparencyLogs, sign.NewRekor(rekorOpts))
 		}
+	}
+	// When requesting a short-lived Fulcio certificate, a timestamp must be provided during
+	// verification. It can come from either Rekor v1 providing a signed entry timestamp, or
+	// from a timestamp authority. Rekor v2 doesn't timestamp entries, so when a client
+	// is configured to use Rekor v2 when retrieving a Fulcio certificate, we enforce
+	// that a timestamp authority is provided as well.
+	if usingRekorV2 && len(bundleOpts.TimestampAuthorities) == 0 && idToken != "" {
+		return nil, fmt.Errorf("a timestamp authority must be provided to request a short-lived certificate that will be logged to Rekor")
 	}
 
 	spinner := ui.NewSpinner(ctx, "Signing artifact...")
