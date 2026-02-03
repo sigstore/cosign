@@ -1244,6 +1244,88 @@ func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
 	must(cmd.Exec(ctx, args), t)
 }
 
+func TestSignRekorV2NoTSA(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	defer tufServer.Close()
+	mirror := tufServer.URL
+
+	// Create signing config with Rekor v2 and no TSA
+	startTime := "2024-01-01T00:00:00Z"
+	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
+	rekorSpec := fmt.Sprintf("url=%s,api-version=2,operator=rekor-op,start-time=%s", rekorURL, startTime)
+
+	downloadDirectory := t.TempDir()
+	signingConfigPath := filepath.Join(downloadDirectory, "signing_config.v0.2.json")
+	scCmd := &signingconfig.CreateCmd{
+		FulcioSpecs: []string{fulcioSpec},
+		RekorSpecs:  []string{rekorSpec},
+		RekorConfig: "EXACT:1",
+		Out:         signingConfigPath,
+	}
+	must(scCmd.Exec(context.TODO()), t)
+
+	trustedRoot := prepareTrustedRoot(t, "")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigPath,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ko := options.KeyOpts{
+		IDToken:          identityToken,
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+	ko.SigningConfig = signingConfig
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e-rekor-v2-no-tsa")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	so := options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+	}
+
+	// This should fail because we are using Rekor v2 (configured) but no TSA, with an ID token.
+	err = sign.SignCmd(ctx, ro, ko, so, []string{imgName})
+	if err == nil {
+		t.Fatal("expected error signing with Rekor v2 and no TSA")
+	}
+	if !strings.Contains(err.Error(), "timestamp authority must be provided") {
+		t.Fatalf("expected error about timestamp authority, got: %v", err)
+	}
+}
+
 func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
