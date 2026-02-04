@@ -25,8 +25,9 @@ func Copy() *cobra.Command {
 	o := &options.CopyOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "copy",
-		Short: "Copy the supplied container image and signatures.",
+		Deprecated: "there are several options you can use instead:\n  - \"oras copy -r\" will copy images and referring artifacts\n  - \"cosign save\" to write to disk, followed by \"cosign load\" for a new registry\n  - \"cosign download\" followed by \"cosign attach\" to just copy the bundle",
+		Use:        "copy",
+		Short:      "Copy the supplied container image and signatures.",
 		Example: `  cosign copy <source image> <destination image>
 
   # copy a container image and its signatures
