@@ -31,10 +31,11 @@ var certSAN *string
 var identityToken *string
 var trustedRootPath *string
 var signingConfigPath *string
+var inToto bool
 
 func usage() {
 	fmt.Println("Usage:")
-	fmt.Printf("\t%s sign-bundle --identity-token TOKEN [--signing-config FILE] [--trusted-root FILE] --bundle FILE FILE\n", os.Args[0])
+	fmt.Printf("\t%s sign-bundle [--in-toto] --identity-token TOKEN [--signing-config FILE] [--trusted-root FILE] --bundle FILE FILE\n", os.Args[0])
 	fmt.Printf("\t%s verify-bundle --bundle FILE --certificate-identity IDENTITY --certificate-oidc-issuer URL [--trusted-root FILE] FILE\n", os.Args[0])
 }
 
@@ -65,6 +66,9 @@ func parseArgs() {
 		case "--signing-config":
 			signingConfigPath = &os.Args[i+1]
 			i += 2
+		case "--in-toto":
+			inToto = true
+			i++
 		default:
 			i++
 		}
@@ -83,7 +87,11 @@ func main() {
 
 	switch os.Args[1] {
 	case "sign-bundle":
-		args = append(args, "sign-blob")
+		if inToto {
+			args = append(args, "attest-blob")
+		} else {
+			args = append(args, "sign-blob")
+		}
 		args = append(args, "-y")
 
 	case "verify-bundle":
@@ -127,6 +135,9 @@ func main() {
 	}
 	if signingConfigPath != nil {
 		args = append(args, "--signing-config", *signingConfigPath)
+	}
+	if inToto {
+		args = append(args, "--statement")
 	}
 	args = append(args, os.Args[len(os.Args)-1])
 
