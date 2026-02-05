@@ -17,6 +17,7 @@ package verify
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -233,6 +234,75 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 			}
 			if err := cmd.Exec(ctx, test.blobPath); err != nil {
 				t.Fatalf("verifyBlobAttestation()= %v", err)
+			}
+		})
+	}
+}
+
+func TestVerifyBlobAttestationMutuallyExclusiveFlags(t *testing.T) {
+	ctx := context.Background()
+	tts := []struct {
+		name          string
+		cmd           VerifyBlobAttestationCommand
+		expectedError error
+	}{
+		{
+			name: "both key and cert identity",
+			cmd: VerifyBlobAttestationCommand{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     "key.pub",
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity: "hello@foo.com",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and cert identity regexp",
+			cmd: VerifyBlobAttestationCommand{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     "key.pub",
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both cert identity and cert identity regexp",
+			cmd: VerifyBlobAttestationCommand{
+				KeyOpts: options.KeyOpts{
+					BundlePath: "bundle.sigstore.json",
+				},
+				CertVerifyOptions: options.CertVerifyOptions{
+					CertIdentity:       "hello@foo.com",
+					CertIdentityRegexp: "^.*@foo.com$",
+				},
+			},
+			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and security key",
+			cmd: VerifyBlobAttestationCommand{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     "key.pub",
+					Sk:         true,
+					BundlePath: "bundle.sigstore.json",
+				},
+			},
+			expectedError: &options.KeyParseError{},
+		},
+	}
+
+	for _, tt := range tts {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cmd.Exec(ctx, "foo")
+			if !errors.Is(err, tt.expectedError) {
+				t.Fatalf("expected %T, got: %T, %v", tt.expectedError, err, err)
 			}
 		})
 	}
