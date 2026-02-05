@@ -61,6 +61,7 @@ func TestTSAMTLS(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:          pemKeyRef,
 		PassFunc:        passFunc,
+		RekorVersion:    1,
 		TSAServerURL:    timestampServerURL,
 		TSAClientCACert: timestampCACert,
 		TSAClientCert:   timestampClientCert,
@@ -106,6 +107,7 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 	signingKO := options.KeyOpts{
 		KeyRef:               privKey,
 		PassFunc:             passFunc,
+		RekorVersion:         1,
 		TSAServerURL:         timestampServerURL,
 		TSAClientCACert:      timestampCACert,
 		TSAClientCert:        timestampClientCert,
@@ -119,6 +121,7 @@ func TestSignBlobTSAMTLS(t *testing.T) {
 
 	verifyKO := options.KeyOpts{
 		KeyRef:               pubKey,
+		RekorVersion:         1,
 		TSACertChainPath:     timestampChainFile,
 		RFC3161TimestampPath: timestampPath,
 		BundlePath:           bundlePath,
@@ -205,6 +208,7 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	signingKO := options.KeyOpts{
 		KeyRef:          privKey,
 		PassFunc:        passFunc,
+		RekorVersion:    1,
 		TSAClientCACert: timestampCACert,
 		TSAClientCert:   timestampClientCert,
 		TSAClientKey:    timestampClientKey,
@@ -219,6 +223,7 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 
 	verifyKO := options.KeyOpts{
 		KeyRef:          pubKey,
+		RekorVersion:    1,
 		BundlePath:      bundlePath,
 		TrustedMaterial: trustedRoot,
 		NewBundleFormat: true,
@@ -325,6 +330,7 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:          pemKeyRef,
 		PassFunc:        passFunc,
+		RekorVersion:    1,
 		TSAClientCACert: timestampCACert,
 		TSAClientCert:   timestampClientCert,
 		TSAClientKey:    timestampClientKey,
