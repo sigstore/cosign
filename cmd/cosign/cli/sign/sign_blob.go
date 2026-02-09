@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -35,13 +34,8 @@ import (
 	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
-	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -80,7 +74,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if ko.SigningConfig == nil {
-		ko.SigningConfig, err = newSigningConfigFromKeyOpts(ko, shouldUpload)
+		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(ko, shouldUpload)
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
@@ -91,7 +85,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
 
-	hashFunction := protoHashAlgoToHash(keypair.GetHashAlgorithm())
+	hashFunction := signcommon.ProtoHashAlgoToHash(keypair.GetHashAlgorithm())
 	payload, closePayload, err := getPayload(ctx, payloadPath, hashFunction)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
@@ -135,7 +129,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
 	}
 
-	sig, extractedCert, rekorEntry, rfc3161Timestamp, err := extractElementsFromProtoBundle(&bundle)
+	sig, extractedCert, rekorEntry, rfc3161Timestamp, err := signcommon.ExtractElementsFromProtoBundle(&bundle)
 	if err != nil {
 		return nil, fmt.Errorf("extracting elements from bundle: %w", err)
 	}
@@ -153,7 +147,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 			if block == nil {
 				return nil, fmt.Errorf("failed to decode public key pem")
 			}
-			contents, err = newLegacyBundleFromProtoBundleElements(sig, extractedCert, block.Bytes, rekorEntry)
+			contents, err = signcommon.NewLegacyBundleFromProtoBundleElements(sig, extractedCert, block.Bytes, rekorEntry)
 			if err != nil {
 				return nil, fmt.Errorf("creating legacy bundle: %w", err)
 			}
@@ -220,146 +214,4 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		return []byte(base64.StdEncoding.EncodeToString(sig)), nil
 	}
 	return sig, nil
-}
-
-func newSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.SigningConfig, error) {
-	var fulcioServices []root.Service
-	if ko.FulcioURL != "" {
-		fulcioServices = append(fulcioServices, root.Service{
-			URL:                 ko.FulcioURL,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-	}
-
-	var oidcServices []root.Service
-	if ko.OIDCIssuer != "" {
-		oidcServices = append(oidcServices, root.Service{
-			URL:                 ko.OIDCIssuer,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-	}
-
-	var rekorServices []root.Service
-	var rekorConfig root.ServiceConfiguration
-	if ko.RekorURL != "" && shouldUpload {
-		rekorServices = append(rekorServices, root.Service{
-			URL:                 ko.RekorURL,
-			MajorAPIVersion:     ko.RekorVersion,
-			ValidityPeriodStart: time.Now(),
-		})
-		rekorConfig = root.ServiceConfiguration{
-			Selector: prototrustroot.ServiceSelector_ANY,
-			Count:    1,
-		}
-	}
-
-	var tsaServices []root.Service
-	var tsaConfig root.ServiceConfiguration
-	if ko.TSAServerURL != "" {
-		tsaServices = append(tsaServices, root.Service{
-			URL:                 ko.TSAServerURL,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-		tsaConfig = root.ServiceConfiguration{
-			Selector: prototrustroot.ServiceSelector_ANY,
-			Count:    1,
-		}
-	}
-
-	return root.NewSigningConfig(
-		root.SigningConfigMediaType02,
-		fulcioServices,
-		oidcServices,
-		rekorServices,
-		rekorConfig,
-		tsaServices,
-		tsaConfig,
-	)
-}
-
-func extractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *protocommon.X509Certificate, *protorekor.TransparencyLogEntry, *protocommon.RFC3161SignedTimestamp, error) {
-	if bundle == nil {
-		return nil, nil, nil, nil, fmt.Errorf("bundle is nil")
-	}
-
-	var sig []byte
-	if ms := bundle.GetMessageSignature(); ms != nil {
-		sig = ms.GetSignature()
-	}
-	if sig == nil {
-		return nil, nil, nil, nil, fmt.Errorf("bundle does not contain a message signature")
-	}
-
-	var extractedCert *protocommon.X509Certificate
-	var rekorEntry *protorekor.TransparencyLogEntry
-	var timestamp *protocommon.RFC3161SignedTimestamp
-	if vm := bundle.GetVerificationMaterial(); vm != nil {
-		if chain := vm.GetX509CertificateChain(); chain != nil && len(chain.GetCertificates()) > 0 {
-			extractedCert = chain.GetCertificates()[0]
-		} else if cert := vm.GetCertificate(); cert != nil {
-			extractedCert = cert
-		}
-		if tlogEntries := vm.GetTlogEntries(); len(tlogEntries) > 0 {
-			rekorEntry = tlogEntries[0]
-		}
-		if tvd := vm.GetTimestampVerificationData(); tvd != nil {
-			if timestamps := tvd.GetRfc3161Timestamps(); len(timestamps) > 0 {
-				timestamp = timestamps[0]
-			}
-		}
-	}
-
-	return sig, extractedCert, rekorEntry, timestamp, nil
-}
-
-func newLegacyBundleFromProtoBundleElements(sig []byte, cert *protocommon.X509Certificate, pubKey []byte, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
-	signedPayload := cosign.LocalSignedPayload{
-		Base64Signature: base64.StdEncoding.EncodeToString(sig),
-	}
-
-	if cert != nil {
-		pemBlock := &pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert.GetRawBytes(),
-		}
-		certPem := pem.EncodeToMemory(pemBlock)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
-	} else if len(pubKey) > 0 {
-		pemBlock := &pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: pubKey,
-		}
-		pubPem := pem.EncodeToMemory(pemBlock)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(pubPem)
-	}
-
-	if rekorEntry != nil {
-		signedPayload.Bundle = &cbundle.RekorBundle{
-			SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
-			Payload: cbundle.RekorPayload{
-				Body:           rekorEntry.GetCanonicalizedBody(),
-				IntegratedTime: rekorEntry.GetIntegratedTime(),
-				LogIndex:       rekorEntry.GetLogIndex(),
-				LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
-			},
-		}
-	}
-
-	return json.Marshal(signedPayload)
-}
-
-func protoHashAlgoToHash(hashFunc protocommon.HashAlgorithm) crypto.Hash {
-	switch hashFunc {
-	case protocommon.HashAlgorithm_SHA2_256:
-		return crypto.SHA256
-	case protocommon.HashAlgorithm_SHA2_384:
-		return crypto.SHA384
-	case protocommon.HashAlgorithm_SHA2_512:
-		return crypto.SHA512
-	default:
-		return crypto.Hash(0)
-	}
 }

@@ -17,7 +17,10 @@ package signcommon
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -46,8 +49,13 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/root"
@@ -511,10 +519,10 @@ func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.Log
 }
 
 // WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
-func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) error {
+func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
 	keypair, _, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
-		return fmt.Errorf("getting keypair and token: %w", err)
+		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
 
 	content := &sign.DSSEData{
@@ -526,27 +534,30 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
 		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
 		if err != nil {
-			return fmt.Errorf("getting TSA client transport: %w", err)
+			return nil, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
-		return fmt.Errorf("signing bundle: %w", err)
+		return nil, fmt.Errorf("signing bundle: %w", err)
 	}
 
 	if bundleOpts.BundlePath != "" {
 		if err := os.WriteFile(bundleOpts.BundlePath, bundle, 0600); err != nil {
-			return fmt.Errorf("creating bundle file: %w", err)
+			return nil, fmt.Errorf("creating bundle file: %w", err)
 		}
 		ui.Infof(ctx, "Wrote bundle to file %s", bundleOpts.BundlePath)
-		return nil
+		return bundle, nil
 	}
 	if !bundleOpts.Upload {
-		return nil
+		return bundle, nil
 	}
-	return ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...)
+	if err := ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
+		return nil, err
+	}
+	return bundle, nil
 }
 
 type bundleComponents struct {
@@ -705,4 +716,153 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	}
 
 	return nil
+}
+
+func ExtractElementsFromProtoBundle(bundle *protobundle.Bundle) ([]byte, *pb_go_v1.X509Certificate, *protorekor.TransparencyLogEntry, *pb_go_v1.RFC3161SignedTimestamp, error) {
+	if bundle == nil {
+		return nil, nil, nil, nil, fmt.Errorf("bundle is nil")
+	}
+
+	var sig []byte
+	if dsseEnv := bundle.GetDsseEnvelope(); dsseEnv != nil {
+		var err error
+		sig, err = protojson.Marshal(dsseEnv)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("marshalling dsse envelope: %w", err)
+		}
+	} else if ms := bundle.GetMessageSignature(); ms != nil {
+		sig = ms.GetSignature()
+	}
+
+	if sig == nil {
+		return nil, nil, nil, nil, fmt.Errorf("bundle does not contain a message signature or dsse envelope")
+	}
+
+	var extractedCert *pb_go_v1.X509Certificate
+	var rekorEntry *protorekor.TransparencyLogEntry
+	var timestamp *pb_go_v1.RFC3161SignedTimestamp
+	if vm := bundle.GetVerificationMaterial(); vm != nil {
+		if chain := vm.GetX509CertificateChain(); chain != nil && len(chain.GetCertificates()) > 0 {
+			extractedCert = chain.GetCertificates()[0]
+		} else if cert := vm.GetCertificate(); cert != nil {
+			extractedCert = cert
+		}
+		if tlogEntries := vm.GetTlogEntries(); len(tlogEntries) > 0 {
+			rekorEntry = tlogEntries[0]
+		}
+		if tvd := vm.GetTimestampVerificationData(); tvd != nil {
+			if timestamps := tvd.GetRfc3161Timestamps(); len(timestamps) > 0 {
+				timestamp = timestamps[0]
+			}
+		}
+	}
+
+	return sig, extractedCert, rekorEntry, timestamp, nil
+}
+
+func NewLegacyBundleFromProtoBundleElements(sig []byte, cert *pb_go_v1.X509Certificate, pubKey []byte, rekorEntry *protorekor.TransparencyLogEntry) ([]byte, error) {
+	signedPayload := cosign.LocalSignedPayload{
+		Base64Signature: base64.StdEncoding.EncodeToString(sig),
+	}
+
+	if cert != nil {
+		pemBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.GetRawBytes(),
+		}
+		certPem := pem.EncodeToMemory(pemBlock)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
+	} else if len(pubKey) > 0 {
+		pemBlock := &pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: pubKey,
+		}
+		pubPem := pem.EncodeToMemory(pemBlock)
+		signedPayload.Cert = base64.StdEncoding.EncodeToString(pubPem)
+	}
+
+	if rekorEntry != nil {
+		signedPayload.Bundle = &cbundle.RekorBundle{
+			SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+			Payload: cbundle.RekorPayload{
+				Body:           rekorEntry.GetCanonicalizedBody(),
+				IntegratedTime: rekorEntry.GetIntegratedTime(),
+				LogIndex:       rekorEntry.GetLogIndex(),
+				LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+			},
+		}
+	}
+
+	return json.Marshal(signedPayload)
+}
+
+func ProtoHashAlgoToHash(hashFunc pb_go_v1.HashAlgorithm) crypto.Hash {
+	switch hashFunc {
+	case pb_go_v1.HashAlgorithm_SHA2_256:
+		return crypto.SHA256
+	case pb_go_v1.HashAlgorithm_SHA2_384:
+		return crypto.SHA384
+	case pb_go_v1.HashAlgorithm_SHA2_512:
+		return crypto.SHA512
+	default:
+		return crypto.Hash(0)
+	}
+}
+
+func NewSigningConfigFromKeyOpts(ko options.KeyOpts, shouldUpload bool) (*root.SigningConfig, error) {
+	var fulcioServices []root.Service
+	if ko.FulcioURL != "" {
+		fulcioServices = append(fulcioServices, root.Service{
+			URL:                 ko.FulcioURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+	}
+
+	var oidcServices []root.Service
+	if ko.OIDCIssuer != "" {
+		oidcServices = append(oidcServices, root.Service{
+			URL:                 ko.OIDCIssuer,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+	}
+
+	var rekorServices []root.Service
+	var rekorConfig root.ServiceConfiguration
+	if ko.RekorURL != "" && shouldUpload {
+		rekorServices = append(rekorServices, root.Service{
+			URL:                 ko.RekorURL,
+			MajorAPIVersion:     ko.RekorVersion,
+			ValidityPeriodStart: time.Now(),
+		})
+		rekorConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
+	}
+
+	var tsaServices []root.Service
+	var tsaConfig root.ServiceConfiguration
+	if ko.TSAServerURL != "" {
+		tsaServices = append(tsaServices, root.Service{
+			URL:                 ko.TSAServerURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
+		tsaConfig = root.ServiceConfiguration{
+			Selector: prototrustroot.ServiceSelector_ANY,
+			Count:    1,
+		}
+	}
+
+	return root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		fulcioServices,
+		oidcServices,
+		rekorServices,
+		rekorConfig,
+		tsaServices,
+		tsaConfig,
+	)
 }
