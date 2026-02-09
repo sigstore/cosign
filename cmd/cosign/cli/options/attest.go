@@ -93,6 +93,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RekorEntryType, "rekor-entry-type", rekorEntryTypes[0],
 		"specifies the type to be used for a rekor entry upload ("+strings.Join(rekorEntryTypes, "|")+")")
 	_ = cmd.RegisterFlagCompletionFunc("rekor-entry-type", cobra.FixedCompletions(rekorEntryTypes, cobra.ShellCompDirectiveNoFileComp))
+	_ = cmd.Flags().MarkDeprecated("rekor-entry-type", "support for this flag will be removed in the future. it is strongly discouraged to rely on Rekor for attestation storage, and in future releases of Rekor, this functionality will be removed.")
 
 	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")
