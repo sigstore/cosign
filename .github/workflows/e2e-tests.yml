@@ -39,14 +39,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -59,14 +59,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -99,23 +99,23 @@ jobs:
       SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: setup vault
-        uses: cpanato/vault-installer@f7e2ad9737b49f351f233eba2df1bdfede939a21 # v1.3.0
+        uses: cpanato/vault-installer@fe568170412f5d81202ec528148f05176efbecc1 # v1.4.0
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
           cache: false
 
-      - uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
+      - uses: imjasonh/setup-crane@6da1ae018866400525525ce74ff892880c099987 # v0.5
 
       - name: Install cluster + sigstore
         uses: sigstore/scaffolding/actions/setup@main
@@ -135,21 +135,21 @@ jobs:
       SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
 
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-    - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
       with:
         go-version: '${{ env.GOVERSION }}'
         check-latest: true
         cache: false
 
     - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+      uses: chainguard-dev/actions/setup-mirror@eba358c567c5b091e34187d905258baebdd2a4ec # v1.5.16
       with:
         mirror: mirror.gcr.io
 
@@ -257,4 +257,4 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+      uses: chainguard-dev/actions/kind-diag@eba358c567c5b091e34187d905258baebdd2a4ec # v1.5.16
