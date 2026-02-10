@@ -39,7 +39,7 @@ func (a *AnnotationsMap) Set(s string) error {
 }
 
 func (a *AnnotationsMap) String() string {
-	s := []string{}
+	s := make([]string, 0, len(a.Annotations))
 	for k, v := range a.Annotations {
 		s = append(s, fmt.Sprintf("%s=%s", k, v))
 	}
