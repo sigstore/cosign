@@ -28,7 +28,7 @@ type List []struct {
 }
 
 func (pl *List) String() string {
-	r := []string{}
+	r := make([]string, 0, len(*pl))
 	for _, p := range *pl {
 		r = append(r, p.Platform.String())
 	}

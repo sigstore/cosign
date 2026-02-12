@@ -92,6 +92,7 @@ func (e *ErrNoCertificateFoundOnSignature) Unwrap() error {
 }
 
 // NewVerificationError exists for backwards compatibility.
+//
 // Deprecated: see [VerificationFailure].
 func NewVerificationError(msg string, args ...interface{}) error {
 	return &VerificationError{
@@ -100,6 +101,7 @@ func NewVerificationError(msg string, args ...interface{}) error {
 }
 
 // VerificationError exists for backwards compatibility.
+//
 // Deprecated: see [VerificationFailure].
 type VerificationError struct {
 	message string
@@ -111,10 +113,12 @@ func (e *VerificationError) Error() string {
 
 var (
 	// ErrNoMatchingAttestationsMessage exists for backwards compatibility.
+	//
 	// Deprecated: see [ErrNoMatchingAttestations].
 	ErrNoMatchingAttestationsMessage = "no matching attestations"
 
 	// ErrNoMatchingAttestationsType exists for backwards compatibility.
+	//
 	// Deprecated: see [ErrNoMatchingAttestations].
 	ErrNoMatchingAttestationsType = "NoMatchingAttestations"
 )

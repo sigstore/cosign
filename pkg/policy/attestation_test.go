@@ -233,7 +233,7 @@ func getDirFiles(t *testing.T, dir string) []string {
 	if err != nil {
 		t.Fatalf("Failed to read dir : %s ReadFile() = %s", dir, err)
 	}
-	ret := []string{}
+	ret := make([]string, 0, len(files))
 	for _, file := range files {
 		ret = append(ret, file.Name())
 	}

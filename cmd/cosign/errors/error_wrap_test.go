@@ -13,19 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors
+package errors_test
 
 import (
-	"errors"
+	stderrors "errors"
 	"testing"
+
+	"github.com/sigstore/cosign/v3/cmd/cosign/errors"
 )
 
 func TestWrapWithGenericCosignError(t *testing.T) {
 	errorText := "i am a generic cosign error"
-	err := WrapError(errors.New(errorText))
+	err := errors.WrapError(stderrors.New(errorText))
 
-	var cosignError *CosignError
-	if errors.As(err, &cosignError) {
+	var cosignError *errors.CosignError
+	if stderrors.As(err, &cosignError) {
 		if cosignError.ExitCode() == 1 && cosignError.Message == errorText {
 			t.Logf("generic cosign error successfully returned")
 			return

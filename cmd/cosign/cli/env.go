@@ -132,7 +132,7 @@ func printEnv(envVars map[env.Variable]env.VariableOpts,
 }
 
 func sortEnvKeys(envVars map[env.Variable]env.VariableOpts) []env.Variable {
-	keys := []env.Variable{}
+	keys := make([]env.Variable, 0, len(envVars))
 	for k := range envVars {
 		keys = append(keys, k)
 	}

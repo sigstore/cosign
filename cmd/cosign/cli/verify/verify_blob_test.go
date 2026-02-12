@@ -586,7 +586,7 @@ func TestVerifyBlob(t *testing.T) {
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
-			entries := make([]models.LogEntry, 0)
+			entries := make([]models.LogEntry, 0, len(tt.rekorEntry))
 			for _, entry := range tt.rekorEntry {
 				entries = append(entries, *entry)
 			}
@@ -1468,7 +1468,7 @@ func (s *keylessStack) genLeafCert(t *testing.T, subject string, issuer string) 
 }
 
 func (s *keylessStack) genChainFile(t *testing.T) {
-	var chain []byte
+	chain := make([]byte, 0, len(s.subPemCert)+len(s.rootPemCert))
 	chain = append(chain, s.subPemCert...)
 	chain = append(chain, s.rootPemCert...)
 	tmpChainFile, err := os.CreateTemp(s.td, "cosign_fulcio_chain_*.cert")

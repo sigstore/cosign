@@ -109,7 +109,7 @@ func tGetEnv() envGetter {
 }
 func tGetEnviron() environGetter {
 	return func() []string {
-		var s []string
+		s := make([]string, 0, len(testingEnvVars))
 
 		for k, v := range testingEnvVars {
 			s = append(s, fmt.Sprintf("%s=%s", k, v))

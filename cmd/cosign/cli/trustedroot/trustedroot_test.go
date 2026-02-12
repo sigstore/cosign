@@ -238,7 +238,7 @@ func TestCreateCmd(t *testing.T) {
 				"certificate-chain": fulcioChainPath,
 			}
 			delete(specMap, key)
-			var pairs []string
+			pairs := make([]string, 0, len(specMap))
 			for k, v := range specMap {
 				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 			}
@@ -263,7 +263,7 @@ func TestCreateCmd(t *testing.T) {
 				"start-time": startTime,
 			}
 			delete(specMap, key)
-			var pairs []string
+			pairs := make([]string, 0, len(specMap))
 			for k, v := range specMap {
 				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 			}
@@ -287,7 +287,7 @@ func TestCreateCmd(t *testing.T) {
 				"certificate-chain": tsaChainPath,
 			}
 			delete(specMap, key)
-			var pairs []string
+			pairs := make([]string, 0, len(specMap))
 			for k, v := range specMap {
 				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 			}
@@ -312,7 +312,7 @@ func TestCreateCmd(t *testing.T) {
 				"start-time": startTime,
 			}
 			delete(specMap, key)
-			var pairs []string
+			pairs := make([]string, 0, len(specMap))
 			for k, v := range specMap {
 				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 			}
