@@ -90,6 +90,8 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("output-signature", "support for this flag will be removed in the future. please use the new bundle output format")
+
 	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
 		"write the signed payload to FILE")
 	// _ = cmd.MarkFlagFilename("output-payload") // no typical extensions
@@ -97,6 +99,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
 	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("output-certificate", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the image to FILE")
@@ -142,6 +145,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
+	_ = cmd.Flags().MarkDeprecated("issue-certificate", "support for this flag will be removed in the future")
 
 	cmd.Flags().StringSliceVar(&o.SignContainerIdentities, "sign-container-identity", nil,
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature, this flag is comma delimited. ex: --sign-container-identity=identity1,identity2")
