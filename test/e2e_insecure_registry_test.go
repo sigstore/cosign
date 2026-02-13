@@ -72,6 +72,7 @@ func TestInsecureRegistry(t *testing.T) {
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()

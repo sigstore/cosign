@@ -56,6 +56,7 @@ cosign attest-blob [flags]
       --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rekor-version uint32              version of rekor API (default 1)
       --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --signing-config string             path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                                whether to use a hardware security key
