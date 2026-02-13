@@ -42,7 +42,6 @@ cosign attest-blob [flags]
   -h, --help                              help for attest-blob
       --identity-token string             identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify              skip verifying fulcio published to the SCT (this should only be used for testing).
-      --issue-certificate                 issue a code signing certificate from Fulcio, even if a key is provided
       --key string                        path to the private key file, KMS URI or Kubernetes Secret
       --new-bundle-format                 output bundle in new format that contains all verification material (default true)
       --oidc-client-id string             OIDC client ID for application (default "sigstore")
@@ -52,11 +51,8 @@ cosign attest-blob [flags]
       --oidc-provider string              Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string          OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output-attestation string         write the attestation to FILE
-      --output-certificate string         write the certificate to FILE
-      --output-signature string           write the signature to FILE
       --predicate string                  path to the predicate file.
       --rekor-url string                  address of rekor STL server (default "https://rekor.sigstore.dev")
-      --rfc3161-timestamp-bundle string   path to an RFC 3161 timestamp bundle FILE
       --signing-config string             path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                                whether to use a hardware security key
       --slot string                       security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
