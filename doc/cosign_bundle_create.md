@@ -16,7 +16,7 @@ cosign bundle create [flags]
       --artifact string            path to artifact FILE
       --attestation string         path to attestation FILE
       --bundle string              path to old format bundle FILE
-      --certificate string         path to the signing certificate, likely from Fulco.
+      --certificate string         path to the signing certificate, likely from Fulcio.
   -h, --help                       help for create
       --ignore-tlog                ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log.
       --key string                 path to the public key file, KMS URI or Kubernetes Secret

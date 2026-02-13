@@ -84,18 +84,22 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
 		"whether to base64 encode the output")
+	_ = cmd.Flags().MarkDeprecated("b64", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("output-signature", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	// TODO: remove when output flag is fully deprecated
 	cmd.Flags().StringVar(&o.Output, "output", "", "write the signature to FILE")
 	_ = cmd.MarkFlagFilename("output", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("output", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
 	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("output-certificate", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
@@ -145,9 +149,11 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"write the RFC3161 timestamp to a file")
 	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "support for this flag will be removed in the future. please use the new bundle output format")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
+	_ = cmd.Flags().MarkDeprecated("issue-certificate", "support for this flag will be removed in the future")
 
 	keyAlgorithmTypes := cosign.GetSupportedAlgorithms()
 	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
