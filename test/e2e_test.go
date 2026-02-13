@@ -610,9 +610,8 @@ func trustedRootCmd(t *testing.T, downloadDirectory, tsaURL string) *trustedroot
 	defer rekorFP.Close()
 	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
 	ctfePath := filepath.Join(downloadDirectory, "ctfe.pub")
-	home, err := os.UserHomeDir()
-	must(err, t)
-	must(copyFile(filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"), ctfePath), t)
+	ctLogKey := os.Getenv("CT_LOG_KEY")
+	must(copyFile(ctLogKey, ctfePath), t)
 	out := filepath.Join(downloadDirectory, "trusted_root.json")
 	cmd := &trustedroot.CreateCmd{
 		CertChain:    []string{caPath},
@@ -646,8 +645,7 @@ func prepareTrustedRootWithSelfSignedCertificate(t *testing.T, certPath, tsaURL 
 }
 
 func TestSignVerifyWithTUFMirror(t *testing.T) {
-	home, err := os.UserHomeDir() // fulcio repo was downloaded to $HOME in e2e_test.sh
-	must(err, t)
+	ctLogKey := os.Getenv("CT_LOG_KEY")
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
 	tufMirror := t.TempDir()
@@ -674,7 +672,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			targets: []targetInfo{
 				{
 					name:   "ct.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 			},
 			wantSignErr: true,
@@ -692,7 +690,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsa_leaf.crt.pem",
@@ -721,7 +719,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				},
 				{
 					name:   "ctfe.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -759,7 +757,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "cert-transparency.pem",
 					usage:  "CTFE",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
+					source: ctLogKey,
 				},
 				{
 					name:   "tsaleaf.pem",
@@ -835,7 +833,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			must(gotErr, t)
 
 			// Verify an image
-			issuer := os.Getenv("OIDC_URL")
+			issuer := os.Getenv("ISSUER_URL")
 			verifyCmd := cliverify.VerifyCommand{
 				CertVerifyOptions: options.CertVerifyOptions{
 					CertOidcIssuer: issuer,
@@ -981,7 +979,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	must(err, t)
 
 	// Verify a blob
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
 		KeyOpts: ko,
 		CertVerifyOptions: options.CertVerifyOptions{
@@ -1096,7 +1094,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	// Verify Fulcio-signed image
 	cmd := cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
 		},
 		NewBundleFormat:     true,
@@ -1124,7 +1122,7 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	// Verify attestation
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: os.Getenv("OIDC_URL"),
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
 		},
 		CommonVerifyOptions: options.CommonVerifyOptions{
@@ -1516,7 +1514,7 @@ func TestSignVerifyBundle(t *testing.T) {
 	// Verify Fulcio-signed image
 	cmd = cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer:     os.Getenv("OIDC_URL"),
+			CertOidcIssuer:     os.Getenv("ISSUER_URL"),
 			CertIdentityRegexp: ".+",
 		},
 		CommonVerifyOptions: options.CommonVerifyOptions{
@@ -4449,7 +4447,7 @@ from %s
 `, signedImg1)
 	withLowercaseDockerfile := mkfile(withLowercaseDockerfileContents, td, t)
 
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 
 	tests := []struct {
 		name       string
@@ -4578,7 +4576,7 @@ spec:
 	unsignedManifestContents := fmt.Sprintf(manifestTemplate, "unsigned-img", unsignedImg)
 	unsignedManifest := mkfileWithExt(unsignedManifestContents, td, ".yaml", t)
 
-	issuer := os.Getenv("OIDC_URL")
+	issuer := os.Getenv("ISSUER_URL")
 
 	tests := []struct {
 		name     string
