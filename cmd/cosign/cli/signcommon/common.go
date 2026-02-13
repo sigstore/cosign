@@ -47,10 +47,14 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
 	"github.com/sigstore/cosign/v3/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -488,12 +492,17 @@ func UploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, t
 }
 
 type CommonBundleOpts struct {
-	Payload       []byte
-	Digest        name.Digest
-	PredicateType string
-	BundlePath    string
-	Upload        bool
-	OCIRemoteOpts []ociremote.Option
+	Payload                 []byte
+	Digest                  name.Digest
+	PredicateType           string
+	BundlePath              string
+	Upload                  bool
+	OCIRemoteOpts           []ociremote.Option
+	OutputSignature         string
+	OutputPayload           string
+	OutputCertificate       string
+	RecordCreationTimestamp bool
+	UseDSSE                 bool
 }
 
 // WriteBundle compiles a protobuf bundle from components and writes the bundle to the OCI remote layer.
@@ -518,18 +527,20 @@ func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.Log
 	return ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...)
 }
 
-// WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
-func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
-	keypair, _, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
-	if err != nil {
-		return nil, fmt.Errorf("getting keypair and token: %w", err)
+func internalSignWithConfig(ctx context.Context, ko options.KeyOpts, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, keypair sign.Keypair, idToken string, certBytes []byte) ([]byte, error) {
+	var content sign.Content
+	if bundleOpts.UseDSSE {
+		content = &sign.DSSEData{
+			Data:        bundleOpts.Payload,
+			PayloadType: "application/vnd.in-toto+json",
+		}
+	} else {
+		content = &sign.PlainData{
+			Data: bundleOpts.Payload,
+		}
 	}
 
-	content := &sign.DSSEData{
-		Data:        bundleOpts.Payload,
-		PayloadType: "application/vnd.in-toto+json",
-	}
-
+	var err error
 	var tsaClientTransport http.RoundTripper
 	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
 		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
@@ -543,20 +554,144 @@ func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, ce
 	if err != nil {
 		return nil, fmt.Errorf("signing bundle: %w", err)
 	}
+	return bundle, nil
+}
+
+// WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
+func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
+	keypair, sv, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+	if err != nil {
+		return nil, fmt.Errorf("getting keypair and token: %w", err)
+	}
+
+	bundle, err := internalSignWithConfig(ctx, ko, bundleOpts, signingConfig, trustedMaterial, keypair, idToken, certBytes)
+	if err != nil {
+		return nil, err
+	}
 
 	if bundleOpts.BundlePath != "" {
 		if err := os.WriteFile(bundleOpts.BundlePath, bundle, 0600); err != nil {
 			return nil, fmt.Errorf("creating bundle file: %w", err)
 		}
 		ui.Infof(ctx, "Wrote bundle to file %s", bundleOpts.BundlePath)
-		return bundle, nil
 	}
-	if !bundleOpts.Upload {
-		return bundle, nil
+
+	if bundleOpts.Upload {
+		if ko.NewBundleFormat {
+			if err := ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
+				return nil, err
+			}
+		} else {
+			// We don't actually need to access the remote entity to attach things to it
+			// so we use a placeholder here.
+			se := ociremote.SignedUnknown(bundleOpts.Digest, bundleOpts.OCIRemoteOpts...)
+			if _, err := SignAndUploadLegacyBundle(ctx, ko, bundleOpts, signingConfig, trustedMaterial, se, keypair, sv, certBytes, idToken); err != nil {
+				return nil, err
+			}
+		}
 	}
-	if err := ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
+
+	return bundle, nil
+}
+
+func SignAndUploadNewBundle(ctx context.Context, ko options.KeyOpts, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, keypair sign.Keypair, certBytes []byte, idToken string) ([]byte, error) {
+	bundle, err := internalSignWithConfig(ctx, ko, bundleOpts, signingConfig, trustedMaterial, keypair, idToken, certBytes)
+	if err != nil {
 		return nil, err
 	}
+
+	if bundleOpts.Upload {
+		if err := ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundle, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
+			return nil, err
+		}
+	}
+	return bundle, nil
+}
+
+func SignAndUploadLegacyBundle(ctx context.Context, ko options.KeyOpts, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, se oci.SignedEntity, keypair sign.Keypair, sv *SignerVerifier, certBytes []byte, idToken string) ([]byte, error) {
+	bundle, err := internalSignWithConfig(ctx, ko, bundleOpts, signingConfig, trustedMaterial, keypair, idToken, certBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	var protoBundle protobundle.Bundle
+	if err := protojson.Unmarshal(bundle, &protoBundle); err != nil {
+		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
+	}
+
+	sig, extractedCert, rekorEntry, _, err := ExtractElementsFromProtoBundle(&protoBundle)
+	if err != nil {
+		return nil, fmt.Errorf("extracting elements from proto bundle: %w", err)
+	}
+
+	var certPEM []byte
+	if extractedCert != nil {
+		certPEM = pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: extractedCert.GetRawBytes(),
+		})
+	}
+
+	if bundleOpts.Upload {
+		var rekorBundle *cbundle.RekorBundle
+		if rekorEntry != nil {
+			rekorBundle = &cbundle.RekorBundle{
+				SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+				Payload: cbundle.RekorPayload{
+					Body:           rekorEntry.GetCanonicalizedBody(),
+					IntegratedTime: rekorEntry.GetIntegratedTime(),
+					LogIndex:       rekorEntry.GetLogIndex(),
+					LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+				},
+			}
+		}
+
+		if bundleOpts.UseDSSE {
+			ociSig, err := static.NewAttestation(sig,
+				static.WithLayerMediaType(types.DssePayloadType),
+				static.WithCertChain(certPEM, nil),
+				static.WithBundle(rekorBundle),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("creating static attestation: %w", err)
+			}
+			dd := cremote.NewDupeDetector(sv)
+			newSE, err := mutate.AttachAttestationToEntity(se, ociSig,
+				mutate.WithDupeDetector(dd),
+				mutate.WithRecordCreationTimestamp(bundleOpts.RecordCreationTimestamp),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("attaching attestation: %w", err)
+			}
+
+			if err := ociremote.WriteAttestations(bundleOpts.Digest.Repository, newSE, bundleOpts.OCIRemoteOpts...); err != nil {
+				return nil, fmt.Errorf("uploading legacy attestation: %w", err)
+			}
+			ui.Infof(ctx, "Pushed attestation to: %s", bundleOpts.Digest.String())
+		} else {
+			ociSig, err := static.NewSignature(bundleOpts.Payload, base64.StdEncoding.EncodeToString(sig),
+				static.WithCertChain(certPEM, nil),
+				static.WithBundle(rekorBundle),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("creating static signature: %w", err)
+			}
+			dd := cremote.NewDupeDetector(sv)
+			newSE, err := mutate.AttachSignatureToEntity(se, ociSig,
+				mutate.WithDupeDetector(dd),
+				mutate.WithRecordCreationTimestamp(bundleOpts.RecordCreationTimestamp),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("attaching signature: %w", err)
+			}
+
+			if err := ociremote.WriteSignatures(bundleOpts.Digest.Repository, newSE, bundleOpts.OCIRemoteOpts...); err != nil {
+				return nil, fmt.Errorf("uploading legacy signature: %w", err)
+			}
+			ui.Infof(ctx, "Pushed signature to: %s", bundleOpts.Digest.String())
+		}
+	}
+
 	return bundle, nil
 }
 

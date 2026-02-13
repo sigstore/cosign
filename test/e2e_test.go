@@ -2824,11 +2824,11 @@ func TestRekorOutput(t *testing.T) {
 		PassFunc:     passFunc,
 		RekorURL:     rekorURL,
 		RekorVersion: 1,
-		BundlePath:   bundlePath,
 	}
 	so := options.SignOptions{
 		Upload:     true,
 		TlogUpload: true,
+		BundlePath: bundlePath,
 	}
 
 	// Sign the image

@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,22 +29,14 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	icos "github.com/sigstore/cosign/v3/internal/pkg/cosign"
-	ifulcio "github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio"
-	ipayload "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
-	irekor "github.com/sigstore/cosign/v3/internal/pkg/cosign/rekor"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
-	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -115,9 +107,9 @@ func SignCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, s
 				return fmt.Errorf("accessing image: %w", err)
 			}
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts, annotations)
+				err = signDigestNewBundle(ctx, digest, ko, signOpts, annotations)
 			} else {
-				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
+				err = signDigestLegacyBundle(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
@@ -138,9 +130,9 @@ func SignCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, s
 			}
 			digest := ref.Context().Digest(d.String())
 			if signOpts.NewBundleFormat {
-				err = signDigestBundle(ctx, digest, ko, signOpts, annotations)
+				err = signDigestNewBundle(ctx, digest, ko, signOpts, annotations)
 			} else {
-				err = signDigest(ctx, digest, staticPayload, ko, signOpts, annotations, se)
+				err = signDigestLegacyBundle(ctx, digest, staticPayload, ko, signOpts, annotations, se)
 			}
 			if err != nil {
 				return fmt.Errorf("signing digest: %w", err)
@@ -154,7 +146,9 @@ func SignCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, s
 	return nil
 }
 
-func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, annotations map[string]any) error {
+func signDigestNewBundle(ctx context.Context, digest name.Digest, ko options.KeyOpts, signOpts options.SignOptions, annotations map[string]any) error {
+	var err error
+
 	digestParts := strings.Split(digest.DigestStr(), ":")
 	if len(digestParts) != 2 {
 		return fmt.Errorf("unable to parse digest %s", digest.DigestStr())
@@ -173,239 +167,243 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		Predicate:     &structpb.Struct{},
 	}
 
-	payload, err := protojson.Marshal(statement)
+	p, err := protojson.Marshal(statement)
+	if err != nil {
+		return fmt.Errorf("marshalling statement: %w", err)
+	}
+
+	ociremoteOpts, outputSignature, outputPayload, err := prepareSignContext(ctx, digest, &ko, signOpts)
 	if err != nil {
 		return err
 	}
 
-	regOpts := signOpts.Registry
-	ociremoteOpts, err := regOpts.ClientOpts(ctx)
-	if err != nil {
-		return fmt.Errorf("constructing client options: %w", err)
-	}
-	if regOpts.AllowHTTPRegistry || regOpts.AllowInsecure {
-		ociremoteOpts = append(ociremoteOpts, ociremote.WithNameOptions(name.Insecure))
-	}
+	ko.NewBundleFormat = true
 
 	bundleOpts := signcommon.CommonBundleOpts{
-		Payload:       payload,
-		Digest:        digest,
-		PredicateType: types.CosignSignPredicateType,
-		BundlePath:    signOpts.BundlePath,
-		Upload:        signOpts.Upload,
-		OCIRemoteOpts: ociremoteOpts,
+		Digest:                  digest,
+		PredicateType:           types.CosignSignPredicateType,
+		BundlePath:              signOpts.BundlePath,
+		Upload:                  signOpts.Upload,
+		OCIRemoteOpts:           ociremoteOpts,
+		OutputSignature:         outputSignature,
+		OutputPayload:           outputPayload,
+		OutputCertificate:       signOpts.OutputCertificate,
+		RecordCreationTimestamp: signOpts.RecordCreationTimestamp,
+		UseDSSE:                 true,
 	}
 
-	if ko.SigningConfig != nil {
-		_, err := signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, signOpts.Cert, signOpts.CertChain, ko, false, signOpts.TlogUpload, payload, digest, "dsse")
+	keypair, sv, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
 	if err != nil {
-		return fmt.Errorf("getting bundle components: %w", err)
+		return fmt.Errorf("getting keypair and token: %w", err)
 	}
-	defer closeSV()
+	defer sv.Close()
 
-	return signcommon.WriteBundle(ctx, bundleComponents.SV, bundleComponents.RekorEntry, bundleOpts, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes)
+	bundleOpts.Payload = p
+	bundleBytes, err := signcommon.SignAndUploadNewBundle(ctx, ko, bundleOpts, ko.SigningConfig, ko.TrustedMaterial, keypair, certBytes, idToken)
+	if err != nil {
+		return err
+	}
+
+	if signOpts.OutputSignature != "" {
+		var protoBundle protobundle.Bundle
+		if err := protojson.Unmarshal(bundleBytes, &protoBundle); err == nil {
+			sig, _, _, _, err := signcommon.ExtractElementsFromProtoBundle(&protoBundle)
+			if err == nil {
+				if err := os.WriteFile(signOpts.OutputSignature, []byte(base64.StdEncoding.EncodeToString(sig)), 0600); err != nil {
+					return fmt.Errorf("create signature file: %w", err)
+				}
+			}
+		}
+	}
+	if signOpts.OutputPayload != "" {
+		if err := os.WriteFile(signOpts.OutputPayload, p, 0600); err != nil {
+			return fmt.Errorf("create payload file: %w", err)
+		}
+	}
+	if signOpts.BundlePath != "" {
+		if err := os.WriteFile(signOpts.BundlePath, bundleBytes, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", signOpts.BundlePath)
+	}
+
+	if signOpts.OutputCertificate != "" {
+		var protoBundle protobundle.Bundle
+		if err := protojson.Unmarshal(bundleBytes, &protoBundle); err == nil {
+			_, cert, _, _, err := signcommon.ExtractElementsFromProtoBundle(&protoBundle)
+			if err == nil && cert != nil {
+				certPEM := pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: cert.GetRawBytes(),
+				})
+				if err := os.WriteFile(signOpts.OutputCertificate, certPEM, 0600); err != nil {
+					return fmt.Errorf("create certificate file: %w", err)
+				}
+				ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
+			}
+		}
+	}
+
+	return nil
 }
 
-func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
-	annotations map[string]interface{}, se oci.SignedEntity) error {
+func signDigestLegacyBundle(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions, annotations map[string]any, se oci.SignedEntity) error {
 	var err error
+
 	var payloads [][]byte
-	// The payload can be passed to skip generation.
-	if len(payload) == 0 {
+	if len(payload) != 0 {
+		payloads = append(payloads, payload)
+	} else {
 		identities := signOpts.SignContainerIdentities
 		if len(identities) == 0 {
 			identities = append(identities, "")
 		}
 		for _, identity := range identities {
-			payload, err = (&sigPayload.Cosign{
+			p, err := (&sigPayload.Cosign{
 				Image:           digest,
 				ClaimedIdentity: identity,
 				Annotations:     annotations,
 			}).MarshalJSON()
 			if err != nil {
-				return fmt.Errorf("payload: %w", err)
+				return fmt.Errorf("marshalling payload: %w", err)
 			}
-			payloads = append(payloads, payload)
+			payloads = append(payloads, p)
 		}
-	} else {
-		payloads = append(payloads, payload)
 	}
 
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
+	ociremoteOpts, outputSignature, outputPayload, err := prepareSignContext(ctx, digest, &ko, signOpts)
 	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer closeSV()
-
-	dd := cremote.NewDupeDetector(sv)
-
-	var s icos.Signer
-	s = ipayload.NewSigner(sv)
-	if sv.Cert != nil {
-		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
+		return err
 	}
 
-	if ko.TSAServerURL != "" {
-		if ko.TSAClientCACert == "" && ko.TSAClientCert == "" { // no mTLS params or custom CA
-			s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
-		} else {
-			s = tsa.NewSigner(s, client.NewTSAClientMTLS(ko.TSAServerURL,
-				ko.TSAClientCACert,
-				ko.TSAClientCert,
-				ko.TSAClientKey,
-				ko.TSAServerName,
-			))
-		}
+	ko.NewBundleFormat = false
+
+	bundleOpts := signcommon.CommonBundleOpts{
+		Digest:                  digest,
+		PredicateType:           types.CosignSignPredicateType,
+		BundlePath:              signOpts.BundlePath,
+		Upload:                  signOpts.Upload,
+		OCIRemoteOpts:           ociremoteOpts,
+		OutputSignature:         outputSignature,
+		OutputPayload:           outputPayload,
+		OutputCertificate:       signOpts.OutputCertificate,
+		RecordCreationTimestamp: signOpts.RecordCreationTimestamp,
 	}
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
+
+	var b64Sigs []string
+	var allPayloads [][]byte
+	var allBundles [][]byte
+	var firstBundle []byte
+
+	keypair, sv, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
 	if err != nil {
-		return fmt.Errorf("should upload to tlog: %w", err)
+		return fmt.Errorf("getting keypair and token: %w", err)
 	}
-	if shouldUpload {
-		rClient, err := rekor.NewClient(ko.RekorURL)
+	defer sv.Close()
+
+	for _, p := range payloads {
+		opts := bundleOpts
+		opts.Payload = p
+		bundleBytes, err := signcommon.SignAndUploadLegacyBundle(ctx, ko, opts, ko.SigningConfig, ko.TrustedMaterial, se, keypair, sv, certBytes, idToken)
 		if err != nil {
 			return err
 		}
-		s = irekor.NewSigner(s, rClient)
+		if firstBundle == nil {
+			firstBundle = bundleBytes
+		}
+
+		var protoBundle protobundle.Bundle
+		if err := protojson.Unmarshal(bundleBytes, &protoBundle); err != nil {
+			return fmt.Errorf("unmarshalling bundle: %w", err)
+		}
+		sig, cert, rekorEntry, _, err := signcommon.ExtractElementsFromProtoBundle(&protoBundle)
+		if err != nil {
+			return fmt.Errorf("extracting elements: %w", err)
+		}
+
+		pubKeyPem, _ := keypair.GetPublicKeyPem()
+		block, _ := pem.Decode([]byte(pubKeyPem))
+		if block == nil {
+			return fmt.Errorf("decoding public key")
+		}
+
+		legacyBytes, err := signcommon.NewLegacyBundleFromProtoBundleElements(sig, cert, block.Bytes, rekorEntry)
+		if err != nil {
+			return fmt.Errorf("creating legacy bundle: %w", err)
+		}
+		allBundles = append(allBundles, legacyBytes)
+		allPayloads = append(allPayloads, p)
+
+		b64Sigs = append(b64Sigs, base64.StdEncoding.EncodeToString(sig))
 	}
 
-	ociSigs := make([]oci.Signature, len(payloads))
-	b64sigs := make([]string, len(payloads))
-
-	for i, payload := range payloads {
-		ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))
-		if err != nil {
-			return err
-		}
-		ociSigs[i] = ociSig
-
-		b64sig, err := ociSig.Base64Signature()
-		if err != nil {
-			return err
-		}
-		b64sigs[i] = b64sig
-	}
-
-	outputSignature := signOpts.OutputSignature
 	if outputSignature != "" {
-		// Add digest to suffix to differentiate each image during recursive signing
-		if signOpts.Recursive {
-			outputSignature = fmt.Sprintf("%s-%s", outputSignature, strings.Replace(digest.DigestStr(), ":", "-", 1))
-		}
-		if err := os.WriteFile(outputSignature, []byte(strings.Join(b64sigs, "\n")), 0600); err != nil {
+		if err := os.WriteFile(outputSignature, []byte(strings.Join(b64Sigs, "\n")), 0600); err != nil {
 			return fmt.Errorf("create signature file: %w", err)
 		}
 	}
-	outputPayload := signOpts.OutputPayload
 	if outputPayload != "" {
-		// Add digest to suffix to differentiate each image during recursive signing
-		if signOpts.Recursive {
-			outputPayload = fmt.Sprintf("%s-%s", outputPayload, strings.Replace(digest.DigestStr(), ":", "-", 1))
-		}
-		if err := os.WriteFile(outputPayload, bytes.Join(payloads, []byte("\n")), 0600); err != nil {
+		if err := os.WriteFile(outputPayload, bytes.Join(allPayloads, []byte("\n")), 0600); err != nil {
 			return fmt.Errorf("create payload file: %w", err)
 		}
 	}
-
-	if signOpts.OutputCertificate != "" {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return fmt.Errorf("create certificate file: %w", err)
-		}
-
-		if err := os.WriteFile(signOpts.OutputCertificate, rekorBytes, 0600); err != nil {
-			return fmt.Errorf("create certificate file: %w", err)
-		}
-		// TODO: maybe accept a --b64 flag as well?
-		ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
-	}
-
-	if ko.BundlePath != "" {
-		var contents [][]byte
-		for _, ociSig := range ociSigs {
-			signedPayload, err := fetchLocalSignedPayload(ociSig)
-			if err != nil {
-				return fmt.Errorf("failed to fetch signed payload: %w", err)
-			}
-
-			content, err := json.Marshal(signedPayload)
-			if err != nil {
-				return fmt.Errorf("failed to marshal signed payload: %w", err)
-			}
-			contents = append(contents, content)
-		}
-		if err := os.WriteFile(ko.BundlePath, bytes.Join(contents, []byte("\n")), 0600); err != nil {
+	if signOpts.BundlePath != "" {
+		if err := os.WriteFile(signOpts.BundlePath, bytes.Join(allBundles, []byte("\n")), 0600); err != nil {
 			return fmt.Errorf("create bundle file: %w", err)
 		}
-		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		ui.Infof(ctx, "Wrote bundle to file %s", signOpts.BundlePath)
 	}
 
-	if !signOpts.Upload {
-		return nil
-	}
-
-	// Attach the signature to the entity.
-	var newSE oci.SignedEntity
-	for _, ociSig := range ociSigs {
-		newSE, err = mutate.AttachSignatureToEntity(se, ociSig, mutate.WithDupeDetector(dd), mutate.WithRecordCreationTimestamp(signOpts.RecordCreationTimestamp))
-		if err != nil {
-			return err
+	if signOpts.OutputCertificate != "" && firstBundle != nil {
+		var protoBundle protobundle.Bundle
+		if err := protojson.Unmarshal(firstBundle, &protoBundle); err != nil {
+			return nil // ignore if unmarshal fails as this is certificate only
 		}
-		se = newSE
+		_, cert, _, _, err := signcommon.ExtractElementsFromProtoBundle(&protoBundle)
+		if err == nil && cert != nil {
+			certPEM := pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: cert.GetRawBytes(),
+			})
+			if err := os.WriteFile(signOpts.OutputCertificate, certPEM, 0600); err != nil {
+				return fmt.Errorf("create certificate file: %w", err)
+			}
+			ui.Infof(ctx, "Certificate wrote in the file %s", signOpts.OutputCertificate)
+		}
 	}
 
-	// Publish the signatures associated with this entity
-	walkOpts, err := signOpts.Registry.ClientOpts(ctx)
-	if err != nil {
-		return fmt.Errorf("constructing client options: %w", err)
-	}
-
-	// Check if we are overriding the signatures repository location
-	repo, _ := ociremote.GetEnvTargetRepository()
-	if repo.RepositoryStr() == "" {
-		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
-	} else {
-		ui.Infof(ctx, "Pushing signature to: %s", repo.RepositoryStr())
-	}
-
-	// Publish the signatures associated with this entity (using OCI 1.1+ behavior)
-	if signOpts.RegistryExperimental.RegistryReferrersMode == options.RegistryReferrersModeOCI11 {
-		return ociremote.WriteSignaturesExperimentalOCI(digest, newSE, walkOpts...)
-	}
-
-	// Publish the signatures associated with this entity
-	return ociremote.WriteSignatures(digest.Repository, newSE, walkOpts...)
+	return nil
 }
 
-func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, error) {
-	signedPayload := &cosign.LocalSignedPayload{}
-	var err error
-
-	signedPayload.Base64Signature, err = sig.Base64Signature()
+func prepareSignContext(ctx context.Context, digest name.Digest, ko *options.KeyOpts, signOpts options.SignOptions) (ociremoteOpts []ociremote.Option, outputSignature, outputPayload string, err error) {
+	regOpts := signOpts.Registry
+	ociremoteOpts, err = regOpts.ClientOpts(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", "", fmt.Errorf("constructing client options: %w", err)
 	}
-
-	sigCert, err := sig.Cert()
-	if err != nil {
-		return nil, err
-	}
-	if sigCert != nil {
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-	} else {
-		signedPayload.Cert = ""
+	if regOpts.AllowHTTPRegistry || regOpts.AllowInsecure {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithNameOptions(name.Insecure))
 	}
 
-	signedPayload.Bundle, err = sig.Bundle()
-	if err != nil {
-		return nil, err
+	outputSignature = signOpts.OutputSignature
+	outputPayload = signOpts.OutputPayload
+	if signOpts.Recursive {
+		// Add digest to suffix to differentiate each image during recursive signing
+		suffix := strings.Replace(digest.DigestStr(), ":", "-", 1)
+		if outputSignature != "" {
+			outputSignature = fmt.Sprintf("%s-%s", outputSignature, suffix)
+		}
+		if outputPayload != "" {
+			outputPayload = fmt.Sprintf("%s-%s", outputPayload, suffix)
+		}
 	}
-	return signedPayload, nil
+
+	if ko.SigningConfig == nil {
+		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(*ko, signOpts.TlogUpload)
+		if err != nil {
+			return nil, "", "", fmt.Errorf("creating signing config: %w", err)
+		}
+	}
+
+	return ociremoteOpts, outputSignature, outputPayload, nil
 }
