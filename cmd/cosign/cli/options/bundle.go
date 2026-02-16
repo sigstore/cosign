@@ -52,7 +52,7 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().StringVar(&o.CertificatePath, "certificate", "",
-		"path to the signing certificate, likely from Fulco.")
+		"path to the signing certificate, likely from Fulcio.")
 	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
 
 	cmd.Flags().BoolVar(&o.IgnoreTlog, "ignore-tlog", false,
