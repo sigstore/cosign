@@ -62,7 +62,8 @@ func (ps *payloadSigner) Sign(ctx context.Context, payload io.Reader) (oci.Signa
 }
 
 func (ps *payloadSigner) publicKey(ctx context.Context) (pk crypto.PublicKey, err error) {
-	pkOpts := []signature.PublicKeyOption{signatureoptions.WithContext(ctx)}
+	pkOpts := make([]signature.PublicKeyOption, 0, 1+len(ps.publicKeyProviderOpts))
+	pkOpts = append(pkOpts, signatureoptions.WithContext(ctx))
 	pkOpts = append(pkOpts, ps.publicKeyProviderOpts...)
 	pk, err = ps.payloadSigner.PublicKey(pkOpts...)
 	if err != nil {
@@ -72,7 +73,8 @@ func (ps *payloadSigner) publicKey(ctx context.Context) (pk crypto.PublicKey, er
 }
 
 func (ps *payloadSigner) signPayload(ctx context.Context, payloadBytes []byte) (sig []byte, err error) {
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	sOpts := make([]signature.SignOption, 0, 1+len(ps.payloadSignerOpts))
+	sOpts = append(sOpts, signatureoptions.WithContext(ctx))
 	sOpts = append(sOpts, ps.payloadSignerOpts...)
 	sig, err = ps.payloadSigner.SignMessage(bytes.NewReader(payloadBytes), sOpts...)
 	if err != nil {

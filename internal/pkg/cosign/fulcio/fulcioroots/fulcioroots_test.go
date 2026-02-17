@@ -34,7 +34,7 @@ func TestGetFulcioRoots(t *testing.T) {
 	subCert, _, _ := test.GenerateSubordinateCa(rootCert, rootPriv)
 	subPemCert, _ := cryptoutils.MarshalCertificateToPEM(subCert)
 
-	var chain []byte
+	chain := make([]byte, 0, len(subPemCert)+len(rootPemCert))
 	chain = append(chain, subPemCert...)
 	chain = append(chain, rootPemCert...)
 

@@ -165,7 +165,7 @@ func TestCreateCmd(t *testing.T) {
 			}
 			delete(specMap, key)
 
-			var pairs []string
+			pairs := make([]string, 0, len(specMap))
 			for k, v := range specMap {
 				pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
 			}

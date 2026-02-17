@@ -117,7 +117,11 @@ func (m *mockAttestation) Base64Signature() (string, error) {
 }
 
 func appendSlices(slices [][]byte) []byte {
-	var tmp []byte
+	totalLen := 0
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+	tmp := make([]byte, 0, totalLen)
 	for _, s := range slices {
 		tmp = append(tmp, s...)
 	}
