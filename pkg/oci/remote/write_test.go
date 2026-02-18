@@ -337,6 +337,101 @@ func TestWriteAttestationsReferrer(t *testing.T) {
 	}
 }
 
+func TestWriteAttestationsReferrerPreservesAnnotations(t *testing.T) {
+	// Save original functions
+	origHead := remoteHead
+	origWriteLayer := remoteWriteLayer
+	origPut := remotePut
+	t.Cleanup(func() {
+		remoteHead = origHead
+		remoteWriteLayer = origWriteLayer
+		remotePut = origPut
+	})
+
+	digest := name.MustParseReference("gcr.io/test/image@sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").(name.Digest)
+
+	// Create a test signed entity with attestations that have annotations
+	i, err := random.Image(300, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(i)
+
+	// Create attestation with certificate chain and custom annotations
+	certPEM := []byte("-----BEGIN CERTIFICATE-----\ntest-cert\n-----END CERTIFICATE-----\n")
+	chainPEM := []byte("-----BEGIN CERTIFICATE-----\ntest-chain\n-----END CERTIFICATE-----\n")
+	att, err := cosignstatic.NewAttestation([]byte("test-attestation"),
+		cosignstatic.WithCertChain(certPEM, chainPEM),
+		cosignstatic.WithAnnotations(map[string]string{
+			"predicateType": "https://cosign.sigstore.dev/attestation/v1",
+		}),
+	)
+	if err != nil {
+		t.Fatalf("static.NewAttestation() = %v", err)
+	}
+	si, err = mutate.AttachAttestationToImage(si, att)
+	if err != nil {
+		t.Fatalf("AttachAttestationToImage() = %v", err)
+	}
+
+	// Mock remoteHead to return a descriptor
+	remoteHead = func(name.Reference, ...remote.Option) (*v1.Descriptor, error) {
+		return &v1.Descriptor{
+			MediaType: types.DockerManifestSchema2,
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: "abcdef1234567890"},
+			Size:      100,
+		}, nil
+	}
+
+	// Mock remoteWriteLayer to succeed
+	remoteWriteLayer = func(name.Repository, v1.Layer, ...remote.Option) error {
+		return nil
+	}
+
+	// Mock remotePut to capture the manifest
+	var capturedManifest remote.Taggable
+	remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+		capturedManifest = manifest
+		return nil
+	}
+
+	err = WriteAttestationsReferrer(digest, si)
+	if err != nil {
+		t.Fatalf("WriteAttestationsReferrer() = %v", err)
+	}
+
+	// Verify that a manifest was uploaded
+	if capturedManifest == nil {
+		t.Fatal("Expected manifest to be uploaded, but none was captured")
+	}
+
+	refManifest, ok := capturedManifest.(referrerManifest)
+	if !ok {
+		t.Fatalf("Expected referrerManifest, got %T", capturedManifest)
+	}
+
+	if len(refManifest.Layers) == 0 {
+		t.Fatal("Expected at least one layer in manifest")
+	}
+
+	// Verify per-layer annotations are preserved (this is the bug fix)
+	layerAnnotations := refManifest.Layers[0].Annotations
+	if layerAnnotations == nil {
+		t.Fatal("Expected layer annotations to be preserved, got nil")
+	}
+
+	expectedKeys := []string{
+		"dev.sigstore.cosign/certificate",
+		"dev.sigstore.cosign/chain",
+		"predicateType",
+	}
+	for _, key := range expectedKeys {
+		if _, exists := layerAnnotations[key]; !exists {
+			t.Errorf("Expected layer annotation %q to be present", key)
+		}
+	}
+}
+
 func TestWriteReferrer(t *testing.T) {
 	// Save original functions
 	origHead := remoteHead

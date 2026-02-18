@@ -359,6 +359,15 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			Digest:    layerDigest,
 			Size:      layerSize,
 		}
+		// Preserve per-layer annotations when available (e.g. from oci.Signature
+		// objects that carry certificate, chain, and RFC3161 timestamp annotations).
+		if al, ok := layer.(interface {
+			Annotations() (map[string]string, error)
+		}); ok {
+			if ann, err := al.Annotations(); err == nil && len(ann) > 0 {
+				layerDescriptors[i].Annotations = ann
+			}
+		}
 	}
 
 	// Create a manifest that includes the blob as a layer
@@ -418,9 +427,16 @@ func WriteAttestationsReferrer(d name.Digest, se oci.SignedEntity, opts ...Optio
 	if err != nil {
 		return err
 	}
-	layers, err := atts.Layers()
+	// Use Get() instead of Layers() to retrieve oci.Signature objects that
+	// carry per-layer descriptor annotations (certificate, chain, RFC3161
+	// timestamp). Layers() returns raw v1.Layer objects without annotations.
+	sigs, err := atts.Get()
 	if err != nil {
 		return err
+	}
+	layers := make([]v1.Layer, len(sigs))
+	for i, sig := range sigs {
+		layers[i] = sig
 	}
 
 	annotations := map[string]string{
