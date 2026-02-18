@@ -247,6 +247,25 @@ Pushing signature to: ttl.sh/my-artifact-f42c22e0
 
 As usual, make sure to reference any images you sign by their digest to make sure you don't sign the wrong thing!
 
+##### Keyless blob verification with identity constraints
+
+For broader keyless signing and verification flows, see the
+[Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/).
+
+If you signed a blob with keyless signing (`cosign sign-blob` without `--key`), verify with both
+the expected certificate identity and OIDC issuer so verification is bound to the expected signer context:
+
+```shell
+$ cosign sign-blob artifact --bundle artifact.sigstore.json --yes
+$ cosign verify-blob artifact \
+  --bundle artifact.sigstore.json \
+  --certificate-identity "https://github.com/ORG/REPO/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+If either `--certificate-identity` or `--certificate-oidc-issuer` does not match the signing
+certificate, verification should fail.
+
 #### Tekton Bundles
 
 [Tekton](https://tekton.dev) bundles can be uploaded and managed within an OCI registry.
