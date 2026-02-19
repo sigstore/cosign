@@ -79,6 +79,7 @@ ENTRYPOINT [ "cosign" ]
 This shows how to:
 * sign a container image with the default identity-based "keyless signing" method (see [the documentation for more information](https://docs.sigstore.dev/cosign/signing/overview/))
 * verify the container image
+* explore broader keyless blob signing/verification flows in the [Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/)
 
 ### Sign a container and store the signature in the registry
 
@@ -181,6 +182,18 @@ If you signed with a keypair, the same command will work, assuming the public ke
 cosign verify --key cosign.pub --offline --local-image ./path/to/dir
 ```
 
+### Identity-based blob signing and verification
+
+Use keyless blob signing (`cosign sign-blob` without `--key`) and verify against the expected signer identity:
+
+```shell
+$ cosign sign-blob artifact --bundle artifact.sigstore.json --yes
+$ cosign verify-blob artifact \
+  --bundle artifact.sigstore.json \
+  --certificate-identity "https://github.com/ORG/REPO/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
 ### What ** is not ** production ready?
 
 While parts of `cosign` are stable, we are continuing to experiment and add new features.
@@ -246,25 +259,6 @@ Pushing signature to: ttl.sh/my-artifact-f42c22e0
 ```
 
 As usual, make sure to reference any images you sign by their digest to make sure you don't sign the wrong thing!
-
-##### Keyless blob verification with identity constraints
-
-For broader keyless signing and verification flows, see the
-[Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/).
-
-If you signed a blob with keyless signing (`cosign sign-blob` without `--key`), verify with both
-the expected certificate identity and OIDC issuer so verification is bound to the expected signer context:
-
-```shell
-$ cosign sign-blob artifact --bundle artifact.sigstore.json --yes
-$ cosign verify-blob artifact \
-  --bundle artifact.sigstore.json \
-  --certificate-identity "https://github.com/ORG/REPO/.github/workflows/release.yml@refs/heads/main" \
-  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-```
-
-If either `--certificate-identity` or `--certificate-oidc-issuer` does not match the signing
-certificate, verification should fail.
 
 #### Tekton Bundles
 
