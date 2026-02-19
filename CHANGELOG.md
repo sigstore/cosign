@@ -1,3 +1,33 @@
+# v3.0.5
+
+## Deprecations
+
+* Deprecate rekor-entry-type flag (#4691)
+* Deprecate cosign triangulate (#4676)
+* Deprecate cosign copy (#4681)
+
+## Features
+
+* Automatically require signed timestamp with Rekor v2 entries (#4666)
+* Allow --local-image with --new-bundle-format for v2 and v3 signatures (#4626)
+* Add mTLS support for TSA client connections when signing with a signing config (#4620)
+* Enforce TSA requirement for Rekor v2, Fuclio signing (#4683)
+
+## Bug Fixes
+
+* Add empty predicate to cosign sign when payload type is application/vnd.in-toto+json (#4635)
+* fix: avoid panic on malformed attestation payload (#4651)
+* fix: avoid panic on malformed tlog entries (#4649)
+* fix: avoid panic on malformed replace payload (#4653)
+* Gracefully fail if bundle payload body is not a string (#4648)
+* Verify validity of chain rather than just certificate (#4663)
+* fix: avoid panic on malformed tlog entry body (#4652)
+
+## Documentation
+
+* docs(cosign): clarify RFC3161 revocation semantics (#4642)
+* Fix typo in CLI help (#4701)
+
 # v3.0.4
 
 v3.0.4 resolves https://github.com/sigstore/cosign/security/advisories/GHSA-whqx-f9j3-ch6m.
