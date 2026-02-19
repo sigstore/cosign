@@ -79,6 +79,7 @@ ENTRYPOINT [ "cosign" ]
 This shows how to:
 * sign a container image with the default identity-based "keyless signing" method (see [the documentation for more information](https://docs.sigstore.dev/cosign/signing/overview/))
 * verify the container image
+* explore broader keyless blob signing/verification flows in the [Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/)
 
 ### Sign a container and store the signature in the registry
 
@@ -179,6 +180,18 @@ If you signed with a keypair, the same command will work, assuming the public ke
 
 ```
 cosign verify --key cosign.pub --offline --local-image ./path/to/dir
+```
+
+### Identity-based blob signing and verification
+
+Use keyless blob signing (`cosign sign-blob` without `--key`) and verify against the expected signer identity:
+
+```shell
+$ cosign sign-blob artifact --bundle artifact.sigstore.json --yes
+$ cosign verify-blob artifact \
+  --bundle artifact.sigstore.json \
+  --certificate-identity "https://github.com/ORG/REPO/.github/workflows/release.yml@refs/heads/main" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
 ### What ** is not ** production ready?
