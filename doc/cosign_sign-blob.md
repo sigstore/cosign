@@ -11,9 +11,6 @@ cosign sign-blob [flags]
 ```
   cosign sign-blob --key <key path>|<kms uri> <blob>
 
-  # sign a blob with Google sign-in (experimental)
-  cosign sign-blob <FILE> --output-signature <FILE> --output-certificate <FILE>
-
   # sign a blob with a local key pair file
   cosign sign-blob --key cosign.key <FILE>
 
@@ -36,7 +33,6 @@ cosign sign-blob [flags]
 ### Options
 
 ```
-      --b64                              whether to base64 encode the output (default true)
       --bundle string                    write everything required to verify the blob to a FILE
       --certificate string               path to the X.509 certificate for signing attestation
       --certificate-chain string         path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signed attestation. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate.
@@ -45,7 +41,6 @@ cosign sign-blob [flags]
   -h, --help                             help for sign-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify             skip verifying fulcio published to the SCT (this should only be used for testing).
-      --issue-certificate                issue a code signing certificate from Fulcio, even if a key is provided
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --new-bundle-format                output bundle in new format that contains all verification material (default true)
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
@@ -54,11 +49,7 @@ cosign sign-blob [flags]
       --oidc-issuer string               OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --oidc-provider string             Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --output string                    write the signature to FILE
-      --output-certificate string        write the certificate to FILE
-      --output-signature string          write the signature to FILE
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
-      --rfc3161-timestamp string         write the RFC3161 timestamp to a file
       --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
       --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key
