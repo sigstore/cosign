@@ -69,6 +69,7 @@ func TestSecretsKMS(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
 		RekorURL:         rekorURL,
+		RekorVersion:     1,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{

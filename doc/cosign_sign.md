@@ -110,6 +110,7 @@ cosign sign [flags]
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
+      --rekor-version uint32                                                                     version of rekor API (default 1)
       --sign-container-identity strings                                                          manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature, this flag is comma delimited. ex: --sign-container-identity=identity1,identity2
       --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
       --sk                                                                                       whether to use a hardware security key

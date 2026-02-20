@@ -18,33 +18,37 @@ package sign
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
-	icos "github.com/sigstore/cosign/v3/internal/pkg/cosign"
-	ifulcio "github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio"
-	ipayload "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
-	irekor "github.com/sigstore/cosign/v3/internal/pkg/cosign/rekor"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore/pkg/signature"
 	sigPayload "github.com/sigstore/sigstore/pkg/signature/payload"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -196,17 +200,24 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		OCIRemoteOpts: ociremoteOpts,
 	}
 
-	if ko.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
-	}
-
-	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, signOpts.Cert, signOpts.CertChain, ko, false, signOpts.TlogUpload, payload, digest, "dsse")
+	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if err != nil {
-		return fmt.Errorf("getting bundle components: %w", err)
+		return fmt.Errorf("should upload to tlog: %w", err)
 	}
-	defer closeSV()
 
-	return signcommon.WriteBundle(ctx, bundleComponents.SV, bundleComponents.RekorEntry, bundleOpts, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes)
+	if ko.SigningConfig == nil {
+		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(ko, shouldUpload)
+		if err != nil {
+			return fmt.Errorf("creating signing config: %w", err)
+		}
+	}
+
+	_, err = signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko options.KeyOpts, signOpts options.SignOptions,
@@ -234,59 +245,101 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		payloads = append(payloads, payload)
 	}
 
-	sv, closeSV, err := signcommon.GetSignerVerifier(ctx, signOpts.Cert, signOpts.CertChain, ko)
-	if err != nil {
-		return fmt.Errorf("getting signer: %w", err)
-	}
-	defer closeSV()
-
-	dd := cremote.NewDupeDetector(sv)
-
-	var s icos.Signer
-	s = ipayload.NewSigner(sv)
-	if sv.Cert != nil {
-		s = ifulcio.NewSigner(s, sv.Cert, sv.Chain)
-	}
-
-	if ko.TSAServerURL != "" {
-		if ko.TSAClientCACert == "" && ko.TSAClientCert == "" { // no mTLS params or custom CA
-			s = tsa.NewSigner(s, client.NewTSAClient(ko.TSAServerURL))
-		} else {
-			s = tsa.NewSigner(s, client.NewTSAClientMTLS(ko.TSAServerURL,
-				ko.TSAClientCACert,
-				ko.TSAClientCert,
-				ko.TSAClientKey,
-				ko.TSAServerName,
-			))
-		}
-	}
 	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if err != nil {
 		return fmt.Errorf("should upload to tlog: %w", err)
 	}
-	if shouldUpload {
-		rClient, err := rekor.NewClient(ko.RekorURL)
+
+	if ko.SigningConfig == nil {
+		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(ko, shouldUpload)
 		if err != nil {
-			return err
+			return fmt.Errorf("creating signing config: %w", err)
 		}
-		s = irekor.NewSigner(s, rClient)
 	}
+
+	keypair, _, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
+	if err != nil {
+		return fmt.Errorf("getting keypair and token: %w", err)
+	}
+
+	var tsaClientTransport http.RoundTripper
+	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
+		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
+		if err != nil {
+			return fmt.Errorf("getting TSA client transport: %w", err)
+		}
+	}
+	cbundleOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
 	ociSigs := make([]oci.Signature, len(payloads))
 	b64sigs := make([]string, len(payloads))
 
-	for i, payload := range payloads {
-		ociSig, _, err := s.Sign(ctx, bytes.NewReader(payload))
-		if err != nil {
-			return err
-		}
-		ociSigs[i] = ociSig
+	var firstCertPem []byte
 
-		b64sig, err := ociSig.Base64Signature()
-		if err != nil {
-			return err
+	for i, payload := range payloads {
+		content := &sign.PlainData{
+			Data: payload,
 		}
+
+		bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, cbundleOpts)
+		if err != nil {
+			return fmt.Errorf("signing bundle: %w", err)
+		}
+
+		var bundle protobundle.Bundle
+		if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+			return fmt.Errorf("unmarshalling bundle: %w", err)
+		}
+
+		sigBytes, extractedCerts, rekorEntry, rfc3161Timestamp, err := signcommon.ExtractElementsFromProtoBundle(&bundle)
+		if err != nil {
+			return fmt.Errorf("extracting elements from bundle: %w", err)
+		}
+
+		var certPem, chainPem []byte
+		for j, c := range extractedCerts {
+			p := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.GetRawBytes()})
+			if j == 0 {
+				certPem = p
+				if i == 0 {
+					firstCertPem = p
+				}
+			} else {
+				chainPem = append(chainPem, p...)
+			}
+		}
+
+		b64sig := base64.StdEncoding.EncodeToString(sigBytes)
 		b64sigs[i] = b64sig
+
+		var opts []static.Option
+		if certPem != nil {
+			opts = append(opts, static.WithCertChain(certPem, chainPem))
+		}
+
+		if rfc3161Timestamp != nil {
+			opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(rfc3161Timestamp.GetSignedTimestamp())))
+		}
+
+		if rekorEntry != nil {
+			rb := &cbundle.RekorBundle{
+				SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+				Payload: cbundle.RekorPayload{
+					Body:           rekorEntry.GetCanonicalizedBody(),
+					IntegratedTime: rekorEntry.GetIntegratedTime(),
+					LogIndex:       rekorEntry.GetLogIndex(),
+					LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+				},
+			}
+			opts = append(opts, static.WithBundle(rb))
+		}
+
+		ociSig, err := static.NewSignature(payload, b64sig, opts...)
+		if err != nil {
+			return fmt.Errorf("creating signature: %w", err)
+		}
+
+		ociSigs[i] = ociSig
 	}
 
 	outputSignature := signOpts.OutputSignature
@@ -311,12 +364,18 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	if signOpts.OutputCertificate != "" {
-		rekorBytes, err := sv.Bytes(ctx)
-		if err != nil {
-			return fmt.Errorf("create certificate file: %w", err)
+		var outBytes []byte
+		if len(firstCertPem) > 0 {
+			outBytes = firstCertPem
+		} else {
+			pubPem, err := keypair.GetPublicKeyPem()
+			if err != nil {
+				return fmt.Errorf("getting public key pem: %w", err)
+			}
+			outBytes = []byte(pubPem)
 		}
 
-		if err := os.WriteFile(signOpts.OutputCertificate, rekorBytes, 0600); err != nil {
+		if err := os.WriteFile(signOpts.OutputCertificate, outBytes, 0600); err != nil {
 			return fmt.Errorf("create certificate file: %w", err)
 		}
 		// TODO: maybe accept a --b64 flag as well?
@@ -346,6 +405,12 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	if !signOpts.Upload {
 		return nil
 	}
+
+	ddVerifier, err := signature.LoadVerifier(keypair.GetPublicKey(), crypto.SHA256)
+	if err != nil {
+		return fmt.Errorf("loading verifier: %w", err)
+	}
+	dd := cremote.NewDupeDetector(ddVerifier)
 
 	// Attach the signature to the entity.
 	var newSE oci.SignedEntity
