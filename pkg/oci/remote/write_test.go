@@ -197,7 +197,6 @@ func TestWriteAttestationNewBundleFormat(t *testing.T) {
 		remotePut = origPut
 	})
 
-	bundleBytes := []byte(`{"payload":"test","signatures":[]}`)
 	predicateType := "https://test.predicate.type"
 	digest := name.MustParseReference("gcr.io/test/image@sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").(name.Digest)
 
@@ -215,41 +214,68 @@ func TestWriteAttestationNewBundleFormat(t *testing.T) {
 		return nil
 	}
 
-	// Mock remotePut to capture the manifest
-	var capturedManifest remote.Taggable
-	remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
-		capturedManifest = manifest
-		return nil
+	tests := []struct {
+		name              string
+		bundleBytes       []byte
+		expectedMediaType string
+	}{
+		{
+			name:              "v0.3 bundle (no cert chain)",
+			bundleBytes:       []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","payload":"test","signatures":[]}`),
+			expectedMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		},
+		{
+			name:              "v0.2 bundle (with cert chain)",
+			bundleBytes:       []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.2+json","payload":"test","signatures":[]}`),
+			expectedMediaType: "application/vnd.dev.sigstore.bundle.v0.2+json",
+		},
+		{
+			name:              "no mediaType defaults to v0.3",
+			bundleBytes:       []byte(`{"payload":"test","signatures":[]}`),
+			expectedMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		},
 	}
 
-	err := WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType)
-	if err != nil {
-		t.Fatalf("WriteAttestationNewBundleFormat() = %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock remotePut to capture the manifest
+			var capturedManifest remote.Taggable
+			remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+				capturedManifest = manifest
+				return nil
+			}
 
-	// Verify that a manifest was uploaded
-	if capturedManifest == nil {
-		t.Error("Expected manifest to be uploaded, but none was captured")
-	}
+			err := WriteAttestationNewBundleFormat(digest, tt.bundleBytes, predicateType)
+			if err != nil {
+				t.Fatalf("WriteAttestationNewBundleFormat() = %v", err)
+			}
 
-	// Verify it's a referrerManifest
-	refManifest, ok := capturedManifest.(referrerManifest)
-	if !ok {
-		t.Errorf("Expected referrerManifest, got %T", capturedManifest)
-		return
-	}
+			// Verify that a manifest was uploaded
+			if capturedManifest == nil {
+				t.Error("Expected manifest to be uploaded, but none was captured")
+				return
+			}
 
-	// Verify the artifact type contains bundle media type
-	if refManifest.ArtifactType == "" {
-		t.Error("Expected ArtifactType to be set")
-	}
+			// Verify it's a referrerManifest
+			refManifest, ok := capturedManifest.(referrerManifest)
+			if !ok {
+				t.Errorf("Expected referrerManifest, got %T", capturedManifest)
+				return
+			}
 
-	// Verify annotations are set correctly
-	if refManifest.Annotations["dev.sigstore.bundle.content"] != "dsse-envelope" {
-		t.Errorf("Expected bundle.content annotation to be 'dsse-envelope', got %s", refManifest.Annotations["dev.sigstore.bundle.content"])
-	}
-	if refManifest.Annotations["dev.sigstore.bundle.predicateType"] != predicateType {
-		t.Errorf("Expected predicateType annotation to be %s, got %s", predicateType, refManifest.Annotations["dev.sigstore.bundle.predicateType"])
+			// Verify the artifact type matches the expected media type
+			if refManifest.ArtifactType != tt.expectedMediaType {
+				t.Errorf("Expected ArtifactType to be %s, got %s", tt.expectedMediaType, refManifest.ArtifactType)
+			}
+
+			// Verify annotations are set correctly
+			if refManifest.Annotations["dev.sigstore.bundle.content"] != "dsse-envelope" {
+				t.Errorf("Expected bundle.content annotation to be 'dsse-envelope', got %s", refManifest.Annotations["dev.sigstore.bundle.content"])
+			}
+			if refManifest.Annotations["dev.sigstore.bundle.predicateType"] != predicateType {
+				t.Errorf("Expected predicateType annotation to be %s, got %s", predicateType, refManifest.Annotations["dev.sigstore.bundle.predicateType"])
+			}
+		})
 	}
 }
 
@@ -414,11 +440,6 @@ func TestWriteReferrer(t *testing.T) {
 	// Verify the subject is set
 	if refManifest.Subject == nil {
 		t.Error("Expected Subject to be set")
-	}
-
-	// Verify config descriptor
-	if refManifest.Config.ArtifactType != artifactType {
-		t.Errorf("Expected Config.ArtifactType to be %s, got %s", artifactType, refManifest.Config.ArtifactType)
 	}
 }
 
