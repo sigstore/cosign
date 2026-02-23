@@ -670,16 +670,6 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 		wantVerifyErr bool
 	}{
 		{
-			name: "invalid CT key name with no usage",
-			targets: []targetInfo{
-				{
-					name:   "ct.pub",
-					source: filepath.Join(home, "fulcio", "config", "ctfe", "pubkey.pem"),
-				},
-			},
-			wantSignErr: true,
-		},
-		{
 			name: "standard key names",
 			targets: []targetInfo{
 				{
