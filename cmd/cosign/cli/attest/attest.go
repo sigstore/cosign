@@ -41,7 +41,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -146,146 +145,129 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		}
 	}
 
-	bundleBytes, keypair, err := signcommon.NewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	bundleBytes, keypair, err := signcommon.NewBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	if err != nil {
 		return fmt.Errorf("creating bundle: %w", err)
 	}
 
-	var bundle protobundle.Bundle
-	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+	if c.NewBundleFormat {
+		if c.BundlePath != "" {
+			if err := os.WriteFile(c.BundlePath, bundleBytes, 0600); err != nil {
+				return fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
+		}
+
+		if !c.NoUpload {
+			if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, ociremoteOpts...); err != nil {
+				return fmt.Errorf("writing bundle: %w", err)
+			}
+		}
+		return nil
+	}
+
+	var pb protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &pb); err != nil {
 		return fmt.Errorf("unmarshalling bundle: %w", err)
 	}
 
-	sig, extractedCerts, rekorEntry, rfc3161Timestamp, err := signcommon.ExtractElementsFromProtoBundle(&bundle)
+	bundleComponents, err := signcommon.ExtractComponentsFromProtoBundle(&pb)
 	if err != nil {
-		return fmt.Errorf("extracting elements from bundle: %w", err)
+		return fmt.Errorf("extracting components from bundle: %w", err)
 	}
 
-	var legacyBundleBytes []byte
-	if !c.NewBundleFormat {
-		pubKeyPem, err := keypair.GetPublicKeyPem()
-		if err != nil {
-			return fmt.Errorf("getting public key: %w", err)
-		}
-		block, _ := pem.Decode([]byte(pubKeyPem))
-		if block == nil {
-			return fmt.Errorf("failed to decode public key pem")
-		}
-		var leafCert *pb_go_v1.X509Certificate
-		if len(extractedCerts) > 0 {
-			leafCert = extractedCerts[0]
-		}
-		legacyBundleBytes, err = signcommon.NewLegacyBundleFromProtoBundleElements(sig, leafCert, block.Bytes, rekorEntry)
-		if err != nil {
-			return fmt.Errorf("creating legacy bundle: %w", err)
-		}
+	legacyBundleBytes, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, keypair)
+	if err != nil {
+		return fmt.Errorf("creating legacy bundle: %w", err)
 	}
 
 	if c.BundlePath != "" {
-		var contents []byte
-		if c.NewBundleFormat {
-			contents = bundleBytes
-		} else {
-			contents = legacyBundleBytes
-		}
-
-		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
+		if err := os.WriteFile(c.BundlePath, legacyBundleBytes, 0600); err != nil {
 			return fmt.Errorf("create bundle file: %w", err)
 		}
 		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
 	}
 
 	if !c.NoUpload {
-		if c.NewBundleFormat {
-			if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, ociremoteOpts...); err != nil {
-				return fmt.Errorf("writing bundle: %w", err)
+		var certPem, chainPem []byte
+		for i, cert := range bundleComponents.Certificates {
+			p := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.GetRawBytes()})
+			if i == 0 {
+				certPem = p
+			} else {
+				chainPem = append(chainPem, p...)
 			}
-			return nil
-		} else {
-			var certPem, chainPem []byte
-			for i, c := range extractedCerts {
-				p := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.GetRawBytes()})
-				if i == 0 {
-					certPem = p
-				} else {
-					chainPem = append(chainPem, p...)
-				}
-			}
-
-			opts := []static.Option{
-				static.WithLayerMediaType(types.DssePayloadType),
-				static.WithAnnotations(map[string]string{
-					"predicateType": predicateURI,
-				}),
-			}
-			if certPem != nil {
-				opts = append(opts, static.WithCertChain(certPem, chainPem))
-			}
-
-			if rfc3161Timestamp != nil {
-				opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(rfc3161Timestamp.GetSignedTimestamp())))
-			}
-
-			predicateType, err := options.ParsePredicateType(c.PredicateType)
-			if err != nil {
-				return err
-			}
-			predicateTypeAnnotation := map[string]string{
-				"predicateType": predicateType,
-			}
-			// Add predicateType as manifest annotation
-			opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
-
-			if rekorEntry != nil {
-				rb := &cbundle.RekorBundle{
-					SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
-					Payload: cbundle.RekorPayload{
-						Body:           rekorEntry.GetCanonicalizedBody(),
-						IntegratedTime: rekorEntry.GetIntegratedTime(),
-						LogIndex:       rekorEntry.GetLogIndex(),
-						LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
-					},
-				}
-				opts = append(opts, static.WithBundle(rb))
-			}
-
-			ociSig, err := static.NewAttestation(sig, opts...)
-			if err != nil {
-				return fmt.Errorf("creating attestation: %w", err)
-			}
-
-			// We don't actually need to access the remote entity to attach things to it
-			// so we use a placeholder here.
-			se := ociremote.SignedUnknown(digest, ociremoteOpts...)
-
-			ddVerifier, err := signature.LoadVerifier(keypair.GetPublicKey(), crypto.SHA256)
-			if err != nil {
-				return fmt.Errorf("loading verifier: %w", err)
-			}
-			dd := cremote.NewDupeDetector(ddVerifier)
-			signOpts := []mutate.SignOption{
-				mutate.WithDupeDetector(dd),
-				mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
-			}
-
-			if c.Replace {
-				ro := cremote.NewReplaceOp(predicateURI)
-				signOpts = append(signOpts, mutate.WithReplaceOp(ro))
-			}
-
-			// Attach the attestation to the entity.
-			newSE, err := mutate.AttachAttestationToEntity(se, ociSig, signOpts...)
-			if err != nil {
-				return fmt.Errorf("attaching attestation: %w", err)
-			}
-
-			// Publish the attestations associated with this entity
-			return ociremote.WriteAttestations(digest.Repository, newSE, ociremoteOpts...)
 		}
-	} else {
-		if c.BundlePath == "" {
-			fmt.Println(string(sig))
+
+		opts := []static.Option{
+			static.WithLayerMediaType(types.DssePayloadType),
+			static.WithAnnotations(map[string]string{
+				"predicateType": predicateURI,
+			}),
 		}
-		return nil
+		if certPem != nil {
+			opts = append(opts, static.WithCertChain(certPem, chainPem))
+		}
+
+		if bundleComponents.RFC3161Timestamp != nil {
+			opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(bundleComponents.RFC3161Timestamp.GetSignedTimestamp())))
+		}
+
+		predicateType, err := options.ParsePredicateType(c.PredicateType)
+		if err != nil {
+			return err
+		}
+		predicateTypeAnnotation := map[string]string{
+			"predicateType": predicateType,
+		}
+		// Add predicateType as manifest annotation
+		opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
+
+		if bundleComponents.RekorEntry != nil {
+			rb := &cbundle.RekorBundle{
+				SignedEntryTimestamp: bundleComponents.RekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+				Payload: cbundle.RekorPayload{
+					Body:           bundleComponents.RekorEntry.GetCanonicalizedBody(),
+					IntegratedTime: bundleComponents.RekorEntry.GetIntegratedTime(),
+					LogIndex:       bundleComponents.RekorEntry.GetLogIndex(),
+					LogID:          hex.EncodeToString(bundleComponents.RekorEntry.GetLogId().GetKeyId()),
+				},
+			}
+			opts = append(opts, static.WithBundle(rb))
+		}
+
+		ociSig, err := static.NewAttestation(bundleComponents.Signature, opts...)
+		if err != nil {
+			return fmt.Errorf("creating attestation: %w", err)
+		}
+
+		// We don't actually need to access the remote entity to attach things to it
+		// so we use a placeholder here.
+		se := ociremote.SignedUnknown(digest, ociremoteOpts...)
+
+		ddVerifier, err := signature.LoadVerifier(keypair.GetPublicKey(), crypto.SHA256)
+		if err != nil {
+			return fmt.Errorf("loading verifier: %w", err)
+		}
+		dd := cremote.NewDupeDetector(ddVerifier)
+		signOpts := []mutate.SignOption{
+			mutate.WithDupeDetector(dd),
+			mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
+		}
+
+		if c.Replace {
+			ro := cremote.NewReplaceOp(predicateURI)
+			signOpts = append(signOpts, mutate.WithReplaceOp(ro))
+		}
+
+		// Attach the attestation to the entity.
+		newSE, err := mutate.AttachAttestationToEntity(se, ociSig, signOpts...)
+		if err != nil {
+			return fmt.Errorf("attaching attestation: %w", err)
+		}
+
+		// Publish the attestations associated with this entity
+		return ociremote.WriteAttestations(digest.Repository, newSE, ociremoteOpts...)
 	}
+	return nil
 }

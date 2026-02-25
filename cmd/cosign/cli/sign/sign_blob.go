@@ -119,43 +119,35 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
-
 	bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, signOpts)
 	if err != nil {
 		return nil, fmt.Errorf("signing bundle: %w", err)
 	}
 
-	var bundle protobundle.Bundle
-	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+	if ko.NewBundleFormat {
+		if ko.BundlePath != "" {
+			if err := os.WriteFile(ko.BundlePath, bundleBytes, 0600); err != nil {
+				return nil, fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		}
+		return nil, nil
+	}
+
+	var pb protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &pb); err != nil {
 		return nil, fmt.Errorf("unmarshalling bundle: %w", err)
 	}
 
-	sig, extractedCerts, rekorEntry, rfc3161Timestamp, err := signcommon.ExtractElementsFromProtoBundle(&bundle)
+	bundleComponents, err := signcommon.ExtractComponentsFromProtoBundle(&pb)
 	if err != nil {
-		return nil, fmt.Errorf("extracting elements from bundle: %w", err)
-	}
-	var extractedCert *pb_go_v1.X509Certificate
-	if len(extractedCerts) > 0 {
-		extractedCert = extractedCerts[0]
+		return nil, fmt.Errorf("extracting components from bundle: %w", err)
 	}
 
 	if ko.BundlePath != "" {
-		var contents []byte
-		if ko.NewBundleFormat {
-			contents = bundleBytes
-		} else {
-			pubKeyPem, err := keypair.GetPublicKeyPem()
-			if err != nil {
-				return nil, fmt.Errorf("getting public key: %w", err)
-			}
-			block, _ := pem.Decode([]byte(pubKeyPem))
-			if block == nil {
-				return nil, fmt.Errorf("failed to decode public key pem")
-			}
-			contents, err = signcommon.NewLegacyBundleFromProtoBundleElements(sig, extractedCert, block.Bytes, rekorEntry)
-			if err != nil {
-				return nil, fmt.Errorf("creating legacy bundle: %w", err)
-			}
+		contents, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, keypair)
+		if err != nil {
+			return nil, fmt.Errorf("creating legacy bundle: %w", err)
 		}
 
 		if err := os.WriteFile(ko.BundlePath, contents, 0600); err != nil {
@@ -165,18 +157,18 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if outputSignature != "" {
-		bts := sig
+		bts := bundleComponents.Signature
 		if b64 {
-			bts = []byte(base64.StdEncoding.EncodeToString(sig))
+			bts = []byte(base64.StdEncoding.EncodeToString(bundleComponents.Signature))
 		}
 		if err := os.WriteFile(outputSignature, bts, 0600); err != nil {
 			return nil, fmt.Errorf("create signature file: %w", err)
 		}
 		ui.Infof(ctx, "Wrote signature to file %s", outputSignature)
 	} else {
-		bts := sig
+		bts := bundleComponents.Signature
 		if b64 {
-			bts = []byte(base64.StdEncoding.EncodeToString(sig))
+			bts = []byte(base64.StdEncoding.EncodeToString(bundleComponents.Signature))
 			fmt.Println(string(bts))
 		} else {
 			if _, err := os.Stdout.Write(bts); err != nil {
@@ -185,13 +177,18 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		}
 	}
 
+	var extractedCert *pb_go_v1.X509Certificate
+	if len(bundleComponents.Certificates) > 0 {
+		extractedCert = bundleComponents.Certificates[0]
+	}
+
 	if outputCertificate != "" && extractedCert != nil {
-		bts := extractedCert.GetRawBytes()
 		pemBlock := &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: extractedCert.GetRawBytes(),
 		}
 		certPem := pem.EncodeToMemory(pemBlock)
+		var bts []byte
 		if b64 {
 			bts = []byte(base64.StdEncoding.EncodeToString(certPem))
 		} else {
@@ -203,8 +200,8 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
 	}
 
-	if rfc3161Timestamp != nil && ko.RFC3161TimestampPath != "" {
-		legacyTimestamp := cbundle.TimestampToRFC3161Timestamp(rfc3161Timestamp.SignedTimestamp)
+	if bundleComponents.RFC3161Timestamp != nil && ko.RFC3161TimestampPath != "" {
+		legacyTimestamp := cbundle.TimestampToRFC3161Timestamp(bundleComponents.RFC3161Timestamp.SignedTimestamp)
 		ts, err := json.Marshal(legacyTimestamp)
 		if err != nil {
 			return nil, fmt.Errorf("marshalling timestamp: %w", err)
@@ -216,7 +213,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if b64 {
-		return []byte(base64.StdEncoding.EncodeToString(sig)), nil
+		return []byte(base64.StdEncoding.EncodeToString(bundleComponents.Signature)), nil
 	}
-	return sig, nil
+	return bundleComponents.Signature, nil
 }

@@ -212,9 +212,23 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		}
 	}
 
-	_, err = signcommon.WriteNewBundleWithSigningConfig(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	bundleBytes, _, err := signcommon.NewBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
 	if err != nil {
 		return err
+	}
+
+	if signOpts.BundlePath != "" {
+		if err := os.WriteFile(signOpts.BundlePath, bundleBytes, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", signOpts.BundlePath)
+	}
+
+	if signOpts.Upload {
+		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
+		if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -286,18 +300,18 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("signing bundle: %w", err)
 		}
 
-		var bundle protobundle.Bundle
-		if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+		var pb protobundle.Bundle
+		if err := protojson.Unmarshal(bundleBytes, &pb); err != nil {
 			return fmt.Errorf("unmarshalling bundle: %w", err)
 		}
 
-		sigBytes, extractedCerts, rekorEntry, rfc3161Timestamp, err := signcommon.ExtractElementsFromProtoBundle(&bundle)
+		bundleComponents, err := signcommon.ExtractComponentsFromProtoBundle(&pb)
 		if err != nil {
-			return fmt.Errorf("extracting elements from bundle: %w", err)
+			return fmt.Errorf("extracting components from bundle: %w", err)
 		}
 
 		var certPem, chainPem []byte
-		for j, c := range extractedCerts {
+		for j, c := range bundleComponents.Certificates {
 			p := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.GetRawBytes()})
 			if j == 0 {
 				certPem = p
@@ -309,7 +323,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			}
 		}
 
-		b64sig := base64.StdEncoding.EncodeToString(sigBytes)
+		b64sig := base64.StdEncoding.EncodeToString(bundleComponents.Signature)
 		b64sigs[i] = b64sig
 
 		var opts []static.Option
@@ -317,18 +331,18 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			opts = append(opts, static.WithCertChain(certPem, chainPem))
 		}
 
-		if rfc3161Timestamp != nil {
-			opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(rfc3161Timestamp.GetSignedTimestamp())))
+		if bundleComponents.RFC3161Timestamp != nil {
+			opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(bundleComponents.RFC3161Timestamp.GetSignedTimestamp())))
 		}
 
-		if rekorEntry != nil {
+		if bundleComponents.RekorEntry != nil {
 			rb := &cbundle.RekorBundle{
-				SignedEntryTimestamp: rekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
+				SignedEntryTimestamp: bundleComponents.RekorEntry.GetInclusionPromise().GetSignedEntryTimestamp(),
 				Payload: cbundle.RekorPayload{
-					Body:           rekorEntry.GetCanonicalizedBody(),
-					IntegratedTime: rekorEntry.GetIntegratedTime(),
-					LogIndex:       rekorEntry.GetLogIndex(),
-					LogID:          hex.EncodeToString(rekorEntry.GetLogId().GetKeyId()),
+					Body:           bundleComponents.RekorEntry.GetCanonicalizedBody(),
+					IntegratedTime: bundleComponents.RekorEntry.GetIntegratedTime(),
+					LogIndex:       bundleComponents.RekorEntry.GetLogIndex(),
+					LogID:          hex.EncodeToString(bundleComponents.RekorEntry.GetLogId().GetKeyId()),
 				},
 			}
 			opts = append(opts, static.WithBundle(rb))
