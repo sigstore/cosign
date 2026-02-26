@@ -90,7 +90,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("output-signature", "support for this flag will be removed in the future. please use the new bundle output format")
+	_ = cmd.Flags().MarkDeprecated("output-signature", "please use --bundle to provide the output bundle location, which will include the signature")
 
 	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
 		"write the signed payload to FILE")
@@ -99,7 +99,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
 	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("output-certificate", "support for this flag will be removed in the future. please use the new bundle output format")
+	_ = cmd.Flags().MarkDeprecated("output-certificate", "please use --bundle to provide the output bundle location, which will include the certificate")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the image to FILE")

@@ -85,7 +85,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
 		"write the signature to FILE")
 	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("output-signature", "support for this flag will be removed in the future. please use the new bundle output format")
+	_ = cmd.Flags().MarkDeprecated("output-signature", "please use --bundle to provide the output bundle location, which will include the signature")
 
 	cmd.Flags().StringVar(&o.OutputAttestation, "output-attestation", "",
 		"write the attestation to FILE")
@@ -94,7 +94,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
 	_ = cmd.MarkFlagFilename("key", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("output-certificate", "support for this flag will be removed in the future. please use the new bundle output format")
+	_ = cmd.Flags().MarkDeprecated("output-certificate", "please use --bundle to provide the output bundle location, which will include the certificate")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
@@ -149,7 +149,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp-bundle", "",
 		"path to an RFC 3161 timestamp bundle FILE")
 	// _ = cmd.MarkFlagFilename("rfc3161-timestamp-bundle") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp-bundle", "support for this flag will be removed in the future. please use the new bundle output format")
+	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp-bundle", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
