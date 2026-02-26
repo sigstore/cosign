@@ -123,10 +123,8 @@ var verifyCertBundle = func(keyRef, caCertFile, caIntermediateCertFile, imageRef
 		MaxWorkers:    10,
 		IgnoreTlog:    skipTlogVerify,
 		CertVerifyOptions: options.CertVerifyOptions{
-			CAIntermediates:      caIntermediateCertFile,
-			CARoots:              caCertFile,
-			CertOidcIssuerRegexp: ".*",
-			CertIdentityRegexp:   ".*",
+			CAIntermediates: caIntermediateCertFile,
+			CARoots:         caCertFile,
 		},
 	}
 
