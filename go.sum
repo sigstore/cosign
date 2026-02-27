@@ -343,8 +343,8 @@ github.com/go-openapi/testify/v2 v2.0.2 h1:X999g3jeLcoY8qctY/c/Z8iBHTbwLz7R2WXd6
 github.com/go-openapi/testify/v2 v2.0.2/go.mod h1:HCPmvFFnheKK2BuwSA0TbbdxJ3I16pjwMkYkP4Ywn54=
 github.com/go-openapi/validate v0.25.1 h1:sSACUI6Jcnbo5IWqbYHgjibrhhmt3vR6lCzKZnmAgBw=
 github.com/go-openapi/validate v0.25.1/go.mod h1:RMVyVFYte0gbSTaZ0N4KmTn6u/kClvAFp+mAVfS/DQc=
-github.com/go-piv/piv-go/v2 v2.4.0 h1:xamQ/fR4MJiw/Ndbk6yi7MVwhjrwlnDAPuaH9zcGb+I=
-github.com/go-piv/piv-go/v2 v2.4.0/go.mod h1:ShZi74nnrWNQEdWzRUd/3cSig3uNOcEZp+EWl0oewnI=
+github.com/go-piv/piv-go/v2 v2.5.0 h1:w4KZ3GytEGZt8zm+S7olcIHZk0giL23xVqCa2HgwuqA=
+github.com/go-piv/piv-go/v2 v2.5.0/go.mod h1:ShZi74nnrWNQEdWzRUd/3cSig3uNOcEZp+EWl0oewnI=
 github.com/go-quicktest/qt v1.101.0 h1:O1K29Txy5P2OK0dGo59b7b0LR6wKfIhttaAhHUyn7eI=
 github.com/go-quicktest/qt v1.101.0/go.mod h1:14Bz/f7NwaXPtdYEgzsx46kqSxVwTbzVZsDC26tQJow=
 github.com/go-rod/rod v0.116.2 h1:A5t2Ky2A+5eD/ZJQr1EfsQSe5rms5Xof/qj296e+ZqA=
