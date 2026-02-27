@@ -86,7 +86,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
-	defer closePayload() //nolint:errcheck
+	defer closePayload()
 
 	if ko.SigningConfig != nil {
 		data, err := io.ReadAll(&payload)

@@ -91,7 +91,7 @@ func (ga *githubActions) Provide(ctx context.Context, audience string) (string, 
 			time.Sleep(time.Second)
 			continue
 		}
-		defer resp.Body.Close() //nolint:errcheck
+		defer resp.Body.Close()
 
 		var payload struct {
 			Value string `json:"value"`

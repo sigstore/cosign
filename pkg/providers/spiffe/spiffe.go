@@ -66,7 +66,7 @@ func (ga *spiffe) Provide(ctx context.Context, audience string) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	defer client.Close() //nolint:errcheck
+	defer client.Close()
 
 	svid, err := client.FetchJWTSVID(ctx, jwtsvid.Params{
 		Audience: audience,

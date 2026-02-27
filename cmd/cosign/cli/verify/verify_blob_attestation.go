@@ -151,7 +151,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			if err != nil {
 				return err
 			}
-			defer f.Close() //nolint:errcheck
+			defer f.Close()
 			fileInfo, err := f.Stat()
 			if err != nil {
 				return err

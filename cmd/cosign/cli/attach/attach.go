@@ -94,7 +94,7 @@ func attachAttestation(remoteOpts []ociremote.Option, signedPayload string, dige
 	if err != nil {
 		return err
 	}
-	defer attestationFile.Close() //nolint:errcheck
+	defer attestationFile.Close()
 
 	env := ssldsse.Envelope{}
 	decoder := json.NewDecoder(attestationFile)

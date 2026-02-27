@@ -29,7 +29,7 @@ import (
 
 // The empty struct is used so this file never imports piv-go which is
 // dependent on cgo and will fail to build if imported.
-type empty struct{} //nolint:U1000
+type empty struct{} //nolint
 
 type Key struct{}
 

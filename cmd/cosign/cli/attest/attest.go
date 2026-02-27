@@ -104,7 +104,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	if err != nil {
 		return fmt.Errorf("getting predicate reader: %w", err)
 	}
-	defer predicate.Close() //nolint:errcheck
+	defer predicate.Close()
 
 	sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 		Predicate: predicate,

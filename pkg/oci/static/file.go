@@ -95,6 +95,6 @@ func (f *file) Payload() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close() //nolint:errcheck
+	defer rc.Close()
 	return io.ReadAll(rc)
 }
