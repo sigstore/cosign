@@ -74,7 +74,7 @@ func PublicKey() *cobra.Command {
 					return err
 				}
 				writer.Writer = f
-				defer f.Close()
+				defer f.Close() //nolint:errcheck
 			} else {
 				writer.Writer = os.Stdout
 			}

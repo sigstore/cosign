@@ -125,7 +125,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return fmt.Errorf("getting predicate reader: %w", err)
 		}
-		defer predicate.Close()
+		defer predicate.Close() //nolint:errcheck
 		sh, err := attestation.GenerateStatement(attestation.GenerateOpts{
 			Predicate: predicate,
 			Type:      c.PredicateType,

@@ -88,7 +88,7 @@ func GetHTTPTransport(cacertFilename, certFilename, keyFilename, serverName stri
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 		caCertBytes, err := io.ReadAll(f)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read CA certs from %s: %w", cacertFilename, err)
@@ -140,7 +140,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("error making request to timestamp authority: %w", err)
 	}
-	defer tsr.Body.Close()
+	defer tsr.Body.Close() //nolint:errcheck
 	if tsr.StatusCode != http.StatusOK && tsr.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("request to timestamp authority failed with status code %d", tsr.StatusCode)
 	}

@@ -72,7 +72,7 @@ func (s *sigLayer) Payload() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck
 	payload, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err

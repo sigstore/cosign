@@ -48,6 +48,6 @@ func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef 
 	if err != nil {
 		return err
 	}
-	w.Write(json)
-	return nil
+	_, err = w.Write(json)
+	return err
 }

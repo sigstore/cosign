@@ -226,7 +226,7 @@ func (o *RegistryOptions) getTLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck
 		caCertBytes, err := io.ReadAll(f)
 		if err != nil {
 			return nil, fmt.Errorf("unable to read CA certs from %s: %w", o.RegistryCACert, err)

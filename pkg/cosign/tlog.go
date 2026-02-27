@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
@@ -209,7 +209,7 @@ func TLogUpload(ctx context.Context, rekorClient *client.Rekor, signature []byte
 func TLogUploadWithCustomHash(ctx context.Context, rekorClient *client.Rekor, signature []byte, checksum NamedHash, pemBytes []byte) (*models.LogEntryAnon, error) {
 	re := rekorEntry(checksum, signature, pemBytes)
 	returnVal := models.Hashedrekord{
-		APIVersion: swag.String(re.APIVersion()),
+		APIVersion: conv.Pointer(re.APIVersion()),
 		Spec:       re.HashedRekordObj,
 	}
 	return doUpload(ctx, rekorClient, &returnVal)
@@ -284,8 +284,8 @@ func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.
 		HashedRekordObj: models.HashedrekordV001Schema{
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Algorithm: swag.String(rekorEntryHashAlgorithm(checksum)),
-					Value:     swag.String(hex.EncodeToString(checksum.Sum(nil))),
+					Algorithm: conv.Pointer(rekorEntryHashAlgorithm(checksum)),
+					Value:     conv.Pointer(hex.EncodeToString(checksum.Sum(nil))),
 				},
 			},
 			Signature: &models.HashedrekordV001SchemaSignature{
@@ -448,7 +448,7 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 		}
 		re := rekorEntry(sha256CheckSum, signature, pubKey)
 		entry := &models.Hashedrekord{
-			APIVersion: swag.String(re.APIVersion()),
+			APIVersion: conv.Pointer(re.APIVersion()),
 			Spec:       re.HashedRekordObj,
 		}
 		proposedEntry = []models.ProposedEntry{entry}

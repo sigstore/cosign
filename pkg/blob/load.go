@@ -49,7 +49,7 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck
 			raw, err = io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, err

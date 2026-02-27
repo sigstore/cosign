@@ -247,7 +247,7 @@ func (f *attached) Payload() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer rc.Close() //nolint:errcheck
 	return io.ReadAll(rc)
 }
 

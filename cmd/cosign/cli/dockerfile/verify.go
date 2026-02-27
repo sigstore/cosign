@@ -45,7 +45,7 @@ func (c *VerifyDockerfileCommand) Exec(ctx context.Context, args []string) error
 	if err != nil {
 		return fmt.Errorf("could not open Dockerfile: %w", err)
 	}
-	defer dockerfile.Close()
+	defer dockerfile.Close() //nolint:errcheck
 
 	fc := newFinderCache()
 	images, err := fc.getImagesFromDockerfile(ctx, dockerfile)
