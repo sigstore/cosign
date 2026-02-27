@@ -72,8 +72,8 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotati
 		return err
 	}
 
-	st := in_toto.Statement{}
-	if err := json.Unmarshal(stBytes, &st); err != nil {
+	st, err := toStatement(stBytes)
+	if err != nil {
 		return err
 	}
 	for _, subj := range st.Subject {
@@ -91,4 +91,39 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotati
 		return nil
 	}
 	return errors.New("no matching subject digest found")
+}
+
+func toStatement(stBytes []byte) (*in_toto.Statement, error) {
+	st := in_toto.Statement{}
+	if err := json.Unmarshal(stBytes, &st); err == nil {
+		return &st, nil
+	}
+	// The predicate might be a string instead of a JSON object, which the in-toto library can't parse.
+	// Convert it to a JSON object and try again.
+	stmtMap := make(map[string]any)
+	if err := json.Unmarshal(stBytes, &stmtMap); err != nil {
+		return nil, err
+	}
+	predicate, ok := stmtMap["predicate"]
+	if !ok {
+		return nil, fmt.Errorf("could not parse statement, could not find predicate")
+	}
+	p, ok := predicate.(string)
+	if !ok {
+		return nil, fmt.Errorf("could not parse predicate with type %T", predicate)
+	}
+	pMap := make(map[string]any)
+	if err := json.Unmarshal([]byte(p), &pMap); err != nil {
+		return nil, fmt.Errorf("could not parse statement as JSON: %w", err)
+	}
+	stmtMap["predicate"] = pMap
+	remarshaled, err := json.Marshal(stmtMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal statement: %w", err)
+	}
+	if err := json.Unmarshal(remarshaled, &st); err != nil {
+		return nil, err
+	}
+
+	return &st, nil
 }

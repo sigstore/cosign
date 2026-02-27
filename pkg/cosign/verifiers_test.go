@@ -41,15 +41,33 @@ The following JSON is the payload in valid attestation:
 }
 */
 
+/* payload for a valid attestation with a string as a predicate:
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://spdx.dev/Document",
+  "subject": [
+    {
+      "name": "localhost:5000/wolfi-base4",
+      "digest": {
+        "sha256": "9925d3017788558fa8f27e8bb160b791e56202b60c91fbcc5c867de3175986c8"
+      }
+    }
+  ],
+  "predicate": "{\"spdxVersion\":\"SPDX-2.2\",\"dataLicense\":\"CC0-1.0\",\"SPDXID\":\"SPDXRef-DOCUMENT\",\"name\":\"SBOM-SPDX-34f1a7f5-03ff-4277-9021-8c04f8777803\",\"documentNamespace\":\"https://spdx.org/spdxdocs/k8s-releng-bom-16f4e288-6bdf-4b89-a79a-9ffd56ad33e0\",\"creationInfo\":{\"licenseListVersion\":\"\",\"creators\":[\"Organization: Kubernetes Release Engineering\",\"Tool: sigs.k8s.io/bom/pkg/spdx\"],\"created\":\"2022-06-07T22:14:56Z\",\"comment\":\"\"},\"packages\":[]}\n"
+}
+*/
+
 const (
 	validIntotoStatement              = `{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJjb3NpZ24uc2lnc3RvcmUuZGV2L2F0dGVzdGF0aW9uL3YxIiwic3ViamVjdCI6W3sibmFtZSI6InJlZ2lzdHJ5LmxvY2FsOjUwMDAva25hdGl2ZS9kZW1vIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjZjNmZkNmE0MTE1YzZlOTk4ZmYzNTdjZDkxNDY4MDkzMWJiOWE2YzFhN2NkNWY1Y2IyZjVlMWMwOTMyYWI2ZWQifX1dLCJwcmVkaWNhdGUiOnsiRGF0YSI6ImZvb2JhciB0ZXN0IGF0dGVzdGF0aW9uIiwiVGltZXN0YW1wIjoiMjAyMi0wNC0wN1QxOToyMjoyNVoifX0=","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
 	invalidIntotoStatementBadEncoding = `{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJjb3NpZ24uc2lnc3RvcmUuZGV2L2F0dGVzdGF0aW9uL3YxIiwic3ViamVjdCI6W3sibmFtZSI6InJlZ2lzdHJ5LmxvY2FsOjUwMDAva25hdGl2ZS9kZW1vIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjZjNmZkNmE0MTE1YzZlOTk4ZmYzNTdjZDkxNDY4MDkzMWJiOWE2YzFhN2NkNWY1Y2IyZjVlMWMwOTMyYWI2ZWQifX1dLCJwcmVkaWNhdGUiOnsiRGF0YSI6ImZvb2JhciB0ZXN0IGF0dGVzdGF0aW9uIiwiVGltZXN0YW1wIjoiMjAyMi0wNC0wN1QxOToyMjoyNV=","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
 	// Start with valid, but change subject.Digest.sha256 to subject.Digest.999
-	validIntotoStatementMissingSubject = `{"payloadType":"application/vnd.in-toto+json","payload":"ewogICJfdHlwZSI6ICJodHRwczovL2luLXRvdG8uaW8vU3RhdGVtZW50L3YwLjEiLAogICJwcmVkaWNhdGVUeXBlIjogImNvc2lnbi5zaWdzdG9yZS5kZXYvYXR0ZXN0YXRpb24vdjEiLAogICJzdWJqZWN0IjogWwogICAgewogICAgICAibmFtZSI6ICJyZWdpc3RyeS5sb2NhbDo1MDAwL2tuYXRpdmUvZGVtbyIsCiAgICAgICJkaWdlc3QiOiB7CiAgICAgICAgIjk5OSI6ICI2YzZmZDZhNDExNWM2ZTk5OGZmMzU3Y2Q5MTQ2ODA5MzFiYjlhNmMxYTdjZDVmNWNiMmY1ZTFjMDkzMmFiNmVkIgogICAgICB9CiAgICB9CiAgXSwKICAicHJlZGljYXRlIjogewogICAgIkRhdGEiOiAiZm9vYmFyIHRlc3QgYXR0ZXN0YXRpb24iLAogICAgIlRpbWVzdGFtcCI6ICIyMDIyLTA0LTA3VDE5OjIyOjI1WiIKICB9Cn0K","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
+	validIntotoStatementMissingSubject  = `{"payloadType":"application/vnd.in-toto+json","payload":"ewogICJfdHlwZSI6ICJodHRwczovL2luLXRvdG8uaW8vU3RhdGVtZW50L3YwLjEiLAogICJwcmVkaWNhdGVUeXBlIjogImNvc2lnbi5zaWdzdG9yZS5kZXYvYXR0ZXN0YXRpb24vdjEiLAogICJzdWJqZWN0IjogWwogICAgewogICAgICAibmFtZSI6ICJyZWdpc3RyeS5sb2NhbDo1MDAwL2tuYXRpdmUvZGVtbyIsCiAgICAgICJkaWdlc3QiOiB7CiAgICAgICAgIjk5OSI6ICI2YzZmZDZhNDExNWM2ZTk5OGZmMzU3Y2Q5MTQ2ODA5MzFiYjlhNmMxYTdjZDVmNWNiMmY1ZTFjMDkzMmFiNmVkIgogICAgICB9CiAgICB9CiAgXSwKICAicHJlZGljYXRlIjogewogICAgIkRhdGEiOiAiZm9vYmFyIHRlc3QgYXR0ZXN0YXRpb24iLAogICAgIlRpbWVzdGFtcCI6ICIyMDIyLTA0LTA3VDE5OjIyOjI1WiIKICB9Cn0K","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
+	validIntotoStatementStringPredicate = `{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3NwZHguZGV2L0RvY3VtZW50Iiwic3ViamVjdCI6W3sibmFtZSI6ImxvY2FsaG9zdDo1MDAwL3dvbGZpLWJhc2U0IiwiZGlnZXN0Ijp7InNoYTI1NiI6Ijk5MjVkMzAxNzc4ODU1OGZhOGYyN2U4YmIxNjBiNzkxZTU2MjAyYjYwYzkxZmJjYzVjODY3ZGUzMTc1OTg2YzgifX1dLCJwcmVkaWNhdGUiOiJ7XCJzcGR4VmVyc2lvblwiOlwiU1BEWC0yLjJcIixcImRhdGFMaWNlbnNlXCI6XCJDQzAtMS4wXCIsXCJTUERYSURcIjpcIlNQRFhSZWYtRE9DVU1FTlRcIixcIm5hbWVcIjpcIlNCT00tU1BEWC0zNGYxYTdmNS0wM2ZmLTQyNzctOTAyMS04YzA0Zjg3Nzc4MDNcIixcImRvY3VtZW50TmFtZXNwYWNlXCI6XCJodHRwczovL3NwZHgub3JnL3NwZHhkb2NzL2s4cy1yZWxlbmctYm9tLTE2ZjRlMjg4LTZiZGYtNGI4OS1hNzlhLTlmZmQ1NmFkMzNlMFwiLFwiY3JlYXRpb25JbmZvXCI6e1wibGljZW5zZUxpc3RWZXJzaW9uXCI6XCJcIixcImNyZWF0b3JzXCI6W1wiT3JnYW5pemF0aW9uOiBLdWJlcm5ldGVzIFJlbGVhc2UgRW5naW5lZXJpbmdcIixcIlRvb2w6IHNpZ3MuazhzLmlvL2JvbS9wa2cvc3BkeFwiXSxcImNyZWF0ZWRcIjpcIjIwMjItMDYtMDdUMjI6MTQ6NTZaXCIsXCJjb21tZW50XCI6XCJcIn0sXCJwYWNrYWdlc1wiOltdfVxuIn0=","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
 )
 
 var validDigest = v1.Hash{Algorithm: "sha256", Hex: "6c6fd6a4115c6e998ff357cd914680931bb9a6c1a7cd5f5cb2f5e1c0932ab6ed"}
 var invalidDigest = v1.Hash{Algorithm: "sha256", Hex: "6c6fd6a4115c6e998ff357cd914680931bb9a6c1a7cd5f5cb2f5e1c0932xxxxx"}
+var validDigestStringPredicate = v1.Hash{Algorithm: "sha256", Hex: "9925d3017788558fa8f27e8bb160b791e56202b60c91fbcc5c867de3175986c8"}
 
 func Test_IntotoSubjectClaimVerifier(t *testing.T) {
 	tests := []struct {
@@ -63,6 +81,7 @@ func Test_IntotoSubjectClaimVerifier(t *testing.T) {
 		{payload: validIntotoStatement, digest: invalidDigest, shouldFail: true},
 		{payload: validIntotoStatementMissingSubject, digest: validDigest, shouldFail: true},
 		{payload: validIntotoStatement, digest: validDigest, shouldFail: false},
+		{payload: validIntotoStatementStringPredicate, digest: validDigestStringPredicate, shouldFail: false},
 	}
 	for _, tc := range tests {
 		ociSig, err := static.NewSignature([]byte(tc.payload), "")
