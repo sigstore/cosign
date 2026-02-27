@@ -23,9 +23,15 @@ import (
 	"strings"
 	"time"
 
+	slsa02_attest "github.com/in-toto/attestation/go/predicates/provenance/v02"
+	slsa1_attest "github.com/in-toto/attestation/go/predicates/provenance/v1"
+	in_toto_attest "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	slsa02 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v0.2"
 	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -41,6 +47,55 @@ const (
 	// https://github.com/openvex/spec/blob/main/ATTESTING.md
 	OpenVexNamespace = "https://openvex.dev/ns"
 )
+
+type Statement struct {
+	*in_toto_attest.Statement
+	// Catch legacy string predicates to preserve exact byte marshaling
+	LegacyPredicate *string `json:"-"`
+}
+
+func (s *Statement) MarshalJSON() ([]byte, error) {
+	if s.LegacyPredicate == nil {
+		return protojson.Marshal(s.Statement)
+	}
+	legacyStatement := map[string]any{
+		"_type":         s.Type,
+		"subject":       s.Subject,
+		"predicateType": s.PredicateType,
+		"predicate":     s.LegacyPredicate,
+	}
+	return json.Marshal(legacyStatement)
+}
+
+func (s *Statement) UnmarshalJSON(stBytes []byte) error {
+	st := in_toto_attest.Statement{}
+	if err := protojson.Unmarshal(stBytes, &st); err == nil {
+		s.Statement = &st
+		return nil
+	}
+
+	// The predicate might be a string instead of a JSON object, which the in-toto library can't parse.
+	// Convert it to a JSON object and try again.
+	stmtMap := make(map[string]any)
+	if err := json.Unmarshal(stBytes, &stmtMap); err != nil {
+		return err
+	}
+	predicate, ok := stmtMap["predicate"]
+	if !ok {
+		return fmt.Errorf("could not parse statement, could not find predicate")
+	}
+	p, ok := predicate.(string)
+	if !ok {
+		return fmt.Errorf("could not parse predicate with type %T", predicate)
+	}
+	s.LegacyPredicate = &p
+	delete(stmtMap, "predicate")
+	remarshaled, err := json.Marshal(stmtMap)
+	if err != nil {
+		return fmt.Errorf("failed to marshal statement: %w", err)
+	}
+	return json.Unmarshal(remarshaled, &s.Statement)
+}
 
 // CosignPredicate specifies the format of the Custom Predicate.
 type CosignPredicate struct {
@@ -60,8 +115,10 @@ type CosignVulnPredicate struct {
 // as a InToto Statement
 // https://github.com/in-toto/attestation/issues/58
 type CosignVulnStatement struct {
-	in_toto.StatementHeader
-	Predicate CosignVulnPredicate `json:"predicate"`
+	Type          string                               `json:"type,omitempty"`
+	Subject       []*in_toto_attest.ResourceDescriptor `json:"subject,omitempty"`
+	PredicateType string                               `json:"predicateType,omitempty"`
+	Predicate     CosignVulnPredicate                  `json:"predicate"`
 }
 
 type Invocation struct {
@@ -106,7 +163,7 @@ type GenerateOpts struct {
 
 // GenerateStatement returns an in-toto statement based on the provided
 // predicate type (custom|slsaprovenance|slsaprovenance02|slsaprovenance1|spdx|spdxjson|cyclonedx|link).
-func GenerateStatement(opts GenerateOpts) (interface{}, error) {
+func GenerateStatement(opts GenerateOpts) (*Statement, error) {
 	predicate, err := io.ReadAll(opts.Predicate)
 	if err != nil {
 		return nil, err
@@ -138,7 +195,7 @@ func GenerateStatement(opts GenerateOpts) (interface{}, error) {
 	}
 }
 
-func generateVulnStatement(predicate []byte, digest string, repo string) (interface{}, error) {
+func generateVulnStatement(predicate []byte, digest string, repo string) (*Statement, error) {
 	var vuln CosignVulnPredicate
 
 	err := json.Unmarshal(predicate, &vuln)
@@ -146,10 +203,25 @@ func generateVulnStatement(predicate []byte, digest string, repo string) (interf
 		return nil, err
 	}
 
-	return in_toto.Statement{
-		StatementHeader: generateStatementHeader(digest, repo, CosignVulnProvenanceV01),
-		Predicate:       vuln,
-	}, nil
+	vulnObj, err := structToStruct(vuln)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: CosignVulnProvenanceV01,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: vulnObj,
+		}}, nil
 }
 
 func timestamp(opts GenerateOpts) string {
@@ -167,11 +239,191 @@ func customType(opts GenerateOpts) string {
 	return CosignCustomProvenanceV01
 }
 
-func generateStatementHeader(digest, repo, predicateType string) in_toto.StatementHeader {
-	return in_toto.StatementHeader{
+func generateCustomStatement(rawPayload []byte, customType, digest, repo, timestamp string) (*Statement, error) {
+	payload, err := generateCustomPredicate(rawPayload, customType, timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	predicate, err := structpb.NewStruct(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: customType,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: predicate,
+		}}, nil
+}
+
+func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (map[string]any, error) {
+	if customType == CosignCustomProvenanceV01 {
+		return map[string]any{
+			"Data":      string(rawPayload),
+			"Timestamp": timestamp,
+		}, nil
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(rawPayload, &result); err != nil {
+		return nil, fmt.Errorf("invalid JSON payload for predicate type %s: %w", customType, err)
+	}
+
+	return result, nil
+}
+
+func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var predicate slsa02_attest.Provenance
+	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate.ProtoReflect().Interface()))
+	if err != nil {
+		return nil, fmt.Errorf("provenance predicate: %w", err)
+	}
+	protoOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	err = protoOpts.Unmarshal(rawPayload, &predicate)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal Provenance predicate: %w", err)
+	}
+	predicateObj, err := protoStructToStruct(&predicate)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa02.PredicateSLSAProvenance,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: predicateObj,
+		}}, nil
+}
+
+func generateSLSAProvenanceStatementSLSA1(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var genericPredicate map[string]any
+	if err := json.Unmarshal(rawPayload, &genericPredicate); err != nil {
+		return nil, fmt.Errorf("unmarshal raw payload to map: %w", err)
+	}
+
+	// Safely rename the key if it exists
+	if runDetails, ok := genericPredicate["runDetails"].(map[string]any); ok {
+		if metadata, ok := runDetails["metadata"].(map[string]any); ok {
+			if val, exists := metadata["invocationID"]; exists {
+				metadata["invocationId"] = val
+				delete(metadata, "invocationID")
+			}
+		}
+	}
+
+	modifiedPayload, err := json.Marshal(genericPredicate)
+	if err != nil {
+		return nil, fmt.Errorf("marshal modified payload: %w", err)
+	}
+
+	var predicate slsa1_attest.Provenance
+	err = checkRequiredJSONFields(modifiedPayload, reflect.TypeOf(predicate.ProtoReflect().Interface()))
+	if err != nil {
+		return nil, fmt.Errorf("provenance predicate: %w", err)
+	}
+	protoOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	err = protoOpts.Unmarshal(modifiedPayload, &predicate)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal Provenance predicate: %w", err)
+	}
+	predicateObj, err := protoStructToStruct(&predicate)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: slsa1.PredicateSLSAProvenance,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: predicateObj,
+		}}, nil
+}
+
+func generateLinkStatement(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var link in_toto.Link
+	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(link))
+	if err != nil {
+		return nil, fmt.Errorf("link statement: %w", err)
+	}
+	err = json.Unmarshal(rawPayload, &link)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal Link statement: %w", err)
+	}
+	linkObj, err := structToStruct(link)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: in_toto.PredicateLinkV1,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: linkObj,
+		}}, nil
+}
+
+func generateOpenVexStatement(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var data map[string]any
+	if err := json.Unmarshal(rawPayload, &data); err != nil {
+		return nil, err
+	}
+	dataObj, err := structpb.NewStruct(data)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: OpenVexNamespace,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: dataObj,
+		}}, nil
+}
+
+func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJSON bool) (*Statement, error) {
+	stmt := &in_toto_attest.Statement{
 		Type:          in_toto.StatementInTotoV01,
-		PredicateType: predicateType,
-		Subject: []in_toto.Subject{
+		PredicateType: in_toto.PredicateSPDX,
+		Subject: []*in_toto_attest.ResourceDescriptor{
 			{
 				Name: repo,
 				Digest: map[string]string{
@@ -180,122 +432,54 @@ func generateStatementHeader(digest, repo, predicateType string) in_toto.Stateme
 			},
 		},
 	}
-}
-
-func generateCustomStatement(rawPayload []byte, customType, digest, repo, timestamp string) (interface{}, error) {
-	payload, err := generateCustomPredicate(rawPayload, customType, timestamp)
-	if err != nil {
-		return nil, err
-	}
-
-	return in_toto.Statement{
-		StatementHeader: generateStatementHeader(digest, repo, customType),
-		Predicate:       payload,
-	}, nil
-}
-
-func generateCustomPredicate(rawPayload []byte, customType, timestamp string) (interface{}, error) {
-	if customType == CosignCustomProvenanceV01 {
-		return &CosignPredicate{
-			Data:      string(rawPayload),
-			Timestamp: timestamp,
-		}, nil
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(rawPayload, &result); err != nil {
-		return nil, fmt.Errorf("invalid JSON payload for predicate type %s: %w", customType, err)
-	}
-
-	return result, nil
-}
-
-func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var predicate slsa02.ProvenancePredicate
-	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
-	if err != nil {
-		return nil, fmt.Errorf("provenance predicate: %w", err)
-	}
-	err = json.Unmarshal(rawPayload, &predicate)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
-	}
-	return in_toto.ProvenanceStatementSLSA02{
-		StatementHeader: generateStatementHeader(digest, repo, slsa02.PredicateSLSAProvenance),
-		Predicate:       predicate,
-	}, nil
-}
-
-func generateSLSAProvenanceStatementSLSA1(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var predicate slsa1.ProvenancePredicate
-	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
-	if err != nil {
-		return nil, fmt.Errorf("provenance predicate: %w", err)
-	}
-	err = json.Unmarshal(rawPayload, &predicate)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
-	}
-	return in_toto.ProvenanceStatementSLSA1{
-		StatementHeader: generateStatementHeader(digest, repo, slsa1.PredicateSLSAProvenance),
-		Predicate:       predicate,
-	}, nil
-}
-
-func generateLinkStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var link in_toto.Link
-	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(link))
-	if err != nil {
-		return nil, fmt.Errorf("link statement: %w", err)
-	}
-	err = json.Unmarshal(rawPayload, &link)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal Link statement: %w", err)
-	}
-	return in_toto.LinkStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateLinkV1),
-		Predicate:       link,
-	}, nil
-}
-
-func generateOpenVexStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var data interface{}
-	if err := json.Unmarshal(rawPayload, &data); err != nil {
-		return nil, err
-	}
-	return in_toto.Statement{
-		StatementHeader: generateStatementHeader(digest, repo, OpenVexNamespace),
-		Predicate:       data,
-	}, nil
-}
-
-func generateSPDXStatement(rawPayload []byte, digest string, repo string, parseJSON bool) (interface{}, error) {
-	var data interface{}
 	if parseJSON {
+		var data map[string]any
 		if err := json.Unmarshal(rawPayload, &data); err != nil {
 			return nil, err
 		}
-	} else {
-		data = string(rawPayload)
+		dataObj, err := structpb.NewStruct(data)
+		if err != nil {
+			return nil, err
+		}
+		stmt.Predicate = dataObj
+		return &Statement{Statement: stmt}, nil
 	}
-	return in_toto.SPDXStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateSPDX),
-		Predicate:       data,
+	legacyPredicate := string(rawPayload)
+	return &Statement{
+		Statement:       stmt,
+		LegacyPredicate: &legacyPredicate,
 	}, nil
 }
 
-func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var data interface{}
+func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var data map[string]any
 	if err := json.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
-	return in_toto.SPDXStatement{
-		StatementHeader: generateStatementHeader(digest, repo, in_toto.PredicateCycloneDX),
-		Predicate:       data,
-	}, nil
+	dataObj, err := structpb.NewStruct(data)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: in_toto.PredicateCycloneDX,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: dataObj,
+		}}, nil
 }
 
 func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
 	var tmp map[string]interface{}
 	if err := json.Unmarshal(rawPayload, &tmp); err != nil {
 		return err
@@ -305,7 +489,7 @@ func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
 	allFields := make([]string, 0)
 	for i := 0; i < attributeCount; i++ {
 		jsonTagFields := strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)
-		if len(jsonTagFields) < 2 {
+		if len(jsonTagFields) < 2 && jsonTagFields[0] != "" && jsonTagFields[0] != "-" {
 			allFields = append(allFields, jsonTagFields[0])
 		}
 	}
@@ -317,4 +501,36 @@ func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
 		}
 	}
 	return nil
+}
+
+func structToStruct(obj any) (*structpb.Struct, error) {
+	toJSON, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	var toMap map[string]any
+	if err := json.Unmarshal(toJSON, &toMap); err != nil {
+		return nil, err
+	}
+	toStruct, err := structpb.NewStruct(toMap)
+	if err != nil {
+		return nil, err
+	}
+	return toStruct, nil
+}
+
+func protoStructToStruct(obj proto.Message) (*structpb.Struct, error) {
+	toJSON, err := protojson.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	var toMap map[string]any
+	if err := json.Unmarshal(toJSON, &toMap); err != nil {
+		return nil, err
+	}
+	toStruct, err := structpb.NewStruct(toMap)
+	if err != nil {
+		return nil, err
+	}
+	return toStruct, nil
 }

@@ -91,8 +91,8 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	}
 
 	// Only apply the policy against the requested predicate type
-	var statement in_toto.Statement
-	if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+	statement := &attestation.Statement{}
+	if err := statement.UnmarshalJSON(decodedPayload); err != nil {
 		return nil, "", fmt.Errorf("unmarshal in-toto statement: %w", err)
 	}
 	if statement.PredicateType != predicateURI {
@@ -106,7 +106,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	var payload []byte
 	switch predicateType {
 	case options.PredicateCustom:
-		payload, err = json.Marshal(statement)
+		payload, err = statement.MarshalJSON()
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("generating CosignStatement: %w", err)
 		}
@@ -157,7 +157,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		}
 	default:
 		// Valid URI type reaches here.
-		payload, err = json.Marshal(statement)
+		payload, err = statement.MarshalJSON()
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("generating Statement: %w", err)
 		}

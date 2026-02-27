@@ -135,7 +135,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return err
 		}
-		payload, err = json.Marshal(sh)
+		payload, err = sh.MarshalJSON()
 		if err != nil {
 			return err
 		}

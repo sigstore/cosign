@@ -175,19 +175,19 @@ func TestGenerateStatement(t *testing.T) {
 			name:      "slsaprovenance",
 			predType:  "slsaprovenance",
 			predicate: `{"builder":{"id":"2"},"buildType":"test"}`,
-			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{"builder":{"id":"2"},"buildType":"test","invocation":{"configSource":{}}}}`,
+			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{"builder":{"id":"2"},"buildType":"test"}}`,
 		},
 		{
 			name:      "slsaprovenance02",
 			predType:  "slsaprovenance02",
 			predicate: `{"builder":{"id":"2"},"buildType":"test"}`,
-			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{"builder":{"id":"2"},"buildType":"test","invocation":{"configSource":{}}}}`,
+			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{"builder":{"id":"2"},"buildType":"test"}}`,
 		},
 		{
 			name:      "slsaprovenance1",
 			predType:  "slsaprovenance1",
 			predicate: `{"buildDefinition":{"buildType":"test"},"runDetails":{"builder":{"id":"x"}}}`,
-			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildDefinition":{"buildType":"test","externalParameters":null},"runDetails":{"builder":{"id":"x"},"metadata":{}}}}`,
+			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildDefinition":{"buildType":"test"},"runDetails":{"builder":{"id":"x"}}}}`,
 		},
 		{
 			name:     "slsaprovenance1 complex",
@@ -216,7 +216,7 @@ func TestGenerateStatement(t *testing.T) {
                                         "byproducts": []
                                 }
                         }`,
-			wantJSON: `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildDefinition":{"buildType":"https://example.com/Makefile","externalParameters":{"version":"1.0"},"internalParameters":{},"resolvedDependencies":[{"uri":"git+https://example.com/repo.git","digest":{"sha1":"abcdef123456"}}]},"runDetails":{"builder":{"id":"https://example.com/builder"},"metadata":{"invocationID":"test-invocation"}}}}`,
+			wantJSON: `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://slsa.dev/provenance/v1","predicate":{"buildDefinition":{"buildType":"https://example.com/Makefile","externalParameters":{"version":"1.0"},"internalParameters":{},"resolvedDependencies":[{"uri":"git+https://example.com/repo.git","digest":{"sha1":"abcdef123456"}}]},"runDetails":{"builder":{"id":"https://example.com/builder"},"metadata":{"invocationId":"test-invocation"}}}}`,
 		},
 	}
 
@@ -230,7 +230,7 @@ func TestGenerateStatement(t *testing.T) {
 				t.Fatalf("GenerateStatement() error = %v", err)
 			}
 
-			gotJSON, err := json.Marshal(gotStmt)
+			gotJSON, err := gotStmt.MarshalJSON()
 			if err != nil {
 				t.Fatalf("gotStmt.MarshalJSON() error = %v", err)
 			}

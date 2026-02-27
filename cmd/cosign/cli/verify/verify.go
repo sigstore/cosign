@@ -25,12 +25,12 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	in_toto_attest "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	cosignError "github.com/sigstore/cosign/v3/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
@@ -274,22 +274,12 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
 			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
 		}
-		// Unmarshal first into in_toto.StatementHeader which should correctly parse the predicate type
-		var intotoStatement in_toto.StatementHeader
-		err = json.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
+		intotoStatement := &attestation.Statement{}
+		err = intotoStatement.UnmarshalJSON(dsseEnvelope.Payload)
 		if err != nil {
 			return nil, err
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
-			return nil, fmt.Errorf("no intoto subject or digest found")
-		}
-		// Unmarshal again into in_toto_attest.Statement in order to parse annotations
-		var intotoAnnoStatement in_toto_attest.Statement
-		err = json.Unmarshal(dsseEnvelope.Payload, &intotoAnnoStatement)
-		if err != nil {
-			return nil, err
-		}
-		if len(intotoAnnoStatement.Subject) < 1 || len(intotoAnnoStatement.Subject[0].Digest) < 1 {
 			return nil, fmt.Errorf("no intoto subject or digest found")
 		}
 
@@ -297,7 +287,7 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		for k, v := range intotoStatement.Subject[0].Digest {
 			digest = k + ":" + v
 		}
-		annotations := intotoAnnoStatement.Subject[0].Annotations.AsMap()
+		annotations := intotoStatement.Subject[0].Annotations.AsMap()
 
 		sci := payload.SimpleContainerImage{
 			Critical: payload.Critical{

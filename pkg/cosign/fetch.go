@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -186,8 +186,9 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 				if err != nil {
 					return fmt.Errorf("decoding payload: %w", err)
 				}
-				var statement in_toto.Statement
-				if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+				statement := &attestation.Statement{}
+
+				if err := statement.UnmarshalJSON(decodedPayload); err != nil {
 					return fmt.Errorf("unmarshaling statement: %w", err)
 				}
 				if statement.PredicateType != predicateType {
