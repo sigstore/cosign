@@ -194,22 +194,6 @@ $ cosign verify-blob artifact \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
-### What ** is not ** production ready?
-
-While parts of `cosign` are stable, we are continuing to experiment and add new features.
-The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
-
-#### Formats/Specifications
-
-While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
-the format specifications for some of those types may not be considered stable yet.
-Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
-
-These include:
-
-* The SBOM specification for storing SBOMs in a container registry
-* The In-Toto attestation format
-
 ## Working with Other Artifacts
 
 OCI registries are useful for storing more than just container images!
@@ -555,6 +539,22 @@ The following checks were performed on each of these signatures:
 ```
 
 ## FAQ
+
+### What ** is not ** production ready?
+
+While parts of `cosign` are stable, we are continuing to experiment and add new features.
+The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
+
+#### Formats/Specifications
+
+While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
+the format specifications for some of those types may not be considered stable yet.
+Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
+
+These include:
+
+* The SBOM specification for storing SBOMs in a container registry
+* The In-Toto attestation format
 
 ### Why not use Notary v2
 
