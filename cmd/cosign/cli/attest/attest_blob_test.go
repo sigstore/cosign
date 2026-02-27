@@ -30,13 +30,13 @@ import (
 
 	"errors"
 
-	"github.com/in-toto/in-toto-golang/in_toto"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
@@ -250,8 +250,8 @@ func TestAttestBlob(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decoding dsse payload: %v", err)
 			}
-			var statement in_toto.Statement
-			if err := json.Unmarshal(decodedPredicate, &statement); err != nil {
+			statement := &attestation.Statement{}
+			if err := statement.UnmarshalJSON(decodedPredicate); err != nil {
 				t.Fatalf("decoding predicate: %v", err)
 			}
 			if statement.Subject == nil || len(statement.Subject) != 1 {

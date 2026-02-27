@@ -22,10 +22,12 @@ import (
 	"errors"
 	"fmt"
 
+	in_toto_attest "github.com/in-toto/attestation/go/v1"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // PayloadProvider is a subset of oci.Signature that only provides the
@@ -91,8 +93,8 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	}
 
 	// Only apply the policy against the requested predicate type
-	var statement in_toto.Statement
-	if err := json.Unmarshal(decodedPayload, &statement); err != nil {
+	var statement in_toto_attest.Statement
+	if err := protojson.Unmarshal(decodedPayload, &statement); err != nil {
 		return nil, "", fmt.Errorf("unmarshal in-toto statement: %w", err)
 	}
 	if statement.PredicateType != predicateURI {
@@ -106,7 +108,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 	var payload []byte
 	switch predicateType {
 	case options.PredicateCustom:
-		payload, err = json.Marshal(statement)
+		payload, err = protojson.Marshal(&statement)
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("generating CosignStatement: %w", err)
 		}
@@ -157,7 +159,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		}
 	default:
 		// Valid URI type reaches here.
-		payload, err = json.Marshal(statement)
+		payload, err = json.Marshal(&statement)
 		if err != nil {
 			return nil, statement.PredicateType, fmt.Errorf("generating Statement: %w", err)
 		}

@@ -28,11 +28,12 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/in-toto/in-toto-golang/in_toto"
+	in_toto_attest "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type failingAttestation struct {
@@ -149,8 +150,8 @@ func TestAttestationToPayloadJson(t *testing.T) {
 		}
 		switch fileName {
 		case "custom":
-			var intoto in_toto.Statement
-			if err := json.Unmarshal(jsonBytes, &intoto); err != nil {
+			var intoto in_toto_attest.Statement
+			if err := protojson.Unmarshal(jsonBytes, &intoto); err != nil {
 				t.Fatalf("[%s] Wanted custom statement, can't unmarshal to it: %v", fileName, err)
 			}
 			checkPredicateType(t, attestation.CosignCustomProvenanceV01, intoto.PredicateType)
