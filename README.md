@@ -194,6 +194,23 @@ $ cosign verify-blob artifact \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
+### Troubleshooting
+
+If you encounter issues with cosign, first make sure you are using a recent release.
+
+#### Common issues and remedies
+
+1. verify fails with `failed to verify timestamps: threshold not met for verified log entry integrated timestamps: 0 < 1`: You may be verifying a signature that requires RFC3161 timestamp support
+   * Upgrade to most recent cosign or
+   * With cosign 2.6.x, use `--use-signed-timestamps`
+1. verify fails with `no signatures found`: You may be verifying an image signature that requires support for Rekor v2 transparency log
+   * Upgrade to most recent cosign
+1. Signing fails with HTTP errors: Signing with cosign depends on multiple Sigstore services. Retrying on failure may be a useful workaround if any of these services fail -- filing issues for specific failures is also appreciated
+
+#### My problem is something else
+
+Please open an [issue](https://github.com/sigstore/cosign/issues/new/choose) or ask in the [slack channel](#info).
+
 ## Working with Other Artifacts
 
 OCI registries are useful for storing more than just container images!
