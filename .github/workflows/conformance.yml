@@ -47,4 +47,4 @@ jobs:
       - uses: sigstore/sigstore-conformance@9611941d54398f2e3f6383b6f744442a56d2fb2a # v0.0.26
         with:
           entrypoint: ${{ github.workspace }}/conformance
-          xfail: "test_verify*managed-key-happy-path] test_verify*managed-key-and-trusted-root] test_verify*PATH-message-digest-mismatch_fail]"
+          xfail: "test_verify*PATH-message-digest-mismatch_fail]"
