@@ -186,7 +186,8 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 				if err != nil {
 					return fmt.Errorf("decoding payload: %w", err)
 				}
-				var statement in_toto.Statement
+				var statement in_toto.Statement //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
+
 				if err := json.Unmarshal(decodedPayload, &statement); err != nil {
 					return fmt.Errorf("unmarshaling statement: %w", err)
 				}

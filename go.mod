@@ -22,7 +22,7 @@ require (
 	github.com/google/go-containerregistry v0.21.0
 	github.com/google/go-github/v73 v73.0.0
 	github.com/in-toto/attestation v1.1.2
-	github.com/in-toto/in-toto-golang v0.9.0
+	github.com/in-toto/in-toto-golang v0.10.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/miekg/pkcs11 v1.1.2

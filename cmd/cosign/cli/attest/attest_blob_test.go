@@ -30,7 +30,7 @@ import (
 
 	"errors"
 
-	"github.com/in-toto/in-toto-golang/in_toto"
+	in_toto "github.com/in-toto/attestation/go/v1"
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
@@ -40,6 +40,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // TestAttestBlobCmdLocalKeyAndSk verifies the AttestBlobCmd returns an error
@@ -251,7 +252,7 @@ func TestAttestBlob(t *testing.T) {
 				t.Fatalf("decoding dsse payload: %v", err)
 			}
 			var statement in_toto.Statement
-			if err := json.Unmarshal(decodedPredicate, &statement); err != nil {
+			if err := protojson.Unmarshal(decodedPredicate, &statement); err != nil {
 				t.Fatalf("decoding predicate: %v", err)
 			}
 			if statement.Subject == nil || len(statement.Subject) != 1 {
