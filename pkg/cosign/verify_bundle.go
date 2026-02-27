@@ -30,7 +30,13 @@ func VerifyNewBundle(_ context.Context, co *CheckOpts, artifactPolicyOption veri
 	if err != nil {
 		return nil, err
 	}
-	verifier, err := verify.NewVerifier(trustedMaterial, verifierOptions...)
+
+	internalTrustMaterial, err := NewInternalTrustMaterial(trustedMaterial, bundle)
+	if err != nil {
+		return nil, err
+	}
+
+	verifier, err := verify.NewVerifier(internalTrustMaterial, verifierOptions...)
 	if err != nil {
 		return nil, err
 	}

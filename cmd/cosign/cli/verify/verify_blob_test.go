@@ -876,7 +876,7 @@ func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte)
 }
 
 func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
-	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
+	b, err := bundle.MakeProtobufBundle("hint", [][]byte{}, nil, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}

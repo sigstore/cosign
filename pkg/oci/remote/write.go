@@ -33,7 +33,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
-	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 const BundlePredicateType string = "dev.sigstore.bundle.predicateType"
@@ -393,14 +392,22 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 }
 
 func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {
-	// generate bundle media type string
-	bundleMediaType, err := sgbundle.MediaTypeString("0.3")
-	if err != nil {
-		return fmt.Errorf("failed to generate bundle media type string: %w", err)
+	// Extract Media Type from Protobuf Bundle
+	var localBundleMediaType struct {
+		MediaType string `json:"mediaType"`
+	}
+	if err := json.Unmarshal(bundleBytes, &localBundleMediaType); err != nil {
+		return fmt.Errorf("failed to parse bundle media type: %w", err)
+	}
+
+	// Use Bundle Media Type if Defined, Otherwise Use Default (application/vnd.dev.sigstore.bundle.v0.3+json)
+	mediaType := localBundleMediaType.MediaType
+	if len(mediaType) == 0 {
+		mediaType = bundle.BundleV03MediaType
 	}
 
 	// Write the bundle layer
-	layer := static.NewLayer(bundleBytes, types.MediaType(bundleMediaType))
+	layer := static.NewLayer(bundleBytes, types.MediaType(mediaType))
 
 	annotations := map[string]string{
 		"org.opencontainers.image.created": time.Now().UTC().Format(time.RFC3339),
@@ -408,7 +415,7 @@ func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicat
 		BundlePredicateType:                predicateType,
 	}
 
-	return WriteReferrer(d, bundleMediaType, []v1.Layer{layer}, annotations, opts...)
+	return WriteReferrer(d, mediaType, []v1.Layer{layer}, annotations, opts...)
 }
 
 // WriteAttestationsReferrer publishes the attestations attached to the given entity

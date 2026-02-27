@@ -71,21 +71,79 @@ func TestMakeProtobufBundle(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle, err := MakeProtobufBundle(tc.hint, tc.rawCert, tc.rekorEntry, tc.timestampBytes)
+			bundle, err := MakeProtobufBundle(tc.hint, [][]byte{tc.rawCert}, tc.rekorEntry, tc.timestampBytes)
 			if err != nil {
 				t.Errorf("unexpected err %s", err)
 			}
 			if tc.hint != "" && bundle.VerificationMaterial.GetPublicKey() == nil {
 				t.Errorf("Verification material should be public key")
 			}
-			if len(tc.rawCert) > 0 && bundle.VerificationMaterial.GetCertificate() == nil {
-				t.Errorf("Verification material should be certificate")
+			if len(tc.rawCert) > 0 && bundle.VerificationMaterial.GetX509CertificateChain() == nil {
+				t.Errorf("Verification material should be certificate chain")
 			}
 			if tc.rekorEntry != nil && len(bundle.VerificationMaterial.GetTlogEntries()) == 0 {
 				t.Errorf("Verification material should contain Tlog Entries")
 			}
 			if len(tc.timestampBytes) > 0 && bundle.VerificationMaterial.GetTimestampVerificationData() == nil {
 				t.Errorf("Verification material should have timestamp")
+			}
+		})
+	}
+}
+
+func TestMakeProtobufBundle_CertificateChain(t *testing.T) {
+	testCases := []struct {
+		name            string
+		rawCertChain    [][]byte
+		expectMediaType string
+		expectChainLen  int
+	}{
+		{
+			name:            "empty certificate chain",
+			rawCertChain:    [][]byte{},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+			expectChainLen:  0,
+		},
+		{
+			name:            "single certificate",
+			rawCertChain:    [][]byte{[]byte("certificate1")},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.2+json",
+			expectChainLen:  1,
+		},
+		{
+			name:            "multiple certificates in chain",
+			rawCertChain:    [][]byte{[]byte("certificate1"), []byte("certificate2"), []byte("certificate3")},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.2+json",
+			expectChainLen:  3,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			bundle, err := MakeProtobufBundle("", tc.rawCertChain, nil, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			if bundle.MediaType != tc.expectMediaType {
+				t.Errorf("expected media type %q, got %q", tc.expectMediaType, bundle.MediaType)
+			}
+
+			if len(tc.rawCertChain) > 0 {
+				certChain := bundle.VerificationMaterial.GetX509CertificateChain()
+				if certChain == nil {
+					t.Fatal("expected X509CertificateChain, got nil")
+				}
+
+				if len(certChain.Certificates) != tc.expectChainLen {
+					t.Errorf("expected %d certificates in chain, got %d", tc.expectChainLen, len(certChain.Certificates))
+				}
+
+				for i, expectedCert := range tc.rawCertChain {
+					if string(certChain.Certificates[i].RawBytes) != string(expectedCert) {
+						t.Errorf("certificate %d mismatch", i)
+					}
+				}
 			}
 		})
 	}

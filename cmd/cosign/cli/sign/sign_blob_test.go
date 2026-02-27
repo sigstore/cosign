@@ -57,7 +57,7 @@ func TestSignBlobCmd(t *testing.T) {
 
 	// Test signing with a certificate
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	cert, certPrivKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	cert, certPrivKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	certPemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	signCertPath := writeFile(t, td, string(certPemBytes), "cert.pem")
 	x509Encoded, err := x509.MarshalPKCS8PrivateKey(certPrivKey)
@@ -78,6 +78,67 @@ func TestSignBlobCmd(t *testing.T) {
 	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, signCertPath, "", false, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
+	}
+}
+
+func TestSignBlobCmdWithCertificateChain(t *testing.T) {
+	td := t.TempDir()
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
+
+	// Generate Certificate Chain (Root CA -> Intermediate CA -> Leaf Certificate)
+	rootCertificateAuthority, rootKey, err := test.GenerateRootCa()
+	if err != nil {
+		t.Fatalf("failed to generate root CA: %v", err)
+	}
+
+	intermediateCertificateAuthority, intermediateKey, err := test.GenerateSubordinateCa(rootCertificateAuthority, rootKey)
+	if err != nil {
+		t.Fatalf("failed to generate intermediate CA: %v", err)
+	}
+
+	leafCertificate, leafPrivateKey, err := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", intermediateCertificateAuthority, intermediateKey)
+	if err != nil {
+		t.Fatalf("failed to generate leaf cert: %v", err)
+	}
+
+	// Create Full Certificate Chain (.pem)
+	var certificateChainPem []byte
+	certificateChainPem = append(certificateChainPem, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCertificate.Raw})...)
+	certificateChainPem = append(certificateChainPem, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: intermediateCertificateAuthority.Raw})...)
+	certificateChainPem = append(certificateChainPem, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCertificateAuthority.Raw})...)
+	certificateChainPath := writeFile(t, td, string(certificateChainPem), "chain.pem")
+
+	// Encode Private Key (.pem)
+	x509Encoded, err := x509.MarshalPKCS8PrivateKey(leafPrivateKey)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling private key: %v", err)
+	}
+
+	encryptedPrivateKey, err := encrypted.Encrypt(x509Encoded, nil)
+	if err != nil {
+		t.Fatalf("unexpected error encrypting private key: %v", err)
+	}
+
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Bytes: encryptedPrivateKey,
+		Type:  cosign.SigstorePrivateKeyPemType,
+	})
+
+	privateKeyReference := writeFile(t, td, string(pemBytes), "certkey.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+
+	rootOpts := &options.RootOptions{}
+	keyOpts := options.KeyOpts{
+		KeyRef:          privateKeyReference,
+		BundlePath:      bundlePath,
+		NewBundleFormat: true,
+	}
+
+	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, certificateChainPath, "", false, "", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error signing with certificate chain: %v", err)
 	}
 }
 

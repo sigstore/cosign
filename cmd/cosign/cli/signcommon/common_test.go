@@ -43,7 +43,7 @@ func generateCertificateFiles(t *testing.T, tmpDir string, pf cosign.PassFunc) (
 
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
 	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})

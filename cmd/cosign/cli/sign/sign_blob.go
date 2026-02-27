@@ -165,7 +165,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if ko.NewBundleFormat {
 			// Determine if signature is certificate or not
 			var hint string
-			var rawCert []byte
+			var rawCertChain [][]byte
 
 			cert, err := cryptoutils.UnmarshalCertificatesFromPEM(signer)
 			if err != nil || len(cert) == 0 {
@@ -180,10 +180,14 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 				hashedBytes := sha256.Sum256(pkixPubKey)
 				hint = base64.StdEncoding.EncodeToString(hashedBytes[:])
 			} else {
-				rawCert = cert[0].Raw
+				// Extract All Certificates from Chain
+				rawCertChain = make([][]byte, len(cert))
+				for i, c := range cert {
+					rawCertChain[i] = c.Raw
+				}
 			}
 
-			bundle, err := cbundle.MakeProtobufBundle(hint, rawCert, rekorEntry, timestampBytes)
+			bundle, err := cbundle.MakeProtobufBundle(hint, rawCertChain, rekorEntry, timestampBytes)
 			if err != nil {
 				return nil, err
 			}

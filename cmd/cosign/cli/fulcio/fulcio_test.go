@@ -160,7 +160,7 @@ func TestNewClient(t *testing.T) {
 
 func TestNewSigner(t *testing.T) {
 	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, _, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	leafCert, _, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
 	pemChain, _ := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{leafCert, rootCert})
 
 	testServer := httptest.NewServer(http.HandlerFunc(
