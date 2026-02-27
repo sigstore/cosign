@@ -36,6 +36,7 @@ import (
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // VerifyCommand verifies a signature on a supplied container image
@@ -269,22 +270,13 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
 			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
 		}
-		// Unmarshal first into in_toto.StatementHeader which should correctly parse the predicate type
-		var intotoStatement in_toto.StatementHeader
-		err = json.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
+		// Unmarshal into in_toto_attest.Statement in order to parse annotations
+		var intotoStatement in_toto_attest.Statement
+		err = protojson.Unmarshal(dsseEnvelope.Payload, &intotoStatement)
 		if err != nil {
 			return nil, err
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
-			return nil, fmt.Errorf("no intoto subject or digest found")
-		}
-		// Unmarshal again into in_toto_attest.Statement in order to parse annotations
-		var intotoAnnoStatement in_toto_attest.Statement
-		err = json.Unmarshal(dsseEnvelope.Payload, &intotoAnnoStatement)
-		if err != nil {
-			return nil, err
-		}
-		if len(intotoAnnoStatement.Subject) < 1 || len(intotoAnnoStatement.Subject[0].Digest) < 1 {
 			return nil, fmt.Errorf("no intoto subject or digest found")
 		}
 
@@ -292,7 +284,7 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		for k, v := range intotoStatement.Subject[0].Digest {
 			digest = k + ":" + v
 		}
-		annotations := intotoAnnoStatement.Subject[0].Annotations.AsMap()
+		annotations := intotoStatement.Subject[0].Annotations.AsMap()
 
 		sci := payload.SimpleContainerImage{
 			Critical: payload.Critical{

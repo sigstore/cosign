@@ -149,7 +149,7 @@ func TestAttestationToPayloadJson(t *testing.T) {
 		}
 		switch fileName {
 		case "custom":
-			var intoto in_toto.Statement
+			var intoto in_toto.Statement //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 			if err := json.Unmarshal(jsonBytes, &intoto); err != nil {
 				t.Fatalf("[%s] Wanted custom statement, can't unmarshal to it: %v", fileName, err)
 			}

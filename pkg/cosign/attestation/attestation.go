@@ -146,7 +146,7 @@ func generateVulnStatement(predicate []byte, digest string, repo string) (interf
 		return nil, err
 	}
 
-	return in_toto.Statement{
+	return in_toto.Statement{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 		StatementHeader: generateStatementHeader(digest, repo, CosignVulnProvenanceV01),
 		Predicate:       vuln,
 	}, nil
@@ -167,11 +167,11 @@ func customType(opts GenerateOpts) string {
 	return CosignCustomProvenanceV01
 }
 
-func generateStatementHeader(digest, repo, predicateType string) in_toto.StatementHeader {
-	return in_toto.StatementHeader{
+func generateStatementHeader(digest, repo, predicateType string) in_toto.StatementHeader { //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
+	return in_toto.StatementHeader{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 		Type:          in_toto.StatementInTotoV01,
 		PredicateType: predicateType,
-		Subject: []in_toto.Subject{
+		Subject: []in_toto.Subject{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 			{
 				Name: repo,
 				Digest: map[string]string{
@@ -188,7 +188,7 @@ func generateCustomStatement(rawPayload []byte, customType, digest, repo, timest
 		return nil, err
 	}
 
-	return in_toto.Statement{
+	return in_toto.Statement{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 		StatementHeader: generateStatementHeader(digest, repo, customType),
 		Predicate:       payload,
 	}, nil
@@ -227,7 +227,7 @@ func generateSLSAProvenanceStatementSLSA02(rawPayload []byte, digest string, rep
 }
 
 func generateSLSAProvenanceStatementSLSA1(rawPayload []byte, digest string, repo string) (interface{}, error) {
-	var predicate slsa1.ProvenancePredicate
+	var predicate slsa1.ProvenancePredicate //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 	err := checkRequiredJSONFields(rawPayload, reflect.TypeOf(predicate))
 	if err != nil {
 		return nil, fmt.Errorf("provenance predicate: %w", err)
@@ -236,7 +236,7 @@ func generateSLSAProvenanceStatementSLSA1(rawPayload []byte, digest string, repo
 	if err != nil {
 		return "", fmt.Errorf("unmarshal Provenance predicate: %w", err)
 	}
-	return in_toto.ProvenanceStatementSLSA1{
+	return in_toto.ProvenanceStatementSLSA1{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 		StatementHeader: generateStatementHeader(digest, repo, slsa1.PredicateSLSAProvenance),
 		Predicate:       predicate,
 	}, nil
@@ -263,7 +263,7 @@ func generateOpenVexStatement(rawPayload []byte, digest string, repo string) (in
 	if err := json.Unmarshal(rawPayload, &data); err != nil {
 		return nil, err
 	}
-	return in_toto.Statement{
+	return in_toto.Statement{ //nolint:staticcheck // SA1019 - in_toto.Statement is deprecated, but we still use it to support non-JSON-object predicates
 		StatementHeader: generateStatementHeader(digest, repo, OpenVexNamespace),
 		Predicate:       data,
 	}, nil
