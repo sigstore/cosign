@@ -18,7 +18,6 @@ package attest
 import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -116,7 +115,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return err
 	}
 
-	payload, err := json.Marshal(sh)
+	payload, err := sh.MarshalJSON()
 	if err != nil {
 		return err
 	}
