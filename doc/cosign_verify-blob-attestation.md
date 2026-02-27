@@ -54,7 +54,6 @@ cosign verify-blob-attestation [flags]
       --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle (default true)
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
-      --rfc3161-timestamp string                        path to RFC3161 timestamp FILE
       --sct string                                      path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
       --signature string                                path to base64-encoded signature over attestation in DSSE format
       --signature-digest-algorithm string               digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
