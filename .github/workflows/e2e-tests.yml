@@ -46,7 +46,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -66,7 +66,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -109,7 +109,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -142,14 +142,14 @@ jobs:
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
       with:
         go-version: '${{ env.GOVERSION }}'
         check-latest: true
         cache: false
 
     - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@eab208ef2d05b13404296a5e194a6b237e8bb213 # v1.6.4
+      uses: chainguard-dev/actions/setup-mirror@71714a76c3df10b544595a2294c16649dc3472e5 # v1.6.5
       with:
         mirror: mirror.gcr.io
 
@@ -257,4 +257,4 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@eab208ef2d05b13404296a5e194a6b237e8bb213 # v1.6.4
+      uses: chainguard-dev/actions/kind-diag@71714a76c3df10b544595a2294c16649dc3472e5 # v1.6.5
