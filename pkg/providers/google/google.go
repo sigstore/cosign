@@ -17,11 +17,11 @@ package google
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	"google.golang.org/api/idtoken"
 	"google.golang.org/api/impersonate"
+
+	"cloud.google.com/go/compute/metadata"
 
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/providers"
@@ -36,19 +36,8 @@ type googleWorkloadIdentity struct{}
 
 var _ providers.Interface = (*googleWorkloadIdentity)(nil)
 
-// gceProductNameFile is the product file path that contains the cloud service name.
-// This is a variable instead of a const to enable testing.
-var gceProductNameFile = "/sys/class/dmi/id/product_name"
-
-// Enabled implements providers.Interface
-// This is based on k8s.io/kubernetes/pkg/credentialprovider/gcp
 func (gwi *googleWorkloadIdentity) Enabled(ctx context.Context) bool {
-	data, err := os.ReadFile(gceProductNameFile)
-	if err != nil {
-		return false
-	}
-	name := strings.TrimSpace(string(data))
-	if name == "Google" || name == "Google Compute Engine" {
+	if metadata.OnGCE() {
 		// Just because we're on Google, does not mean workload identity is available.
 		// TODO(mattmoor): do something better than this.
 		_, err := gwi.Provide(ctx, "garbage")
