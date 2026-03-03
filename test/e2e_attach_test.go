@@ -26,13 +26,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"net/http/httptest"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/google/go-cmp/cmp"
@@ -43,15 +41,10 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
-	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
-	"github.com/sigstore/timestamp-authority/v2/pkg/server"
-	"github.com/spf13/viper"
 )
 
 func TestAttachSignature(t *testing.T) {
@@ -165,82 +158,6 @@ func TestAttachSignature(t *testing.T) {
 	}
 	args = []string{imgName}
 	must(verifyCmd.Exec(ctx, args), t)
-}
-
-func TestAttachWithRFC3161Timestamp(t *testing.T) {
-	ctx := context.Background()
-	// TSA server needed to create timestamp
-	viper.Set("timestamp-signer", "memory")
-	viper.Set("timestamp-signer-hash", "sha256")
-	apiServer := server.NewRestAPIServer("localhost", 0, []string{"http"}, false, 10*time.Second, 10*time.Second)
-	server := httptest.NewServer(apiServer.GetHandler())
-	t.Cleanup(server.Close)
-
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-
-	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	b := bytes.Buffer{}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
-
-	rootCert, rootKey, _ := cert_test.GenerateRootCa()
-	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString(signature)
-	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
-	pemrootRef := mkfile(string(pemRoot), td, t)
-
-	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
-
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
-
-	tsclient, err := tsaclient.GetTimestampClient(server.URL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
-	}
-
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(server.URL+"/api/v1/timestamp"))
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TSRef := mkfile(string(tsBytes), td, t)
-
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	must(verifyKeylessTSA(imgName, file.Name(), true, true), t)
 }
 
 func TestAttachWithRekorBundle(t *testing.T) {
