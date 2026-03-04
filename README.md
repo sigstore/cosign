@@ -194,21 +194,22 @@ $ cosign verify-blob artifact \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
-### What ** is not ** production ready?
+### Troubleshooting
 
-While parts of `cosign` are stable, we are continuing to experiment and add new features.
-The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
+If you encounter issues with Cosign, first make sure you are using a recent release: The Cosign project actively supports the most recent release as well as the last release in the v2 series.
 
-#### Formats/Specifications
+#### Common issues and remedies
 
-While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
-the format specifications for some of those types may not be considered stable yet.
-Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
+1. Verification fails with `failed to verify timestamps: threshold not met for verified log entry integrated timestamps: 0 < 1`: You may be verifying a signature that requires RFC3161 timestamp support
+   * Upgrade to most recent Cosign or
+   * With Cosign 2.6.x, use `--use-signed-timestamps`
+1. Verification fails with `no signatures found`: You may be verifying an image signature that requires support for Rekor v2 transparency log
+   * Upgrade to most recent Cosign
+1. Signing fails with HTTP errors: Signing with Cosign depends on multiple Sigstore services. Retrying on failure may be a useful workaround if any of these services fail -- filing issues for specific failures is also appreciated
 
-These include:
+#### My problem is something else
 
-* The SBOM specification for storing SBOMs in a container registry
-* The In-Toto attestation format
+Please open an [issue](https://github.com/sigstore/cosign/issues/new/choose) or ask in the [slack channel](#info).
 
 ## Working with Other Artifacts
 
