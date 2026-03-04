@@ -196,16 +196,16 @@ $ cosign verify-blob artifact \
 
 ### Troubleshooting
 
-If you encounter issues with cosign, first make sure you are using a recent release.
+If you encounter issues with Cosign, first make sure you are using a recent release: The Cosign project actively supports the most recent release as well as the last release in the v2 series.
 
 #### Common issues and remedies
 
-1. verify fails with `failed to verify timestamps: threshold not met for verified log entry integrated timestamps: 0 < 1`: You may be verifying a signature that requires RFC3161 timestamp support
-   * Upgrade to most recent cosign or
-   * With cosign 2.6.x, use `--use-signed-timestamps`
-1. verify fails with `no signatures found`: You may be verifying an image signature that requires support for Rekor v2 transparency log
-   * Upgrade to most recent cosign
-1. Signing fails with HTTP errors: Signing with cosign depends on multiple Sigstore services. Retrying on failure may be a useful workaround if any of these services fail -- filing issues for specific failures is also appreciated
+1. Verification fails with `failed to verify timestamps: threshold not met for verified log entry integrated timestamps: 0 < 1`: You may be verifying a signature that requires RFC3161 timestamp support
+   * Upgrade to most recent Cosign or
+   * With Cosign 2.6.x, use `--use-signed-timestamps`
+1. Verification fails with `no signatures found`: You may be verifying an image signature that requires support for Rekor v2 transparency log
+   * Upgrade to most recent Cosign
+1. Signing fails with HTTP errors: Signing with Cosign depends on multiple Sigstore services. Retrying on failure may be a useful workaround if any of these services fail -- filing issues for specific failures is also appreciated
 
 #### My problem is something else
 
@@ -556,22 +556,6 @@ The following checks were performed on each of these signatures:
 ```
 
 ## FAQ
-
-### What ** is not ** production ready?
-
-While parts of `cosign` are stable, we are continuing to experiment and add new features.
-The following feature set is not considered stable yet, but we are committed to stabilizing it over time!
-
-#### Formats/Specifications
-
-While the `cosign` code for uploading, signing, retrieving, and verifying several artifact types is stable,
-the format specifications for some of those types may not be considered stable yet.
-Some of these are developed outside of the `cosign` project, so we are waiting for them to stabilize first.
-
-These include:
-
-* The SBOM specification for storing SBOMs in a container registry
-* The In-Toto attestation format
 
 ### Why not use Notary v2
 
