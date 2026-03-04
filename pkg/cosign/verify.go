@@ -146,6 +146,11 @@ type CheckOpts struct {
 	// PayloadRef is a reference to the payload file. Applicable only if SignatureRef is set.
 	PayloadRef string
 
+	// CertRef is a reference to the certificate file. Applicable only if SignatureRef is set.
+	CertRef string
+	// CertChain is a reference to the certificate chain file. Applicable only if SignatureRef is set.
+	CertChain string
+
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
 	// to be met for the signature to ve valid.
 	Identities []Identity
@@ -1018,7 +1023,31 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		}
 	}
 
-	sig, err := static.NewSignature(payload, b64sig)
+	var opts []static.Option
+	var targetCert, targetChain []byte
+	if co.CertRef != "" {
+		targetCert, err = blob.LoadFileOrURL(co.CertRef)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return nil, err
+			}
+			targetCert = []byte(co.CertRef)
+		}
+	}
+	if co.CertChain != "" {
+		targetChain, err = blob.LoadFileOrURL(co.CertChain)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return nil, err
+			}
+			targetChain = []byte(co.CertChain)
+		}
+	}
+	if len(targetCert) > 0 {
+		opts = append(opts, static.WithCertChain(targetCert, targetChain))
+	}
+
+	sig, err := static.NewSignature(payload, b64sig, opts...)
 	if err != nil {
 		return nil, err
 	}
