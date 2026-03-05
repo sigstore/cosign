@@ -110,7 +110,7 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("validating cert: %w", err)
 			}
-			return sigVerifier, nil, func() {}, nil
+			return sigVerifier, cert, func() {}, nil
 		}
 		chain, err := loadCertChainFromFileOrURL(certChain)
 		if err != nil {
@@ -120,7 +120,7 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("validating cert with chain: %w", err)
 		}
-		return sigVerifier, nil, func() {}, nil
+		return sigVerifier, cert, func() {}, nil
 	}
 	return nil, nil, func() {}, nil
 }

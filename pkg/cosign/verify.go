@@ -146,6 +146,9 @@ type CheckOpts struct {
 	// PayloadRef is a reference to the payload file. Applicable only if SignatureRef is set.
 	PayloadRef string
 
+	// Cert is the parsed certificate, if one was provided
+	Cert *x509.Certificate
+
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
 	// to be met for the signature to ve valid.
 	Identities []Identity
@@ -952,6 +955,9 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	cert, err := sig.Cert()
 	if err != nil {
 		return nil, err
+	}
+	if cert == nil && co.Cert != nil {
+		cert = co.Cert
 	}
 	var pub crypto.PublicKey
 	if co.SigVerifier != nil {
