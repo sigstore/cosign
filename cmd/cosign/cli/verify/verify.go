@@ -130,8 +130,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreSCT:                    c.IgnoreSCT,
 		SignatureRef:                 c.SignatureRef,
 		PayloadRef:                   c.PayloadRef,
-		CertRef:                      c.CertRef,
-		CertChain:                    c.CertChain,
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
