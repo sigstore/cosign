@@ -2639,7 +2639,7 @@ We would love to thank the contributors:
 
 This is the first release of `cosign`!
 
-The main goal of this release is to release something we can start using to sign other releases of [sigstore](sigstore.dev) projects, including `cosign` itself.
+The main goal of this release is to release something we can start using to sign other releases of [sigstore](https://sigstore.dev) projects, including `cosign` itself.
 
 We expect many flags, commands, and formats to change going forward.
 No backwards compatibility is promised or implied.
