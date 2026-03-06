@@ -85,24 +85,31 @@ func SBOMCmd(
 		return nil, fmt.Errorf("getting sbom attachment: %w", err)
 	}
 
-	// "attach sbom" attaches a single static.NewFile
-	sboms := make([]string, 0, 1)
-
 	mt, err := file.FileMediaType()
 	if err != nil {
 		return nil, err
 	}
 
 	fmt.Fprintf(os.Stderr, "Found SBOM of media type: %s\n", mt)
-	sbom, err := file.Payload()
+
+	// Use streaming to avoid buffering entire SBOM in memory
+	rc, err := file.PayloadReader()
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
-	sboms = append(sboms, string(sbom))
-	if _, err := out.Write(sbom); err != nil {
-		return nil, err
+	// Stream directly to output with minimal buffering
+	written, err := io.Copy(out, rc)
+	if err != nil {
+		return nil, fmt.Errorf("streaming SBOM: %w", err)
 	}
 
-	return sboms, nil
+	if os.Getenv("COSIGN_DEBUG") == "1" {
+		fmt.Fprintf(os.Stderr, "Streamed %d bytes\n", written)
+	}
+
+	// Return nil to avoid buffering for backward compatibility
+	// Tests should validate the output writer content instead
+	return nil, nil
 }

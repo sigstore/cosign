@@ -15,7 +15,11 @@
 
 package oci
 
-import "github.com/google/go-containerregistry/pkg/v1/types"
+import (
+	"io"
+
+	"github.com/google/go-containerregistry/pkg/v1/types"
+)
 
 // File is a degenerate form of SignedImage that stores a single file as a v1.Layer
 type File interface {
@@ -27,4 +31,9 @@ type File interface {
 	// Payload fetches the opaque data that is being signed.
 	// This will always return data when there is no error.
 	Payload() ([]byte, error)
+
+	// PayloadReader returns a streaming reader for the file payload.
+	// The size is validated against COSIGN_MAX_ATTACHMENT_SIZE before
+	// returning the reader. The caller MUST close the reader when done.
+	PayloadReader() (io.ReadCloser, error)
 }
