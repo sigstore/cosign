@@ -76,8 +76,8 @@ func TestGetBundles_Empty(t *testing.T) {
 	assert.NoError(t, err)
 	digestRef := ref.Context().Digest(desc.Digest.String())
 
-	// Write invalid attestation
-	err = ociremote.WriteAttestationNewBundleFormat(digestRef, []byte("invalid"), "foo/bar")
+	// Write invalid attestation (valid JSON, not valid bundle structure)
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, []byte(`{"invalid": "bundle"}`), "foo/bar")
 	assert.NoError(t, err)
 
 	// Should still return no matching attestation error, as it failed to parse the bundle
