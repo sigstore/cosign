@@ -37,7 +37,7 @@ var inToto bool
 func usage() {
 	fmt.Println("Usage:")
 	fmt.Printf("\t%s sign-bundle [--in-toto] --identity-token TOKEN [--signing-config FILE] [--trusted-root FILE] --bundle FILE FILE\n", os.Args[0])
-	fmt.Printf("\t%s verify-bundle --bundle FILE [--certificate-identity IDENTITY] [--certificate-oidc-issuer URL] [--key FILE] [--trusted-root FILE] FILE\n", os.Args[0])
+	fmt.Printf("\t%s verify-bundle --bundle FILE [--certificate-identity IDENTITY --certificate-oidc-issuer URL] [--key FILE] [--trusted-root FILE] FILE\n", os.Args[0])
 }
 
 func parseArgs() {
