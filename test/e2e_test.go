@@ -3981,19 +3981,18 @@ func TestAttachSBOM(t *testing.T) {
 	// Upload it!
 	must(attach.SBOMCmd(ctx, options.RegistryOptions{}, options.RegistryExperimentalOptions{}, "./testdata/bom-go-mod.spdx", "spdx", imgName), t)
 
-	sboms, err := download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
+	_, err = download.SBOMCmd(ctx, options.RegistryOptions{}, options.SBOMDownloadOptions{}, imgName, &out)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(out.String())
-	if len(sboms) != 1 {
-		t.Fatalf("Expected one sbom, got %d", len(sboms))
-	}
+
+	// Validate the streamed output
 	want, err := os.ReadFile("./testdata/bom-go-mod.spdx")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(string(want), sboms[0]); diff != "" {
+	if diff := cmp.Diff(string(want), out.String()); diff != "" {
 		t.Errorf("diff: %s", diff)
 	}
 

@@ -251,6 +251,25 @@ func (f *attached) Payload() ([]byte, error) {
 	return io.ReadAll(rc)
 }
 
+// PayloadReader implements oci.File with streaming support.
+// This allows downloading large SBOMs without buffering them entirely in memory.
+func (f *attached) PayloadReader() (io.ReadCloser, error) {
+	size, err := f.layer.Size()
+	if err != nil {
+		return nil, err
+	}
+	err = payloadsize.CheckSize(uint64(size))
+	if err != nil {
+		return nil, err
+	}
+
+	// remote layers are believed to be stored
+	// compressed, but we don't compress attachments
+	// so use "Compressed" to access the raw byte
+	// stream.
+	return f.layer.Compressed()
+}
+
 // attachmentExperimentalOCI is a shared implementation of the oci.Signed* Attachment method (for OCI 1.1+ behavior).
 func attachmentExperimentalOCI(digestable oci.SignedEntity, attName string, o *options) (oci.File, error) {
 	h, err := digestable.Digest()

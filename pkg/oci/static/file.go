@@ -98,3 +98,16 @@ func (f *file) Payload() ([]byte, error) {
 	defer rc.Close()
 	return io.ReadAll(rc)
 }
+
+// PayloadReader implements oci.File with streaming support.
+func (f *file) PayloadReader() (io.ReadCloser, error) {
+	size, err := f.layer.Size()
+	if err != nil {
+		return nil, err
+	}
+	err = payloadsize.CheckSize(uint64(size))
+	if err != nil {
+		return nil, err
+	}
+	return f.layer.Uncompressed()
+}
