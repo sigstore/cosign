@@ -243,14 +243,18 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if outputCertificate != "" {
-		certBytes, err := extractCertificate(ctx, sv)
+		// Write the signer's PEM-encoded bytes to the output certificate file.
+		// This matches the behavior of `cosign sign --output-certificate`:
+		// - For keyless/Fulcio signing: writes the certificate
+		// - For key-based signing: writes the PEM-encoded public key
+		signerBytes, err := sv.Bytes(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting signer bytes: %w", err)
 		}
-		if certBytes != nil {
-			bts := certBytes
+		if signerBytes != nil {
+			bts := signerBytes
 			if b64 {
-				bts = []byte(base64.StdEncoding.EncodeToString(certBytes))
+				bts = []byte(base64.StdEncoding.EncodeToString(signerBytes))
 			}
 			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
 				return nil, fmt.Errorf("create certificate file: %w", err)
