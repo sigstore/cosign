@@ -55,6 +55,22 @@ func TestSignBlobCmd(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	// Verify that --output-certificate writes the public key when signing with --key
+	certBytes, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatalf("expected certificate file to exist: %v", err)
+	}
+	if len(certBytes) == 0 {
+		t.Fatal("expected certificate file to contain public key PEM data, got empty file")
+	}
+	block, _ := pem.Decode(certBytes)
+	if block == nil {
+		t.Fatal("expected certificate file to contain valid PEM data")
+	}
+	if block.Type != "PUBLIC KEY" {
+		t.Fatalf("expected PEM type 'PUBLIC KEY', got %q", block.Type)
+	}
+
 	// Test signing with a certificate
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	cert, certPrivKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
