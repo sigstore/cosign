@@ -243,20 +243,18 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if outputCertificate != "" {
-		certBytes, err := extractCertificate(ctx, sv)
+		certBytes, err := sv.Bytes(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting certificate: %w", err)
 		}
-		if certBytes != nil {
-			bts := certBytes
-			if b64 {
-				bts = []byte(base64.StdEncoding.EncodeToString(certBytes))
-			}
-			if err := os.WriteFile(outputCertificate, bts, 0600); err != nil {
-				return nil, fmt.Errorf("create certificate file: %w", err)
-			}
-			ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
+
+		if b64 {
+			certBytes = []byte(base64.StdEncoding.EncodeToString(certBytes))
 		}
+		if err := os.WriteFile(outputCertificate, certBytes, 0600); err != nil {
+			return nil, fmt.Errorf("create certificate file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote certificate to file %s", outputCertificate)
 	}
 
 	return sig, nil

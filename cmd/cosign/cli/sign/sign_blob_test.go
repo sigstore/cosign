@@ -55,6 +55,15 @@ func TestSignBlobCmd(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
+	// Verify that --output-certificate writes a file when using a key
+	certData, err := os.ReadFile(certPath)
+	if err != nil {
+		t.Fatalf("expected certificate file to be written: %v", err)
+	}
+	if len(certData) == 0 {
+		t.Fatal("expected non-empty certificate file")
+	}
+
 	// Test signing with a certificate
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	cert, certPrivKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
