@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/auth"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/v3/internal/pkg/retry"
 	"github.com/sigstore/fulcio/pkg/api"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -61,7 +62,16 @@ func GetCert(_ context.Context, sv signature.SignerVerifier, idToken, flow, oidc
 
 	fmt.Fprintln(os.Stderr, "Retrieving signed certificate...")
 
-	return fClient.SigningCert(cr, tok)
+	var resp *api.CertificateResponse
+	err = retry.Do(context.Background(), func() error {
+		var certErr error
+		resp, certErr = fClient.SigningCert(cr, tok)
+		return certErr
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 type Signer struct {

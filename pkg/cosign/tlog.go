@@ -32,6 +32,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
+	"github.com/sigstore/cosign/v3/internal/pkg/retry"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
@@ -188,11 +189,20 @@ func GetRekorPubs(ctx context.Context) (*TrustedTransparencyLogPubKeys, error) {
 // sign path to validate return responses are consistent from Rekor.
 func rekorPubsFromClient(rekorClient *client.Rekor) (*TrustedTransparencyLogPubKeys, error) {
 	publicKeys := NewTrustedTransparencyLogPubKeys()
-	pubOK, err := rekorClient.Pubkey.GetPublicKey(nil)
+
+	var pubPayload string
+	err := retry.Do(context.Background(), func() error {
+		pubOK, pubErr := rekorClient.Pubkey.GetPublicKey(nil)
+		if pubErr != nil {
+			return pubErr
+		}
+		pubPayload = pubOK.Payload
+		return nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch rekor public key from rekor: %w", err)
 	}
-	if err := publicKeys.AddTransparencyLogPubKey([]byte(pubOK.Payload), tuf.Active); err != nil {
+	if err := publicKeys.AddTransparencyLogPubKey([]byte(pubPayload), tuf.Active); err != nil {
 		return nil, fmt.Errorf("constructRekorPubKey: %w", err)
 	}
 	return &publicKeys, nil
@@ -238,7 +248,20 @@ func TLogUploadInTotoAttestation(ctx context.Context, rekorClient *client.Rekor,
 func doUpload(ctx context.Context, rekorClient *client.Rekor, pe models.ProposedEntry) (*models.LogEntryAnon, error) {
 	params := entries.NewCreateLogEntryParamsWithContext(ctx)
 	params.SetProposedEntry(pe)
-	resp, err := rekorClient.Entries.CreateLogEntry(params)
+
+	var resp *entries.CreateLogEntryCreated
+	err := retry.Do(ctx, func() error {
+		var createErr error
+		resp, createErr = rekorClient.Entries.CreateLogEntry(params)
+		if createErr != nil {
+			// Don't retry conflict errors - the entry already exists
+			var existsErr *entries.CreateLogEntryConflict
+			if errors.As(createErr, &existsErr) {
+				return createErr
+			}
+		}
+		return createErr
+	})
 	if err != nil {
 		// If the entry already exists, we get a specific error.
 		// Here, we display the proof and succeed.
@@ -404,7 +427,13 @@ func verifyUUID(entryUUID string, e models.LogEntryAnon) error {
 func GetTlogEntry(ctx context.Context, rekorClient *client.Rekor, entryUUID string) (*models.LogEntryAnon, error) {
 	params := entries.NewGetLogEntryByUUIDParamsWithContext(ctx)
 	params.SetEntryUUID(entryUUID)
-	resp, err := rekorClient.Entries.GetLogEntryByUUID(params)
+
+	var resp *entries.GetLogEntryByUUIDOK
+	err := retry.Do(ctx, func() error {
+		var getErr error
+		resp, getErr = rekorClient.Entries.GetLogEntryByUUID(params)
+		return getErr
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +497,13 @@ func FindTlogEntry(ctx context.Context, rekorClient *client.Rekor,
 	searchLogQuery.SetEntries(proposedEntries)
 
 	searchParams.SetEntry(&searchLogQuery)
-	resp, err := rekorClient.Entries.SearchLogQuery(searchParams)
+
+	var resp *entries.SearchLogQueryOK
+	err = retry.Do(ctx, func() error {
+		var searchErr error
+		resp, searchErr = rekorClient.Entries.SearchLogQuery(searchParams)
+		return searchErr
+	})
 	if err != nil {
 		return nil, fmt.Errorf("searching log query: %w", err)
 	}
