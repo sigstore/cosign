@@ -102,7 +102,7 @@ func Attest() *cobra.Command {
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
 				o.NewBundleFormat, "", o.Key, o.IssueCertificate,
-				"", "", "", "", ""); err != nil {
+				"", "", "", "", "", ""); err != nil {
 				return err
 			}
 

@@ -641,7 +641,7 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath string,
 	rekorURL, fulcioURL, oidcIssuer, tsaServerURL, trustedRootPath string,
 	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
-	output, outputAttestation, outputCertificate, outputPayload, outputSignature string) error {
+	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
 	var err error
 	// If a signing config is used, then service URLs cannot be specified
 	if (useSigningConfig || signingConfigPath != "") &&
@@ -699,6 +699,9 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	}
 	if newBundleFormat && outputPayload != "" {
 		ui.Warnf(context.Background(), "--output-payload is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputTimestamp != "" {
+		ui.Warnf(context.Background(), "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
 	}
 	if newBundleFormat && output != "" {
 		ui.Warnf(context.Background(), "--output is deprecated when using --new-bundle-format and will be ignored")
