@@ -108,6 +108,9 @@ func (s *sigLayer) Cert() (*x509.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(certs) == 0 {
+		return nil, nil
+	}
 	return certs[0], nil
 }
 
