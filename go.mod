@@ -4,7 +4,7 @@ go 1.25.6
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
-	cuelang.org/go v0.15.4
+	cuelang.org/go v0.16.0
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.11.0
 	github.com/buildkite/agent/v3 v3.118.0
@@ -73,7 +73,7 @@ require (
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/kms v1.25.0 // indirect
 	cloud.google.com/go/longrunning v0.8.0 // indirect
-	cuelabs.dev/go/oci/ociregistry v0.0.0-20250722084951-074d06050084 // indirect
+	cuelabs.dev/go/oci/ociregistry v0.0.0-20251212221603-3adeb8663819 // indirect
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider v0.14.0 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
@@ -148,7 +148,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.9.4 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/emicklei/proto v1.14.2 // indirect
+	github.com/emicklei/proto v1.14.3 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
@@ -237,7 +237,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
-	github.com/protocolbuffers/txtpbfmt v0.0.0-20251016062345-16587c79cd91 // indirect
+	github.com/protocolbuffers/txtpbfmt v0.0.0-20260217160748-a481f6a22f94 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
