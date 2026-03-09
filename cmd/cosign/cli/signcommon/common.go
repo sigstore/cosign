@@ -88,6 +88,8 @@ func (c *SignerVerifier) Bytes(ctx context.Context) ([]byte, error) {
 
 // GetKeypairAndToken creates a keypair object from provided key or cert flags or generates an ephemeral key.
 // For an ephemeral key, it also uses the key to fetch an OIDC token, the pair of which are later used to get a Fulcio cert.
+//
+// Ensure the returned SignerVerifier is closed via calling SignerVerifier.Close.
 func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, *SignerVerifier, []byte, string, error) {
 	var keypair sign.Keypair
 	var ephemeralKeypair bool
@@ -105,11 +107,6 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 		return nil, nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
 	}
 	certBytes = sv.Cert
-	defer func() {
-		if sv != nil {
-			sv.Close()
-		}
-	}()
 
 	if ephemeralKeypair || ko.IssueCertificateForExistingKey {
 		if ko.SigningConfig == nil {
@@ -512,7 +509,12 @@ func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.Log
 
 // WriteNewBundleWithSigningConfig uses signing config and trusted root to fetch responses from services for the bundle and writes the bundle to the OCI remote layer.
 func WriteNewBundleWithSigningConfig(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) error {
-	keypair, _, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+	keypair, sv, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+	defer func() {
+		if sv != nil {
+			sv.Close()
+		}
+	}()
 	if err != nil {
 		return fmt.Errorf("getting keypair and token: %w", err)
 	}

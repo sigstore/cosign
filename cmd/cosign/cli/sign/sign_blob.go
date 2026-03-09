@@ -77,6 +77,11 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	keypair, sv, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
+	defer func() {
+		if sv != nil {
+			sv.Close()
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
