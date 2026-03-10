@@ -146,6 +146,11 @@ type CheckOpts struct {
 	// PayloadRef is a reference to the payload file. Applicable only if SignatureRef is set.
 	PayloadRef string
 
+	// Cert is the parsed certificate, if one was provided
+	Cert *x509.Certificate
+	// Chain is the parsed certificate chain, if one was provided
+	Chain []*x509.Certificate
+
 	// Identities is an array of Identity (Subject, Issuer) matchers that have
 	// to be met for the signature to ve valid.
 	Identities []Identity
@@ -862,6 +867,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		if err != nil {
 			return false, err
 		}
+		if cert == nil && co.Cert != nil {
+			cert = co.Cert
+		}
 		if cert == nil {
 			return false, &ErrNoCertificateFoundOnSignature{
 				fmt.Errorf("no certificate found on signature"),
@@ -871,6 +879,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		chain, err := sig.Chain()
 		if err != nil {
 			return false, err
+		}
+		if len(chain) == 0 && len(co.Chain) > 0 {
+			chain = co.Chain
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
 		var pool *x509.CertPool
@@ -912,7 +923,13 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	if err != nil {
 		return false, err
 	}
+	if cert == nil && co.Cert != nil {
+		cert = co.Cert
+	}
 	if cert != nil {
+		if len(verifierChain) == 0 && len(co.Chain) > 1 {
+			verifierChain = co.Chain[1:]
+		}
 		// use the provided Rekor bundle or RFC3161 timestamp to check certificate expiration
 		expirationChecked := false
 
@@ -952,6 +969,9 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	cert, err := sig.Cert()
 	if err != nil {
 		return nil, err
+	}
+	if cert == nil && co.Cert != nil {
+		cert = co.Cert
 	}
 	var pub crypto.PublicKey
 	if co.SigVerifier != nil {

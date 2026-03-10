@@ -122,10 +122,13 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
 	var cert *x509.Certificate
-	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
+	var chain []*x509.Certificate
+	co.SigVerifier, cert, chain, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, true, co)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
+	co.Cert = cert
+	co.Chain = chain
 	defer closeSV()
 
 	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
@@ -239,15 +242,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 	// Set a cert chain if provided.
 	var chainPEM []byte
-	switch {
-	case c.CertChain != "":
-		chain, err := loadCertChainFromFileOrURL(c.CertChain)
-		if err != nil {
-			return err
-		}
-		if chain == nil {
-			return errors.New("expected certificate chain in --certificate-chain")
-		}
+	if len(chain) > 0 {
 		// Set the last one in the co.RootCerts. This is trusted, as its passed in
 		// via the CLI.
 		if co.RootCerts == nil {
@@ -260,9 +255,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-	case c.CARoots != "":
-		// CA roots + possible intermediates are already loaded into co.RootCerts with the call to
-		// loadCertsKeylessVerification above.
 	}
 
 	// Gather the cert for the signature and add the cert along with the
