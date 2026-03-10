@@ -127,6 +127,19 @@ func TestSignature(t *testing.T) {
 		wantSig:     "blah",
 		wantCertErr: errors.New(`error during PEM decoding`),
 	}, {
+		name: "min plus empty cert",
+		l: &sigLayer{
+			Layer: layer,
+			desc: v1.Descriptor{
+				Digest: digest,
+				Annotations: map[string]string{
+					sigkey:  "blah",
+					certkey: " ",
+				},
+			},
+		},
+		wantSig: "blah",
+	}, {
 		name: "min plus bad chain",
 		l: &sigLayer{
 			Layer: layer,
