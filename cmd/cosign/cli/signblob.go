@@ -114,7 +114,7 @@ func SignBlob() *cobra.Command {
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
 				o.NewBundleFormat, o.BundlePath, o.Key, o.IssueCertificate,
-				o.Output, "", o.OutputCertificate, "", o.OutputSignature); err != nil {
+				o.Output, "", o.OutputCertificate, "", o.OutputSignature, o.RFC3161TimestampPath); err != nil {
 				return err
 			}
 
