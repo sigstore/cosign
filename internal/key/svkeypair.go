@@ -135,3 +135,10 @@ func (k *SignerVerifierKeypair) SignData(ctx context.Context, data []byte) ([]by
 	}
 	return sig, digest, nil
 }
+
+// Close closes the underlying SignerVerifier if it has a Close() method.
+func (k *SignerVerifierKeypair) Close() {
+	if closer, ok := k.sv.(interface{ Close() }); ok {
+		closer.Close()
+	}
+}

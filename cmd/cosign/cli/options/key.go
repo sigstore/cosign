@@ -54,6 +54,7 @@ type KeyOpts struct {
 	// for valid values.
 	FulcioAuthFlow string
 
+	// Deprecated: SCT verification is no longer performed during signing/attestation.
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
 	// verifying the SCT.
 	InsecureSkipFulcioVerify bool
