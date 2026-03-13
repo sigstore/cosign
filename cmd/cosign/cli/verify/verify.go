@@ -18,6 +18,7 @@ package verify
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -183,10 +184,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
 	// after initializing trust material in order to verify certificate chain.
 	var closeSV func()
-	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	var parsedCert *x509.Certificate
+	var parsedChain []*x509.Certificate
+	co.SigVerifier, parsedCert, parsedChain, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
+	co.Cert = parsedCert
+	co.Chain = parsedChain
 	defer closeSV()
 
 	if c.CertRef != "" && c.SCTRef != "" {
