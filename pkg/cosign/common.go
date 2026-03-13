@@ -26,7 +26,15 @@ import (
 
 // TODO(jason): Move this to an internal package.
 func GetPassFromTerm(confirm bool) ([]byte, error) {
-	fmt.Fprint(os.Stderr, "Enter password for private key: ")
+	return GetPassFromTermWithPrompt(confirm, "Enter password for private key")
+}
+
+// GetPassFromTermWithPrompt reads a password from the terminal using a custom prompt.
+// prompt should not include a trailing ": "; the function appends it automatically.
+// If confirm is true, the user is asked to enter the password a second time.
+// TODO(jason): Move this to an internal package.
+func GetPassFromTermWithPrompt(confirm bool, prompt string) ([]byte, error) {
+	fmt.Fprint(os.Stderr, prompt+": ")
 	// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
 	// nolint:unconvert
 	pw1, err := term.ReadPassword(int(syscall.Stdin))
@@ -37,7 +45,7 @@ func GetPassFromTerm(confirm bool) ([]byte, error) {
 	if !confirm {
 		return pw1, nil
 	}
-	fmt.Fprint(os.Stderr, "Enter password for private key again: ")
+	fmt.Fprint(os.Stderr, prompt+" again: ")
 	// Unnecessary convert of syscall.Stdin on *nix, but Windows is a uintptr
 	// nolint:unconvert
 	confirmpw, err := term.ReadPassword(int(syscall.Stdin))
