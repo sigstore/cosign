@@ -90,7 +90,7 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 	td := t.TempDir()
 	rootCert, rootKey, _ := test.GenerateRootCa()
 	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", subCert, subKey)
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
 	pemChain := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
 	subCertPem := writeFile(t, td, string(pemChain), "other_cert.pem")
 	pemChain = append(pemChain,
