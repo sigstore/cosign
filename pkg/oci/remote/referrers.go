@@ -23,12 +23,18 @@ import (
 
 // Referrers fetches references using registry options.
 func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexManifest, error) {
-	o := makeOptions(name.Repository{}, opts...)
+	o := makeOptions(d.Context(), opts...)
 	rOpt := o.ROpt
 	if artifactType != "" {
 		rOpt = append(rOpt, remote.WithFilter("artifactType", artifactType))
 	}
-	idx, err := remote.Referrers(d, rOpt...)
+	// If a target repository override is set (e.g. via COSIGN_REPOSITORY),
+	// look for referrers in the target repository instead of the image's repository.
+	target := d
+	if (o.TargetRepository != name.Repository{}) && o.TargetRepository.Name() != d.Context().Name() {
+		target = o.TargetRepository.Digest(d.DigestStr())
+	}
+	idx, err := remote.Referrers(target, rOpt...)
 	if err != nil {
 		return nil, err
 	}
