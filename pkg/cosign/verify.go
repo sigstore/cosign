@@ -1646,7 +1646,8 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 		}
 		// TODO: do this smarter using "created" annotations
 		lastResult := results[numResults-1]
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
+		targetRepo := ociremote.ResolveTargetRepository(digest.Context(), co.RegistryClientOpts...)
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", targetRepo, lastResult.Digest.String()))
 		if err != nil {
 			return nil, false, err
 		}
@@ -1688,9 +1689,12 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 	if err != nil {
 		return nil, nil, err
 	}
+	// Resolve the target repository, which may differ from the image's
+	// repository when COSIGN_REPOSITORY is set.
+	targetRepo := ociremote.ResolveTargetRepository(digest.Context(), registryClientOpts...)
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()), nameOpts...)
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", targetRepo, result.Digest.String()), nameOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
