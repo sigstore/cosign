@@ -26,7 +26,7 @@ type FulcioOptions struct {
 	URL                      string
 	AuthFlow                 string
 	IdentityToken            string
-	InsecureSkipFulcioVerify bool
+	InsecureSkipFulcioVerify bool // Deprecated: SCT verification is no longer performed during signing/attestation.
 }
 
 var _ Interface = (*FulcioOptions)(nil)
@@ -46,4 +46,5 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
 		"skip verifying fulcio published to the SCT (this should only be used for testing).")
+	_ = cmd.Flags().MarkDeprecated("insecure-skip-verify", "SCT verification is no longer performed during signing/attestation.")
 }

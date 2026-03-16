@@ -19,13 +19,16 @@ import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	cremote "github.com/sigstore/cosign/v3/pkg/cosign/remote"
@@ -33,6 +36,8 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 // nolint
@@ -123,64 +128,108 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	bundleOpts := signcommon.CommonBundleOpts{
 		Payload:       payload,
 		Digest:        digest,
-		PredicateType: types.CosignSignPredicateType,
+		PredicateType: predicateURI,
 		BundlePath:    c.BundlePath,
 		Upload:        !c.NoUpload,
 		OCIRemoteOpts: ociremoteOpts,
 	}
 
-	if c.SigningConfig != nil {
-		return signcommon.WriteNewBundleWithSigningConfig(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	if c.SigningConfig == nil {
+		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts, c.TlogUpload)
+		if err != nil {
+			return fmt.Errorf("creating signing config: %w", err)
+		}
 	}
 
-	bundleComponents, closeSV, err := signcommon.GetBundleComponents(ctx, c.CertPath, c.CertChainPath, c.KeyOpts, c.NoUpload, c.TlogUpload, payload, digest, c.RekorEntryType)
+	bundleBytes, pubKey, pubKeyPem, hashAlgProto, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	if err != nil {
-		return fmt.Errorf("getting bundle components: %w", err)
+		return fmt.Errorf("creating bundle: %w", err)
 	}
-	defer closeSV()
 
-	sv := bundleComponents.SV
+	if c.NewBundleFormat {
+		// TODO(#4534): Mandate verification material output if no registry upload
+		if c.BundlePath != "" {
+			if err := os.WriteFile(c.BundlePath, bundleBytes, 0600); err != nil {
+				return fmt.Errorf("create bundle file: %w", err)
+			}
+			ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
+		}
 
-	if c.NoUpload && c.BundlePath == "" {
-		fmt.Println(string(bundleComponents.SignedPayload))
+		if !c.NoUpload {
+			if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, ociremoteOpts...); err != nil {
+				return fmt.Errorf("writing bundle: %w", err)
+			}
+		}
 		return nil
 	}
 
-	opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-	if sv.Cert != nil {
-		opts = append(opts, static.WithCertChain(sv.Cert, sv.Chain))
+	var pb protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &pb); err != nil {
+		return fmt.Errorf("unmarshalling bundle: %w", err)
 	}
 
-	if bundleComponents.RFC3161Timestamp != nil {
-		opts = append(opts, static.WithRFC3161Timestamp(bundleComponents.RFC3161Timestamp))
-	}
-
-	predicateType, err := options.ParsePredicateType(c.PredicateType)
+	bundleComponents, err := signcommon.ExtractComponentsFromProtoBundle(&pb)
 	if err != nil {
-		return err
+		return fmt.Errorf("extracting components from bundle: %w", err)
 	}
 
-	bundleOpts.PredicateType = predicateType
+	legacyBundleBytes, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, pubKeyPem)
+	if err != nil {
+		return fmt.Errorf("creating legacy bundle: %w", err)
+	}
+
+	// TODO(#4534): Mandate verification material output if no registry upload
+	if c.BundlePath != "" {
+		if err := os.WriteFile(c.BundlePath, legacyBundleBytes, 0600); err != nil {
+			return fmt.Errorf("create bundle file: %w", err)
+		}
+		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
+	}
+
+	if c.NoUpload {
+		return nil
+	}
+
+	certPem, chainPem := signcommon.EncodeCertificatesToPEM(bundleComponents.Certificates)
+
+	opts := []static.Option{
+		static.WithLayerMediaType(types.DssePayloadType),
+		static.WithAnnotations(map[string]string{
+			"predicateType": predicateURI,
+		}),
+	}
+	if certPem != nil {
+		opts = append(opts, static.WithCertChain(certPem, chainPem))
+	}
+
+	if len(bundleComponents.RFC3161Timestamps) > 0 {
+		opts = append(opts, static.WithRFC3161Timestamp(cbundle.TimestampToRFC3161Timestamp(bundleComponents.RFC3161Timestamps[0].GetSignedTimestamp())))
+	}
 
 	predicateTypeAnnotation := map[string]string{
-		"predicateType": predicateType,
+		"predicateType": predicateURI,
 	}
 	// Add predicateType as manifest annotation
 	opts = append(opts, static.WithAnnotations(predicateTypeAnnotation))
 
-	if bundleComponents.RekorEntry != nil {
-		opts = append(opts, static.WithBundle(cbundle.EntryToBundle(bundleComponents.RekorEntry)))
+	if len(bundleComponents.RekorEntries) > 0 {
+		opts = append(opts, static.WithBundle(signcommon.RekorBundleFromProtoTlogEntry(bundleComponents.RekorEntries[0])))
 	}
 
-	if c.KeyOpts.NewBundleFormat {
-		return signcommon.WriteBundle(ctx, sv, bundleComponents.RekorEntry, bundleOpts, bundleComponents.SignedPayload, bundleComponents.SignerBytes, bundleComponents.TimestampBytes)
+	ociSig, err := static.NewAttestation(bundleComponents.Signature, opts...)
+	if err != nil {
+		return fmt.Errorf("creating attestation: %w", err)
 	}
 
 	// We don't actually need to access the remote entity to attach things to it
 	// so we use a placeholder here.
 	se := ociremote.SignedUnknown(digest, ociremoteOpts...)
 
-	dd := cremote.NewDupeDetector(sv)
+	ddVerifier, err := signature.LoadVerifier(pubKey, signcommon.ProtoHashAlgoToHash(hashAlgProto))
+	if err != nil {
+		return fmt.Errorf("loading verifier: %w", err)
+	}
+	dd := cremote.NewDupeDetector(ddVerifier)
 	signOpts := []mutate.SignOption{
 		mutate.WithDupeDetector(dd),
 		mutate.WithRecordCreationTimestamp(c.RecordCreationTimestamp),
@@ -191,15 +240,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		signOpts = append(signOpts, mutate.WithReplaceOp(ro))
 	}
 
-	sig, err := static.NewAttestation(bundleComponents.SignedPayload, opts...)
-	if err != nil {
-		return err
-	}
-
 	// Attach the attestation to the entity.
-	newSE, err := mutate.AttachAttestationToEntity(se, sig, signOpts...)
+	newSE, err := mutate.AttachAttestationToEntity(se, ociSig, signOpts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("attaching attestation: %w", err)
 	}
 
 	// Publish the attestations associated with this entity

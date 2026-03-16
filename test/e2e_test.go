@@ -657,19 +657,8 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	tests := []struct {
 		name          string
 		targets       []targetInfo
-		wantSignErr   bool
 		wantVerifyErr bool
 	}{
-		{
-			name: "invalid CT key name with no usage",
-			targets: []targetInfo{
-				{
-					name:   "ct.pub",
-					source: ctLogKey,
-				},
-			},
-			wantSignErr: true,
-		},
 		{
 			name: "standard key names",
 			targets: []targetInfo{
@@ -819,10 +808,6 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				SkipConfirmation: true,
 			}
 			gotErr := sign.SignCmd(ctx, ro, ko, so, []string{imgName})
-			if test.wantSignErr {
-				mustErr(gotErr, t)
-				return
-			}
 			must(gotErr, t)
 
 			// Verify an image
@@ -856,11 +841,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			ko.BundlePath = bundlePath
 			ko.RFC3161TimestampPath = tsPath
 			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true)
-			if test.wantSignErr {
-				mustErr(gotErr, t)
-			} else {
-				must(gotErr, t)
-			}
+			must(gotErr, t)
 
 			// Verify a blob
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
