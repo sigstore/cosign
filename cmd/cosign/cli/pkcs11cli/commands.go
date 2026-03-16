@@ -98,6 +98,11 @@ func GetKeysInfo(_ context.Context, modulePath string, slotID uint, pin string) 
 	defer ctx.Destroy()
 	defer ctx.Finalize()
 
+	// Call GetSlotList to initialize slot data before GetTokenInfo (required by some modules like YKCS11).
+	if _, err = ctx.GetSlotList(true); err != nil {
+		return nil, fmt.Errorf("get slot list: %w", err)
+	}
+
 	// Get token Info.
 	var tokenInfo pkcs11.TokenInfo
 	tokenInfo, err = ctx.GetTokenInfo(uint(slotID))
