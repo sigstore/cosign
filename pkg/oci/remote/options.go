@@ -143,6 +143,15 @@ func GetEnvTargetRepository() (name.Repository, error) {
 	return name.Repository{}, nil
 }
 
+// ResolveTargetRepository returns the target repository resolved from the
+// provided options, falling back to the provided default repository.
+// This is useful for callers outside this package that need to know which
+// repository to use for constructing references.
+func ResolveTargetRepository(defaultRepo name.Repository, opts ...Option) name.Repository {
+	o := makeOptions(defaultRepo, opts...)
+	return o.TargetRepository
+}
+
 // WithNameOptions is a functional option for overriding the default
 // name options passed to GGCR.
 func WithNameOptions(opts ...name.Option) Option {
