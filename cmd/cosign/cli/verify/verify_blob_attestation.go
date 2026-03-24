@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -131,13 +132,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
 	var cert *x509.Certificate
-	var chain []*x509.Certificate
-	co.SigVerifier, cert, chain, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, true, co)
+	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
-	co.Cert = cert
-	co.Chain = chain
 	defer closeSV()
 
 	var h v1.Hash
@@ -299,7 +297,14 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 	// Set a cert chain if provided.
 	var chainPEM []byte
-	if len(chain) > 0 {
+	if c.CertChain != "" {
+		chain, err := loadCertChainFromFileOrURL(c.CertChain)
+		if err != nil {
+			return err
+		}
+		if chain == nil {
+			return errors.New("expected certificate chain in --certificate-chain")
+		}
 		// Set the last one in the co.RootCerts. This is trusted, as its passed in
 		// via the CLI.
 		if co.RootCerts == nil {
