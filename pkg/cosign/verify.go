@@ -329,6 +329,20 @@ func verifyOCISignature(ctx context.Context, verifier signature.Verifier, sig pa
 	return verifier.VerifySignature(bytes.NewReader(signature), bytes.NewReader(payload), options.WithContext(ctx))
 }
 
+type verifierWithCertChain struct {
+	signature.Verifier
+	cert  *x509.Certificate
+	chain []*x509.Certificate
+}
+
+func (v *verifierWithCertChain) GetCert() *x509.Certificate {
+	return v.cert
+}
+
+func (v *verifierWithCertChain) GetChain() []*x509.Certificate {
+	return v.chain
+}
+
 // ValidateAndUnpackCert creates a Verifier from a certificate. Verifies that the
 // certificate chains up to a trusted root using intermediate certificate chain coming from CheckOpts.
 // Optionally verifies the subject and issuer of the certificate.
@@ -390,7 +404,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 
 	// If IgnoreSCT is set, skip the SCT check
 	if co.IgnoreSCT {
-		return verifier, chains[0], nil
+		return &verifierWithCertChain{Verifier: verifier, cert: cert, chain: chains[0]}, chains[0], nil
 	}
 	contains, err := ContainsSCT(cert.Raw)
 	if err != nil {
@@ -407,7 +421,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 		if err := verify.VerifySignedCertificateTimestamp(chains, 1, co.TrustedMaterial); err != nil {
 			return nil, nil, err
 		}
-		return verifier, chain, nil
+		return &verifierWithCertChain{Verifier: verifier, cert: cert, chain: chain}, chain, nil
 	}
 
 	if len(chain) < 2 {
@@ -417,7 +431,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 		if err := VerifyEmbeddedSCT(context.Background(), chain, co.CTLogPubKeys); err != nil {
 			return nil, nil, err
 		}
-		return verifier, chain, nil
+		return &verifierWithCertChain{Verifier: verifier, cert: cert, chain: chain}, chain, nil
 	}
 	certPEM, err := cryptoutils.MarshalCertificateToPEM(chain[0])
 	if err != nil {
@@ -431,7 +445,7 @@ func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpt
 		return nil, nil, err
 	}
 
-	return verifier, chain, nil
+	return &verifierWithCertChain{Verifier: verifier, cert: cert, chain: chain}, chain, nil
 }
 
 // CheckCertificatePolicy checks that the certificate subject and issuer match
@@ -1018,7 +1032,33 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		}
 	}
 
-	sig, err := static.NewSignature(payload, b64sig)
+	var opts []static.Option
+	if co.SigVerifier != nil {
+		if cb, ok := co.SigVerifier.(interface{ GetCert() *x509.Certificate }); ok {
+			if cert := cb.GetCert(); cert != nil {
+				var chain []*x509.Certificate
+				if ch, ok := co.SigVerifier.(interface{ GetChain() []*x509.Certificate }); ok {
+					chain = ch.GetChain()
+				}
+
+				certPEM, err := cryptoutils.MarshalCertificateToPEM(cert)
+				if err != nil {
+					return nil, err
+				}
+				var chainPEM []byte
+				if len(chain) > 0 {
+					chainPEM, err = cryptoutils.MarshalCertificatesToPEM(chain)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				opts = append(opts, static.WithCertChain(certPEM, chainPEM))
+			}
+		}
+	}
+
+	sig, err := static.NewSignature(payload, b64sig, opts...)
 	if err != nil {
 		return nil, err
 	}
