@@ -128,13 +128,10 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if ko.NewBundleFormat {
-		// TODO(#4534): Require bundle output or registry upload
-		if ko.BundlePath != "" {
-			if err := os.WriteFile(ko.BundlePath, bundleBytes, 0600); err != nil {
-				return nil, fmt.Errorf("create bundle file: %w", err)
-			}
-			ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
+		if err := os.WriteFile(ko.BundlePath, bundleBytes, 0600); err != nil {
+			return nil, fmt.Errorf("create bundle file: %w", err)
 		}
+		ui.Infof(ctx, "Wrote bundle to file %s", ko.BundlePath)
 		return nil, nil
 	}
 
