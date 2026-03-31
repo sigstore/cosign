@@ -966,6 +966,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 		Digest:              "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
 		DigestAlg:           "alg",
 		CheckClaims:         true,
+		PredicateType:       "something",
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
 	must(err, t)
@@ -1170,10 +1171,11 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	// Verify an attestation with the key in the trusted root
 	ko.KeyRef = pubKeyPath
 	verifyBlobAttestationCmd := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:     ko,
-		Digest:      "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
-		DigestAlg:   "alg",
-		CheckClaims: true,
+		KeyOpts:       ko,
+		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+		DigestAlg:     "alg",
+		CheckClaims:   true,
+		PredicateType: "something",
 	}
 	err = verifyBlobAttestationCmd.Exec(ctx, "")
 	must(err, t)
