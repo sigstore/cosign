@@ -76,4 +76,7 @@ type KeyOpts struct {
 	// SigningAlgorithm is the AlgorithmDetails string representation used to
 	// sign/hash the payload.
 	SigningAlgorithm string
+
+	// Ignore a certificate found on the PKCS11 token
+	IgnorePKCS11Certificate bool
 }

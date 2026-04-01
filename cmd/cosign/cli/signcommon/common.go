@@ -226,7 +226,7 @@ func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	case ko.Sk:
 		sv, err = signerFromSecurityKey(ctx, ko.Slot)
 	case ko.KeyRef != "":
-		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions)
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions, ko.IgnorePKCS11Certificate)
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
@@ -272,7 +272,7 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption, ignorePKCS11Certificate bool) (*SignerVerifier, error) {
 	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc, defaultLoadOptions)
 	if err != nil {
 		return nil, fmt.Errorf("reading key: %w", err)
@@ -288,29 +288,32 @@ func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef strin
 	// token as the private key. If it's not there, show a warning to the
 	// user.
 	if pkcs11Key, ok := k.(*pkcs11key.Key); ok {
-		certFromPKCS11, _ := pkcs11Key.Certificate()
 		certSigner.close = pkcs11Key.Close
 
-		if certFromPKCS11 == nil {
-			ui.Warnf(ctx, "no x509 certificate retrieved from the PKCS11 token")
-		} else {
-			pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
-			if err != nil {
-				pkcs11Key.Close()
-				return nil, err
+		if !ignorePKCS11Certificate {
+			certFromPKCS11, _ := pkcs11Key.Certificate()
+
+			if certFromPKCS11 == nil {
+				ui.Warnf(ctx, "no x509 certificate retrieved from the PKCS11 token")
+			} else {
+				pemBytes, err := cryptoutils.MarshalCertificateToPEM(certFromPKCS11)
+				if err != nil {
+					pkcs11Key.Close()
+					return nil, err
+				}
+				// Check that the provided public key and certificate key match
+				pubKey, err := k.PublicKey()
+				if err != nil {
+					pkcs11Key.Close()
+					return nil, err
+				}
+				if cryptoutils.EqualKeys(pubKey, certFromPKCS11.PublicKey) != nil {
+					pkcs11Key.Close()
+					return nil, errors.New("pkcs11 key and certificate do not match")
+				}
+				leafCert = certFromPKCS11
+				certSigner.Cert = pemBytes
 			}
-			// Check that the provided public key and certificate key match
-			pubKey, err := k.PublicKey()
-			if err != nil {
-				pkcs11Key.Close()
-				return nil, err
-			}
-			if cryptoutils.EqualKeys(pubKey, certFromPKCS11.PublicKey) != nil {
-				pkcs11Key.Close()
-				return nil, errors.New("pkcs11 key and certificate do not match")
-			}
-			leafCert = certFromPKCS11
-			certSigner.Cert = pemBytes
 		}
 	}
 
