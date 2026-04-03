@@ -26,4 +26,4 @@ jobs:
     permissions:
       contents: read
 
-    uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@main
+    uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@187381b77390665f46135fbad0ed9ec1ccaeb0ce # main

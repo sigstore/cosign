@@ -42,7 +42,7 @@ jobs:
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@main
+      - uses: sigstore/sigstore-conformance@711e3a7a666653df5be821ab5fb44b598edbe438 # main
         with:
           entrypoint: ${{ github.workspace }}/conformance
           xfail: "test_verify*PATH-message-digest-mismatch_fail]"

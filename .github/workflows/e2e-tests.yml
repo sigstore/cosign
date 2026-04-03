@@ -118,7 +118,7 @@ jobs:
       - uses: imjasonh/setup-crane@6da1ae018866400525525ce74ff892880c099987 # v0.5
 
       - name: Install cluster + sigstore
-        uses: sigstore/scaffolding/actions/setup@main
+        uses: sigstore/scaffolding/actions/setup@a1aa4c33287ee7bd82a075a150fbb05f80a94bde # main
         with:
           version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
@@ -154,7 +154,7 @@ jobs:
         mirror: mirror.gcr.io
 
     - name: Install cluster + sigstore
-      uses: sigstore/scaffolding/actions/setup@main
+      uses: sigstore/scaffolding/actions/setup@a1aa4c33287ee7bd82a075a150fbb05f80a94bde # main
       with:
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
