@@ -1043,6 +1043,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -1080,6 +1081,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -1412,6 +1414,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
 			CheckClaims:   false, // Intentionally false. This checks the subject claim. This is tested in verify_blob_attestation_test.go
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
