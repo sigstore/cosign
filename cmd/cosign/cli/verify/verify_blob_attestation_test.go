@@ -15,14 +15,24 @@
 package verify
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -119,8 +129,9 @@ func TestVerifyBlobAttestation(t *testing.T) {
 		}, {
 			description: "verify new bundle with public key",
 			// From blobSLSAProvenanceSignature
-			bundlePath: makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "MEUCIA8KjZqkrt90fzBojSwwtj3Bqb41E6ruxQk97TLnpzdYAiEAzOAjOTzyvTHqbpFDAn6zhrg6EZv7kxK5faRoVGYMh2c="),
-			blobPath:   blobPath,
+			bundlePath:    makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "MEUCIA8KjZqkrt90fzBojSwwtj3Bqb41E6ruxQk97TLnpzdYAiEAzOAjOTzyvTHqbpFDAn6zhrg6EZv7kxK5faRoVGYMh2c="),
+			blobPath:      blobPath,
+			predicateType: "slsaprovenance",
 		}, {
 			description: "verify new bundle with public key - bad sig",
 			// From blobSLSAProvenanceSignature
@@ -234,6 +245,182 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 			if err := cmd.Exec(ctx, test.blobPath); err != nil {
 				t.Fatalf("verifyBlobAttestation()= %v", err)
 			}
+		})
+	}
+}
+
+func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	leafPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := signature.LoadECDSASignerVerifier(leafPriv, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKeyBytes, err := cryptoutils.MarshalPublicKeyToPEM(signer.Public())
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyRef := writeBlobFile(t, td, string(pubKeyBytes), "cosign.pub")
+	blobPath := writeBlobFile(t, td, "blob", "blob")
+
+	dsseSigner := dsse.WrapSigner(signer, "application/vnd.in-toto+json")
+
+	tests := []struct {
+		description   string
+		predicateType string
+		setupEnv      func() (string, error)
+	}{
+		{
+			description:   "missing predicate type",
+			predicateType: "",
+			setupEnv: func() (string, error) {
+				envBytes, err := dsseSigner.SignMessage(bytes.NewReader([]byte(`{"_type": "https://in-toto.io/Statement/v0.1"}`)))
+				return string(envBytes), err
+			},
+		},
+		{
+			description:   "missing payload field in json",
+			predicateType: "slsaprovenance",
+			setupEnv: func() (string, error) {
+				env := ssldsse.Envelope{
+					PayloadType: "application/vnd.in-toto+json",
+					Payload:     "",
+				}
+				pae := ssldsse.PAE(env.PayloadType, []byte(env.Payload))
+				sigBytes, err := signer.SignMessage(bytes.NewReader(pae))
+				if err != nil {
+					return "", err
+				}
+				env.Signatures = []ssldsse.Signature{{Sig: base64.StdEncoding.EncodeToString(sigBytes)}}
+				envJSONBytes, err := json.Marshal(env)
+				if err != nil {
+					return "", err
+				}
+				var m map[string]interface{}
+				if err := json.Unmarshal(envJSONBytes, &m); err != nil {
+					return "", err
+				}
+				delete(m, "payload")
+				envJSONBytes, err = json.Marshal(m)
+				return string(envJSONBytes), err
+			},
+		},
+		{
+			description:   "payload is valid base64 but inner is not valid in-toto statement",
+			predicateType: "slsaprovenance",
+			setupEnv: func() (string, error) {
+				envBytes, err := dsseSigner.SignMessage(bytes.NewReader([]byte(`not-json`)))
+				return string(envBytes), err
+			},
+		},
+		{
+			description:   "unmarshaling ProvenanceStatementSLSA02",
+			predicateType: "slsaprovenance",
+			setupEnv: func() (string, error) {
+				malformedSlsa := `{"_type": "https://in-toto.io/Statement/v0.1", "predicateType": "https://slsa.dev/provenance/v0.2", "predicate": {"builder": []}}`
+				envBytes, err := dsseSigner.SignMessage(bytes.NewReader([]byte(malformedSlsa)))
+				return string(envBytes), err
+			},
+		},
+		{
+			description:   "unmarshaling CosignVulnStatement",
+			predicateType: "vuln",
+			setupEnv: func() (string, error) {
+				malformedVuln := `{"_type": "https://in-toto.io/Statement/v0.1", "predicateType": "https://cosign.sigstore.dev/attestation/vuln/v1", "predicate": {"scanner": []}}`
+				envBytes, err := dsseSigner.SignMessage(bytes.NewReader([]byte(malformedVuln)))
+				return string(envBytes), err
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			sigStr, err := tc.setupEnv()
+			if err != nil {
+				t.Fatalf("failed to setup envelope: %v", err)
+			}
+
+			t.Run("Standalone Signature", func(t *testing.T) {
+				sigRef := writeBlobFile(t, td, sigStr, "signature")
+
+				cmd := VerifyBlobAttestationCommand{
+					KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+					SignaturePath: sigRef,
+					IgnoreTlog:    true,
+					CheckClaims:   false,
+					PredicateType: tc.predicateType,
+				}
+
+				err = cmd.Exec(ctx, blobPath)
+				if err == nil {
+					t.Fatalf("[%s Standalone] FAIL: swallowed error, returned Verified OK", tc.description)
+				} else {
+					t.Logf("[%s Standalone] PASS: returned error: %v", tc.description, err)
+				}
+			})
+
+			t.Run("Old Bundle Format", func(t *testing.T) {
+				bundleData := map[string]interface{}{
+					"base64Signature": base64.StdEncoding.EncodeToString([]byte(sigStr)),
+					"cert":            string(pubKeyBytes),
+				}
+				bundleBytes, err := json.Marshal(bundleData)
+				if err != nil {
+					t.Fatalf("failed to marshal old bundle: %v", err)
+				}
+				bundleRef := writeBlobFile(t, td, string(bundleBytes), "bundle.json")
+
+				cmd := VerifyBlobAttestationCommand{
+					KeyOpts:       options.KeyOpts{KeyRef: keyRef, BundlePath: bundleRef},
+					IgnoreTlog:    true,
+					CheckClaims:   false,
+					PredicateType: tc.predicateType,
+				}
+
+				err = cmd.Exec(ctx, blobPath)
+				if err == nil {
+					t.Fatalf("[%s Old Bundle] FAIL: swallowed error, returned Verified OK", tc.description)
+				} else {
+					t.Logf("[%s Old Bundle] PASS: returned error: %v", tc.description, err)
+				}
+			})
+
+			t.Run("New Bundle Format", func(t *testing.T) {
+				var envJSON struct {
+					PayloadType string `json:"payloadType"`
+					Payload     string `json:"payload"`
+					Signatures  []struct {
+						Sig string `json:"sig"`
+					} `json:"signatures"`
+				}
+				if err := json.Unmarshal([]byte(sigStr), &envJSON); err != nil {
+					t.Fatalf("failed to unmarshal dsse envelope: %v", err)
+				}
+				if len(envJSON.Signatures) == 0 {
+					t.Fatalf("no signatures in dsse envelope")
+				}
+				bundlePath := makeLocalAttestNewBundle(t, envJSON.Payload, envJSON.PayloadType, envJSON.Signatures[0].Sig)
+
+				cmd := VerifyBlobAttestationCommand{
+					KeyOpts:         options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath, NewBundleFormat: true},
+					IgnoreTlog:      true,
+					CheckClaims:     false,
+					PredicateType:   tc.predicateType,
+					TrustedRootPath: writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}"),
+				}
+
+				err = cmd.Exec(ctx, blobPath)
+				if err == nil {
+					t.Fatalf("[%s New Bundle] FAIL: swallowed error, returned Verified OK", tc.description)
+				} else {
+					t.Logf("[%s New Bundle] PASS: returned error: %v", tc.description, err)
+				}
+			})
 		})
 	}
 }

@@ -956,6 +956,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -993,6 +994,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			SignaturePath: "", // Sig is fetched from bundle
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -1325,6 +1327,7 @@ func TestVerifyBlobCmdWithBundle(t *testing.T) {
 			KeyOpts:       options.KeyOpts{BundlePath: bundlePath},
 			IgnoreSCT:     true,
 			CheckClaims:   false, // Intentionally false. This checks the subject claim. This is tested in verify_blob_attestation_test.go
+			PredicateType: "customFoo",
 		}
 		if err := cmd.Exec(context.Background(), blobPath); err != nil {
 			t.Fatal(err)
@@ -1638,7 +1641,7 @@ func writeTimestampFile(t *testing.T, td string, ts *bundle.RFC3161Timestamp, na
 	return path
 }
 
-func writeTrustedRootFile(t *testing.T, td, contents string) string {
+func writeTrustedRootFile(t *testing.T, td, contents string) string { //nolint: unparam
 	path := filepath.Join(td, "trusted_root.json")
 	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
 		t.Fatal(err)
