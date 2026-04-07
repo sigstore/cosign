@@ -496,7 +496,7 @@ func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
 }
 
 func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) string {
-	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
+	b, err := bundle.MakeProtobufBundle("hint", [][]byte{}, nil, []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
