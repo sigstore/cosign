@@ -29,4 +29,5 @@ var _ Interface = (*ReferenceOptions)(nil)
 // AddFlags implements Interface
 func (o *ReferenceOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TagPrefix, "attachment-tag-prefix", "", "optional custom prefix to use for attached image tags. Attachment images are tagged as: `[AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]`")
+	_ = cmd.Flags().MarkDeprecated("attachment-tag-prefix", "please use OCI referrers")
 }
