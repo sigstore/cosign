@@ -55,6 +55,8 @@ type SignOptions struct {
 	AnnotationOptions
 	Registry             RegistryOptions
 	RegistryExperimental RegistryExperimentalOptions
+
+	IgnorePKCS11Certificate bool
 }
 
 var _ Interface = (*SignOptions)(nil)
@@ -164,4 +166,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"optional path to a TrustedRoot JSON file to verify a signature after signing")
+
+	cmd.Flags().BoolVar(&o.IgnorePKCS11Certificate, "ignore-pkcs11-certificate", false,
+		"ignore a certificate from the PKCS11 token")
 }
