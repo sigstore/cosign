@@ -56,6 +56,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
+	_ = cmd.Flags().MarkDeprecated("experimental-oci11", "OCI referrers will be the default behavior in future versions and this flag will no longer be needed")
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
@@ -109,6 +110,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to verify (sbom), default none")
 	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
+	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments and verify with `--experimental-oci11`")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")

@@ -115,6 +115,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to sign (sbom), default none")
 	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
+	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments; see `cosign attach sbom --registry-referrers-mode=oci-1-1 --help`")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
