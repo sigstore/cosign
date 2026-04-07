@@ -1,5 +1,5 @@
 //
-// Copyright 2022 the Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -210,6 +210,41 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			return err
 		}
 
+		sigContent, err := bundle.SignatureContent()
+		if err != nil {
+			return fmt.Errorf("fetching signature content: %w", err)
+		}
+
+		envContent := sigContent.EnvelopeContent()
+		if envContent == nil {
+			return fmt.Errorf("bundle does not contain a DSSE envelope")
+		}
+
+		rawEnv := envContent.RawEnvelope()
+		if rawEnv == nil {
+			return fmt.Errorf("bundle does not contain a raw DSSE envelope")
+		}
+
+		payloadBytes, err := json.Marshal(rawEnv)
+		if err != nil {
+			return fmt.Errorf("marshaling envelope: %w", err)
+		}
+
+		att, err := static.NewAttestation(payloadBytes)
+		if err != nil {
+			return fmt.Errorf("creating attestation from envelope: %w", err)
+		}
+
+		// This checks the predicate type -- if no error is returned and no payload is, then
+		// the attestation is not of the given predicate type.
+		b, gotPredicateType, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, att)
+		if err != nil {
+			return fmt.Errorf("converting to consumable policy validation: %w", err)
+		}
+		if b == nil {
+			return fmt.Errorf("invalid predicate type, expected %s got %s", c.PredicateType, gotPredicateType)
+		}
+
 		ui.Infof(ctx, "Verified OK")
 		return nil
 	}
@@ -344,7 +379,11 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	// This checks the predicate type -- if no error is returned and no payload is, then
 	// the attestation is not of the given predicate type.
-	if b, gotPredicateType, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature); b == nil && err == nil {
+	b, gotPredicateType, err := policy.AttestationToPayloadJSON(ctx, c.PredicateType, signature)
+	if err != nil {
+		return fmt.Errorf("converting to consumable policy validation: %w", err)
+	}
+	if b == nil {
 		return fmt.Errorf("invalid predicate type, expected %s got %s", c.PredicateType, gotPredicateType)
 	}
 

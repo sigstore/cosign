@@ -60,7 +60,7 @@ jobs:
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
       with:
         go-version: '${{ env.GOVERSION }}'
         check-latest: true
@@ -70,7 +70,7 @@ jobs:
     - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
     - name: Install yq
-      uses: mikefarah/yq@5a7e72a743649b1b3a47d1a1d8214f3453173c51 # v4.52.4
+      uses: mikefarah/yq@0f4fb8d35ec1a939d78dd6862f494d19ec589f19 # v4.52.5
 
     - name: build cosign
       run: |
@@ -181,7 +181,7 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@7440e20e3e0bb180a2f6e330bcd53504e2ac8980 # v1.6.8
+      uses: chainguard-dev/actions/kind-diag@8bb24c24be6871bee44f19be55ea11e3b2aea3dd # v1.6.11
 
     - name: Create vuln attestation for it
       run: |
