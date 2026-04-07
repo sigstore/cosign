@@ -82,7 +82,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 		"do not upload the generated attestation, but send the attestation output to STDOUT")
 	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
 		"")
-	_ = cmd.Flags().MarkDeprecated("replace", "not needed when OCI referrers become the default behavior")
+	_ = cmd.Flags().MarkDeprecated("replace", "not needed when OCI referrers becomes the default behavior")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
