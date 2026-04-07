@@ -281,7 +281,18 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
-	cbundleOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+	var certProvider sign.CertificateProvider
+	if idToken != "" {
+		certProvider, err = cbundle.NewCachingFulcioProvider(ko.SigningConfig)
+		if err != nil {
+			return fmt.Errorf("creating caching Fulcio provider: %w", err)
+		}
+	}
+
+	cbundleOpts := cbundle.SignOptions{
+		TSAClientTransport:  tsaClientTransport,
+		CertificateProvider: certProvider,
+	}
 
 	ociSigs := make([]oci.Signature, len(payloads))
 	b64sigs := make([]string, len(payloads))

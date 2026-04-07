@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -31,7 +32,8 @@ import (
 )
 
 type SignOptions struct {
-	TSAClientTransport http.RoundTripper
+	TSAClientTransport  http.RoundTripper
+	CertificateProvider sign.CertificateProvider
 }
 
 func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, opts SignOptions) ([]byte, error) {
@@ -42,20 +44,19 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 	}
 
 	switch {
-	case idToken != "":
-		if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
-			return nil, fmt.Errorf("no fulcio URLs provided in signing config")
+	case opts.CertificateProvider != nil:
+		bundleOpts.CertificateProvider = opts.CertificateProvider
+		if idToken != "" {
+			bundleOpts.CertificateProviderOptions = &sign.CertificateProviderOptions{
+				IDToken: idToken,
+			}
 		}
-		fulcioSvc, err := root.SelectService(signingConfig.FulcioCertificateAuthorityURLs(), sign.FulcioAPIVersions, time.Now())
+	case idToken != "":
+		provider, err := NewFulcioProvider(signingConfig)
 		if err != nil {
 			return nil, err
 		}
-		fulcioOpts := &sign.FulcioOptions{
-			BaseURL: fulcioSvc.URL,
-			Timeout: 30 * time.Second,
-			Retries: 1,
-		}
-		bundleOpts.CertificateProvider = sign.NewFulcio(fulcioOpts)
+		bundleOpts.CertificateProvider = provider
 		bundleOpts.CertificateProviderOptions = &sign.CertificateProviderOptions{
 			IDToken: idToken,
 		}
@@ -166,4 +167,43 @@ func (c *localCertProvider) GetCertificate(_ context.Context, _ sign.Keypair, _ 
 		return nil, fmt.Errorf("could not decode cert")
 	}
 	return certBlock.Bytes, nil
+}
+
+type cachingCertProvider struct {
+	provider sign.CertificateProvider
+	once     sync.Once
+	fetch    func() ([]byte, error)
+}
+
+func (c *cachingCertProvider) GetCertificate(ctx context.Context, keypair sign.Keypair, opts *sign.CertificateProviderOptions) ([]byte, error) {
+	c.once.Do(func() {
+		c.fetch = sync.OnceValues(func() ([]byte, error) {
+			return c.provider.GetCertificate(ctx, keypair, opts)
+		})
+	})
+	return c.fetch()
+}
+
+func NewFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
+	if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
+		return nil, fmt.Errorf("no fulcio URLs provided in signing config")
+	}
+	fulcioSvc, err := root.SelectService(signingConfig.FulcioCertificateAuthorityURLs(), sign.FulcioAPIVersions, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	fulcioOpts := &sign.FulcioOptions{
+		BaseURL: fulcioSvc.URL,
+		Timeout: 30 * time.Second,
+		Retries: 1,
+	}
+	return sign.NewFulcio(fulcioOpts), nil
+}
+
+func NewCachingFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
+	provider, err := NewFulcioProvider(signingConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &cachingCertProvider{provider: provider}, nil
 }
