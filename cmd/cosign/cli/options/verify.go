@@ -56,7 +56,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
-	_ = cmd.Flags().MarkDeprecated("experimental-oci11", "OCI referrers will be the default behavior in future versions and this flag will no longer be needed")
+	_ = cmd.Flags().MarkDeprecated("experimental-oci11", "OCI referrers will be the default behavior in future versions")
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
