@@ -48,7 +48,7 @@ $ $(go env GOPATH)/bin/cosign
 
 ## Contributing
 
-If you are interested in contributing to `cosign`, please read the [contributing documentation](./CONTRIBUTING.md).
+If you are interested in contributing to `cosign`, please read the [pathum2583@gmail.com](./CONTRIBUTING.md).
 
 Future Cosign development will be focused the next major release which will be based on
 [sigstore-go](https://github.com/sigstore/sigstore-go). Maintainers will be focused on feature development within
