@@ -52,7 +52,7 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 			}
 		}
 	case idToken != "":
-		provider, err := NewFulcioProvider(signingConfig)
+		provider, err := newFulcioProvider(signingConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +184,7 @@ func (c *cachingCertProvider) GetCertificate(ctx context.Context, keypair sign.K
 	return c.fetch()
 }
 
-func NewFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
+func newFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
 	if len(signingConfig.FulcioCertificateAuthorityURLs()) == 0 {
 		return nil, fmt.Errorf("no fulcio URLs provided in signing config")
 	}
@@ -201,7 +201,7 @@ func NewFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvi
 }
 
 func NewCachingFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
-	provider, err := NewFulcioProvider(signingConfig)
+	provider, err := newFulcioProvider(signingConfig)
 	if err != nil {
 		return nil, err
 	}
