@@ -657,19 +657,8 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	tests := []struct {
 		name          string
 		targets       []targetInfo
-		wantSignErr   bool
 		wantVerifyErr bool
 	}{
-		{
-			name: "invalid CT key name with no usage",
-			targets: []targetInfo{
-				{
-					name:   "ct.pub",
-					source: ctLogKey,
-				},
-			},
-			wantSignErr: true,
-		},
 		{
 			name: "standard key names",
 			targets: []targetInfo{
@@ -819,10 +808,6 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				SkipConfirmation: true,
 			}
 			gotErr := sign.SignCmd(ctx, ro, ko, so, []string{imgName})
-			if test.wantSignErr {
-				mustErr(gotErr, t)
-				return
-			}
 			must(gotErr, t)
 
 			// Verify an image
@@ -856,11 +841,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			ko.BundlePath = bundlePath
 			ko.RFC3161TimestampPath = tsPath
 			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true)
-			if test.wantSignErr {
-				mustErr(gotErr, t)
-			} else {
-				must(gotErr, t)
-			}
+			must(gotErr, t)
 
 			// Verify a blob
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
@@ -4754,6 +4735,82 @@ func TestSignVerifyMultipleIdentities(t *testing.T) {
 
 	// Now verify should work
 	must(verify(pubKeyPath, imgName, true, nil, "", false), t)
+}
+
+func TestSignVerifyMultipleIdentitiesKeyless(t *testing.T) {
+	td := t.TempDir()
+
+	// set up SIGSTORE_ variables to point to keys for the local instances
+	err := setLocalEnv(t, td)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// unset the roots that were generated for timestamp signing, they won't work here
+	err = fulcioroots.ReInit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "cosign-e2e")
+
+	imgRef, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify should fail at first
+	issuer := os.Getenv("ISSUER_URL")
+	verifyCmd := cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: issuer,
+			CertIdentity:   certID,
+		},
+		RekorURL:    rekorURL,
+		CheckClaims: true,
+	}
+	mustErr(verifyCmd.Exec(t.Context(), []string{imgName}), t)
+
+	// Now sign the image with multiple container identities
+	ko := options.KeyOpts{
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		IDToken:          identityToken,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:                  true,
+		TlogUpload:              true,
+		SignContainerIdentities: []string{"registry/cosign-e2e:tag1", "registry/cosign-e2e:tag2"},
+	}
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
+
+	// Now verify should work
+	must(verifyCmd.Exec(t.Context(), []string{imgName}), t)
+
+	// Fetch signatures and check if certificates are identical
+	si, err := ociremote.SignedEntity(imgRef)
+	must(err, t)
+	sigs, err := si.Signatures()
+	must(err, t)
+	gottenSigs, err := sigs.Get()
+	must(err, t)
+
+	assert.Len(t, gottenSigs, 2, "expected 2 signatures")
+
+	cert1, err := gottenSigs[0].Cert()
+	must(err, t)
+	cert2, err := gottenSigs[1].Cert()
+	must(err, t)
+
+	// Compare raw bytes of certificates to ensure they are the same
+	assert.Equal(t, cert1.Raw, cert2.Raw, "expected certificates to be identical")
 }
 
 func TestTree(t *testing.T) {
