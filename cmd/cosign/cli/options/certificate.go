@@ -83,11 +83,12 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"The flag is optional and must be used together with --ca-roots, conflicts with "+
 			"--certificate-chain.")
 	_ = cmd.MarkFlagFilename("ca-intermediates", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("ca-intermediates", "please use a trusted root; see `cosign verify --trusted-root <path to trusted root>`")
+	_ = cmd.Flags().MarkDeprecated("ca-intermediates", "please use --trusted-root to provide CA certificates")
 	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
 		"path to a bundle file of CA certificates in PEM format which will be needed "+
 			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
 	_ = cmd.MarkFlagFilename("ca-roots", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("ca-roots", "please use --trusted-root to provide CA certificates")
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA certificates in PEM format which will be needed "+
