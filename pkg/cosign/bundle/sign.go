@@ -200,6 +200,9 @@ func newFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvi
 	return sign.NewFulcio(fulcioOpts), nil
 }
 
+// NewCachingFulcioProvider creates a caching Fulcio provider from the given signing config.
+// This function should not be used in long-running processes, as the certificate will
+// expire.
 func NewCachingFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvider, error) {
 	provider, err := newFulcioProvider(signingConfig)
 	if err != nil {
