@@ -142,9 +142,24 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	var digest []byte
 	if c.CheckClaims {
 		if artifactPath != "" {
-			if c.Digest != "" && c.DigestAlg != "" {
-				ui.Warnf(ctx, "Ignoring provided digest and digestAlg in favor of provided blob")
+			if c.Digest != "" {
+				ui.Warnf(ctx, "Ignoring provided --digest in favor of provided blob")
 			}
+			// Pick the hash algorithm used to compute the blob digest.
+			// Default to SHA-256 for backward compatibility; honor
+			// --digestAlg so attestations produced against e.g. SHA-512
+			// (npm, some DSSE producers) can be verified. See #4805.
+			hashName := "sha256"
+			hashAlg := crypto.SHA256
+			if c.DigestAlg != "" {
+				parsed, err := parseBlobHashAlgorithm(c.DigestAlg)
+				if err != nil {
+					return err
+				}
+				hashName = c.DigestAlg
+				hashAlg = parsed
+			}
+
 			// Get the actual digest of the blob
 			var payload internal.HashReader
 			f, err := os.Open(filepath.Clean(artifactPath))
@@ -161,14 +176,14 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 				return err
 			}
 
-			payload = internal.NewHashReader(f, crypto.SHA256)
+			payload = internal.NewHashReader(f, hashAlg)
 			if _, err := io.ReadAll(&payload); err != nil {
 				return err
 			}
 			digest = payload.Sum(nil)
 			h = v1.Hash{
 				Hex:       hex.EncodeToString(digest),
-				Algorithm: "sha256",
+				Algorithm: hashName,
 			}
 		} else if c.Digest != "" && c.DigestAlg != "" {
 			digest, err = hex.DecodeString(c.Digest)
@@ -389,4 +404,19 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	fmt.Fprintln(os.Stderr, "Verified OK")
 	return nil
+}
+
+// parseBlobHashAlgorithm maps the --digestAlg name used by
+// verify-blob-attestation to a crypto.Hash. Only algorithms actually
+// supported as in-toto subject digest algorithms are accepted.
+func parseBlobHashAlgorithm(name string) (crypto.Hash, error) {
+	switch name {
+	case "sha256":
+		return crypto.SHA256, nil
+	case "sha384":
+		return crypto.SHA384, nil
+	case "sha512":
+		return crypto.SHA512, nil
+	}
+	return 0, fmt.Errorf("unsupported --digestAlg %q; supported values are sha256, sha384, sha512", name)
 }
