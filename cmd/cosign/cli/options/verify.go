@@ -43,7 +43,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
-	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chai")
+	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chain")
 
 	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
 		"verify rfc3161 timestamps")
