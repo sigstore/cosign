@@ -99,6 +99,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
 	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
+	_ = cmd.Flags().MarkDeprecated("certificate-chain", "please use --trusted-root to provide the certificate chain")
 
 	cmd.Flags().StringVar(&o.SCT, "sct", "",
 		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
