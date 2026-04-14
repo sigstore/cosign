@@ -145,10 +145,10 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 			if c.Digest != "" {
 				ui.Warnf(ctx, "Ignoring provided --digest in favor of provided blob")
 			}
-			// Pick the hash algorithm used to compute the blob digest.
-			// Default to SHA-256 for backward compatibility; honor
-			// --digestAlg so attestations produced against e.g. SHA-512
-			// (npm, some DSSE producers) can be verified. See #4805.
+			// For the legacy (non-bundle) verification path we still need to
+			// compute the digest manually.  Pick the hash algorithm to use:
+			// default to SHA-256 for backward compatibility; honor --digestAlg
+			// so attestations produced against e.g. SHA-512 can be verified.
 			hashName := "sha256"
 			hashAlg := crypto.SHA256
 			if c.DigestAlg != "" {
@@ -160,8 +160,6 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 				hashAlg = parsed
 			}
 
-			// Get the actual digest of the blob
-			var payload internal.HashReader
 			f, err := os.Open(filepath.Clean(artifactPath))
 			if err != nil {
 				return err
@@ -176,7 +174,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 				return err
 			}
 
-			payload = internal.NewHashReader(f, hashAlg)
+			payload := internal.NewHashReader(f, hashAlg)
 			if _, err := io.ReadAll(&payload); err != nil {
 				return err
 			}
@@ -214,10 +212,21 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		}
 
 		var policyOpt sgverify.ArtifactPolicyOption
-		if c.CheckClaims {
-			policyOpt = sgverify.WithArtifactDigest(h.Algorithm, digest)
-		} else {
+		switch {
+		case !c.CheckClaims:
 			policyOpt = sgverify.WithoutArtifactUnsafe()
+		case artifactPath != "":
+			// Pass the artifact directly so sigstore-go can peek at the bundle
+			// and choose the correct hash algorithm automatically, rather than
+			// requiring the caller to supply --digestAlg up-front.
+			artifactFile, err := os.Open(filepath.Clean(artifactPath))
+			if err != nil {
+				return err
+			}
+			defer artifactFile.Close()
+			policyOpt = sgverify.WithArtifact(artifactFile)
+		default:
+			policyOpt = sgverify.WithArtifactDigest(h.Algorithm, digest)
 		}
 
 		_, err = cosign.VerifyNewBundle(ctx, co, policyOpt, bundle)
