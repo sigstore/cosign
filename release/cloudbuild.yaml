@@ -73,6 +73,7 @@ steps:
     env:
       - "GOPATH=/workspace/go"
       - "GOBIN=/workspace/bin"
+      - "DOCKER_CONFIG=/workspace/.docker"
       - PROJECT_ID=${PROJECT_ID}
       - KEY_LOCATION=${_KEY_LOCATION}
       - KEY_RING=${_KEY_RING}
@@ -90,7 +91,44 @@ steps:
       - '-c'
       - |
         echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
-        && make sign-release-images && make copy-signed-release-to-ghcr || true
+        && make sign-release-images || true
+
+  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+    env:
+      - 'DOCKER_CONFIG=/workspace/.docker'
+    args:
+      - 'copy'
+      - '-r'
+      - 'gcr.io/${PROJECT_ID}/cosign:${_GIT_TAG}'
+      - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}'
+
+  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+    env:
+      - 'DOCKER_CONFIG=/workspace/.docker'
+    args:
+      - 'copy'
+      - '-r'
+      - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}'
+      - '${_GHCR_PREFIX}/cosign:latest'
+
+  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+    env:
+      - 'DOCKER_CONFIG=/workspace/.docker'
+    args:
+      - 'copy'
+      - '-r'
+      - 'gcr.io/${PROJECT_ID}/cosign:${_GIT_TAG}-dev'
+      - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}-dev'
+
+  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+    env:
+      - 'DOCKER_CONFIG=/workspace/.docker'
+    args:
+      - 'copy'
+      - '-r'
+      - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}-dev'
+      - '${_GHCR_PREFIX}/cosign:latest-dev'
+
 
 availableSecrets:
   secretManager:
@@ -123,3 +161,5 @@ substitutions:
   _KEY_VERSION: '1'
   _KEY_LOCATION: 'global'
   _GITHUB_USER: 'placeholder'
+  _GHCR_PREFIX: 'ghcr.io/sigstore/cosign'
+
