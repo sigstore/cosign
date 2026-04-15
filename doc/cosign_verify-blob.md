@@ -26,8 +26,8 @@ cosign verify-blob [flags]
   # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
-  # Verify a signature with CA roots and optional intermediate certificates
-  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+  # Verify a signature with a trusted root
+  cosign verify-blob --trusted-root trusted_root.json --new-bundle-format --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg

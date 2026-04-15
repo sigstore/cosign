@@ -38,9 +38,8 @@ cosign verify [flags]
   # verify image with local certificate and certificate chain
   cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
-  # verify image with local certificate and certificate bundles of CA roots
-  # and (optionally) CA intermediates
-  cosign verify --cert cosign.crt --ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem <IMAGE>
+  # verify image with a trusted root
+  cosign verify --trusted-root trusted_root.json --new-bundle-format <IMAGE>
 
   # verify image using keyless verification with the given certificate
   # chain and identity parameters, without Fulcio roots (for BYO PKI):

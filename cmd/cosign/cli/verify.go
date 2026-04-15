@@ -60,9 +60,8 @@ against the transparency log.`,
   # verify image with local certificate and certificate chain
   cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
 
-  # verify image with local certificate and certificate bundles of CA roots
-  # and (optionally) CA intermediates
-  cosign verify --cert cosign.crt --ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem <IMAGE>
+  # verify image with a trusted root
+  cosign verify --trusted-root trusted_root.json --new-bundle-format <IMAGE>
 
   # verify image using keyless verification with the given certificate
   # chain and identity parameters, without Fulcio roots (for BYO PKI):
@@ -295,8 +294,8 @@ The blob may be specified as a path to a file or - for stdin.`,
   # Verify a signature with certificate and CA certificate chain
   cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
 
-  # Verify a signature with CA roots and optional intermediate certificates
-  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+  # Verify a signature with a trusted root
+  cosign verify-blob --trusted-root trusted_root.json --new-bundle-format --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
