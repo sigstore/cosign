@@ -92,7 +92,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
-		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
+		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --trusted-root, or a bundle with --bundle")
 	}
 
 	// key and cert identity are mutually exclusive

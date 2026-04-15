@@ -274,8 +274,8 @@ func VerifyBlob() *cobra.Command {
 		Use:   "verify-blob",
 		Short: "Verify a signature on the supplied blob",
 		Long: `Verify a signature on the supplied blob input using the specified key reference.
-You may specify either a key, a certificate or a kms reference to verify against.
-	If you use a key or a certificate, you must specify the path to them on disk.
+You may specify either a key, a trusted root, or a kms reference to verify against.
+	If you use a key or a trusted root, you must specify the path to them on disk.
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.`,
