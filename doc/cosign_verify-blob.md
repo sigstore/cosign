@@ -18,16 +18,13 @@ cosign verify-blob [flags]
 ### Examples
 
 ```
- cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
+ cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--trusted-root <trusted root>) --signature <sig> <blob>
 
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-  # Verify a signature with certificate and CA certificate chain
-  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
-
   # Verify a signature with a trusted root
-  cosign verify-blob --trusted-root trusted_root.json --new-bundle-format --signature $sig <blob>
+  cosign verify-blob --trusted-root trusted_root.json --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -56,8 +53,6 @@ cosign verify-blob [flags]
   # Verify a signature against GitLab with project id
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
-  # Verify a signature against a certificate
-  cosign verify-blob --certificate <cert> --signature $sig <blob>
 
 ```
 

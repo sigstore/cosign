@@ -57,15 +57,8 @@ against the transparency log.`,
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
-  # verify image with local certificate and certificate chain
-  cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
-
   # verify image with a trusted root
-  cosign verify --trusted-root trusted_root.json --new-bundle-format <IMAGE>
-
-  # verify image using keyless verification with the given certificate
-  # chain and identity parameters, without Fulcio roots (for BYO PKI):
-  cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
+  cosign verify --trusted-root trusted_root.json <IMAGE>
 
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
@@ -286,16 +279,13 @@ You may specify either a key, a certificate or a kms reference to verify against
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.`,
-		Example: ` cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
+		Example: ` cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--trusted-root <trusted root>) --signature <sig> <blob>
 
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-  # Verify a signature with certificate and CA certificate chain
-  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
-
   # Verify a signature with a trusted root
-  cosign verify-blob --trusted-root trusted_root.json --new-bundle-format --signature $sig <blob>
+  cosign verify-blob --trusted-root trusted_root.json --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -324,8 +314,6 @@ The blob may be specified as a path to a file or - for stdin.`,
   # Verify a signature against GitLab with project id
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
-  # Verify a signature against a certificate
-  cosign verify-blob --certificate <cert> --signature $sig <blob>
 `,
 
 		Args:             cobra.ExactArgs(1),
