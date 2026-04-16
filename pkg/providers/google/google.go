@@ -17,6 +17,7 @@ package google
 
 import (
 	"context"
+	"net/url"
 
 	"google.golang.org/api/idtoken"
 	"google.golang.org/api/impersonate"
@@ -29,6 +30,7 @@ import (
 
 func init() {
 	providers.Register("google-workload-identity", &googleWorkloadIdentity{})
+	providers.Register("google-compute-identity", &googleComputeIdentity{})
 	providers.Register("google-impersonate", &googleImpersonate{})
 }
 
@@ -57,6 +59,30 @@ func (gwi *googleWorkloadIdentity) Provide(ctx context.Context, audience string)
 		return "", err
 	}
 	return tok.AccessToken, nil
+}
+
+// googleComputeIdentity fetches an ID token directly from the GCE metadata
+// server, bypassing Application Default Credentials (ADC). This is useful when
+// running on GCE/GKE and ADC is configured (e.g. via
+// "gcloud auth application-default login") but the caller wants the identity
+// of the attached service account rather than the ADC identity.
+type googleComputeIdentity struct{}
+
+var _ providers.Interface = (*googleComputeIdentity)(nil)
+
+// Enabled implements providers.Interface
+func (gci *googleComputeIdentity) Enabled(_ context.Context) bool {
+	return metadata.OnGCE()
+}
+
+// Provide implements providers.Interface
+func (gci *googleComputeIdentity) Provide(ctx context.Context, audience string) (string, error) {
+	c := metadata.NewClient(nil)
+	tok, err := c.GetWithContext(ctx, "instance/service-accounts/default/identity?audience="+url.QueryEscape(audience)+"&format=full")
+	if err != nil {
+		return "", err
+	}
+	return tok, nil
 }
 
 type googleImpersonate struct{}
