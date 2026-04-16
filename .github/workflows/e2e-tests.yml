@@ -83,6 +83,7 @@ jobs:
         image: hashicorp/vault:latest
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
+          SKIP_SETCAP: "true"
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
