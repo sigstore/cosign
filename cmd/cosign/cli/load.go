@@ -46,7 +46,7 @@ func Load() *cobra.Command {
 }
 
 func LoadCmd(ctx context.Context, opts options.LoadOptions, imageRef string) error {
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, opts.Registry.NameOptions()...)
 	if err != nil {
 		return fmt.Errorf("parsing image name %s: %w", imageRef, err)
 	}
