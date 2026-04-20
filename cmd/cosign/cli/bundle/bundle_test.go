@@ -32,6 +32,7 @@ import (
 
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	sgBundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -146,5 +147,98 @@ func TestCreateCmd(t *testing.T) {
 func checkErr(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestCreateCmd_FailOnIgnoreTlogWithSET(t *testing.T) {
+	ctx := context.Background()
+
+	artifact := "hello world"
+	digest := sha256.Sum256([]byte(artifact))
+
+	td := t.TempDir()
+	artifactPath := filepath.Join(td, "artifact")
+	err := os.WriteFile(artifactPath, []byte(artifact), 0600)
+	checkErr(t, err)
+
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+
+	sigBytes, err := privKey.Sign(rand.Reader, digest[:], crypto.SHA256)
+	checkErr(t, err)
+
+	// Test using an old bundle with a SET
+	signedPayloadWithSET := cosign.LocalSignedPayload{}
+	signedPayloadWithSET.Base64Signature = base64.StdEncoding.EncodeToString(sigBytes)
+
+	certBytes, err := cryptoutils.MarshalCertificateToPEM(leafCert)
+	checkErr(t, err)
+
+	signedPayloadWithSET.Cert = base64.StdEncoding.EncodeToString(certBytes)
+	signedPayloadWithSET.Bundle = &bundle.RekorBundle{
+		SignedEntryTimestamp: []byte("set"),
+	}
+
+	bundleContentsWithSET, err := json.Marshal(signedPayloadWithSET)
+	checkErr(t, err)
+	bundlePathWithSET := filepath.Join(td, "old-bundle-with-set.json")
+	err = os.WriteFile(bundlePathWithSET, bundleContentsWithSET, 0600)
+	checkErr(t, err)
+
+	// Test using an old bundle without a SET
+	signedPayloadWithoutSET := cosign.LocalSignedPayload{}
+	signedPayloadWithoutSET.Base64Signature = signedPayloadWithSET.Base64Signature
+	signedPayloadWithoutSET.Cert = signedPayloadWithSET.Cert
+
+	bundleContentsWithoutSET, err := json.Marshal(signedPayloadWithoutSET)
+	checkErr(t, err)
+	bundlePathWithoutSET := filepath.Join(td, "old-bundle-without-set.json")
+	err = os.WriteFile(bundlePathWithoutSET, bundleContentsWithoutSET, 0600)
+	checkErr(t, err)
+
+	tests := []struct {
+		name        string
+		bundlePath  string
+		ignoreTlog  bool
+		expectError bool
+		errStr      string
+	}{
+		{
+			name:        "Fail when bundle has SET and IgnoreTlog is true",
+			bundlePath:  bundlePathWithSET,
+			ignoreTlog:  true,
+			expectError: true,
+			errStr:      "cannot ignore transparency log when the provided bundle contains a Signed Entry Timestamp",
+		},
+		{
+			name:        "Pass when bundle has no SET and IgnoreTlog is true",
+			bundlePath:  bundlePathWithoutSET,
+			ignoreTlog:  true,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outPath := filepath.Join(td, "out-"+filepath.Base(tt.bundlePath))
+			bundleCreate := CreateCmd{
+				Artifact:   artifactPath,
+				BundlePath: tt.bundlePath,
+				IgnoreTlog: tt.ignoreTlog,
+				Out:        outPath,
+			}
+
+			err := bundleCreate.Exec(ctx)
+			if tt.expectError {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.errStr != "" && err.Error() != tt.errStr {
+					t.Fatalf("expected error %q, got %q", tt.errStr, err.Error())
+				}
+			} else {
+				checkErr(t, err)
+			}
+		})
 	}
 }
