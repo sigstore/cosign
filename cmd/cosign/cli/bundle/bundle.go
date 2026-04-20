@@ -76,6 +76,10 @@ func (c *CreateCmd) Exec(ctx context.Context) (err error) {
 			return err
 		}
 
+		if c.IgnoreTlog && b.Bundle != nil && len(b.Bundle.SignedEntryTimestamp) > 0 {
+			return fmt.Errorf("cannot ignore transparency log when the provided bundle contains a Signed Entry Timestamp")
+		}
+
 		if b.Cert != "" {
 			certPEM, err := base64.StdEncoding.DecodeString(b.Cert)
 			if err != nil {
