@@ -82,6 +82,9 @@ race conditions or (worse) malicious tampering.
   # sign a container image and skip uploading to the transparency log
   cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
 
+  # sign a container image in private infrastructure with a custom signing config and TSA
+  cosign sign --key cosign.key --certificate cosign.crt --certificate-chain chain.crt --signing-config signing-config.json --timestamp-server-url https://tsa.internal.example.com/api/v1/timestamp <IMAGE DIGEST>
+
   # sign a container image by manually setting the container image identity
   cosign sign --sign-container-identity <NEW IMAGE DIGEST> <IMAGE DIGEST>
 

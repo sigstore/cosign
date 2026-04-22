@@ -46,6 +46,9 @@ cosign verify [flags]
   # chain and identity parameters, without Fulcio roots (for BYO PKI):
   cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
 
+  # verify an image in private infrastructure with a custom trusted root:
+  cosign verify --certificate-identity spiffe://example.internal/sa/build --certificate-oidc-issuer https://issuer.example.com --trusted-root trusted-root.json --private-infrastructure <IMAGE>
+
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
 
