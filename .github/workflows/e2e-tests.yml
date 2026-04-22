@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       vault:
-        image: hashicorp/vault:latest
+        image: hashicorp/vault:1.21.4
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
         options: >-
