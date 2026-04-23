@@ -404,6 +404,10 @@ The blob may be specified as a path to a file.`,
   # Verify a simple blob attestation with a DSSE style signature
   cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
 
+  # Verify a bundle attestation by matching the in-toto subject digest instead of reading the blob.
+  # When the subject uses an alternative digest algorithm, pass it explicitly with --digestAlg.
+  cosign verify-blob-attestation --bundle <bundle path> --key cosign.pub --digest <hex digest> --digestAlg sha512
+
 `,
 
 		Args:             cobra.MaximumNArgs(1),
