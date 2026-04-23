@@ -115,6 +115,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to sign (sbom), default none")
 	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
+	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments; see `cosign attach sbom --registry-referrers-mode=oci-1-1 --help`")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
@@ -149,6 +150,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringSliceVar(&o.SignContainerIdentities, "sign-container-identity", nil,
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature, this flag is comma delimited. ex: --sign-container-identity=identity1,identity2")
+	_ = cmd.Flags().MarkDeprecated("sign-container-identity", "not possible when OCI referrers become the default behavior")
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false, "set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value")
 
