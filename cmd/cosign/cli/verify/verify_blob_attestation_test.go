@@ -536,3 +536,36 @@ func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) st
 	}
 	return bundlePath
 }
+
+func TestParseBlobHashAlgorithm(t *testing.T) {
+	cases := []struct {
+		name    string
+		want    crypto.Hash
+		wantErr bool
+	}{
+		{name: "sha256", want: crypto.SHA256},
+		{name: "sha384", want: crypto.SHA384},
+		{name: "sha512", want: crypto.SHA512},
+		{name: "sha1", wantErr: true},
+		{name: "md5", wantErr: true},
+		{name: "", wantErr: true},
+		{name: "SHA256", wantErr: true}, // case-sensitive; matches in-toto subject convention
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parseBlobHashAlgorithm(tc.name)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %q, got nil", tc.name)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
