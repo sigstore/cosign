@@ -21,14 +21,20 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
+var remoteReferrers = remote.Referrers
+
 // Referrers fetches references using registry options.
 func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexManifest, error) {
 	o := makeOptions(name.Repository{}, opts...)
+	if (o.TargetRepository != name.Repository{}) {
+		d = o.TargetRepository.Digest(d.DigestStr())
+	}
+
 	rOpt := o.ROpt
 	if artifactType != "" {
 		rOpt = append(rOpt, remote.WithFilter("artifactType", artifactType))
 	}
-	idx, err := remote.Referrers(d, rOpt...)
+	idx, err := remoteReferrers(d, rOpt...)
 	if err != nil {
 		return nil, err
 	}

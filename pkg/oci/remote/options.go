@@ -129,6 +129,13 @@ func WithTargetRepository(repo name.Repository) Option {
 	}
 }
 
+// TargetRepositoryFromOptions extracts the TargetRepository that a
+// WithTargetRepository option would have set in the provided options.
+// Returns the zero name.Repository if no override was provided.
+func TargetRepositoryFromOptions(opts ...Option) name.Repository {
+	return makeOptions(name.Repository{}, opts...).TargetRepository
+}
+
 // GetEnvTargetRepository returns the Repository specified by
 // `os.Getenv(RepoOverrideEnvKey)`, or the empty value if not set.
 // Returns an error if the value is set but cannot be parsed.
