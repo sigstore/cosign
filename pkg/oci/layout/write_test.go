@@ -16,6 +16,7 @@
 package layout
 
 import (
+	"bytes"
 	"fmt"
 	"runtime"
 	"testing"
@@ -140,5 +141,59 @@ func compareDigests(t *testing.T, img1 oci.SignedImage, img2 oci.SignedImage) {
 	}
 	if d := cmp.Diff(d1, d2); d != "" {
 		t.Fatalf("digests are different: %s", d)
+	}
+}
+
+// artifactTypeImage wraps a v1.Image and injects an artifactType field into
+// the raw manifest so we can test that cosign save preserves it in index.json.
+type artifactTypeImage struct {
+	v1.Image
+	artifactType string
+}
+
+func (a *artifactTypeImage) RawManifest() ([]byte, error) {
+	raw, err := a.Image.RawManifest()
+	if err != nil {
+		return nil, err
+	}
+	// Inject the artifactType field before the closing brace.
+	insert := fmt.Sprintf(`, "artifactType": %q}`, a.artifactType)
+	raw = append(bytes.TrimRight(raw, " \t\r\n}"), []byte(insert)...)
+	return raw, nil
+}
+
+func TestAppendImagePreservesArtifactType(t *testing.T) {
+	const wantArtifactType = "application/vnd.example.test+json"
+
+	base, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img := &artifactTypeImage{Image: base, artifactType: wantArtifactType}
+
+	dir := t.TempDir()
+	if err := WriteSignedImage(dir, signed.Image(img)); err != nil {
+		t.Fatalf("WriteSignedImage: %v", err)
+	}
+
+	sii, err := SignedImageIndex(dir)
+	if err != nil {
+		t.Fatalf("SignedImageIndex: %v", err)
+	}
+
+	idx, err := sii.IndexManifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found := false
+	for _, m := range idx.Manifests {
+		if m.ArtifactType == wantArtifactType {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("artifactType %q not found in index.json manifests: %+v", wantArtifactType, idx.Manifests)
 	}
 }
