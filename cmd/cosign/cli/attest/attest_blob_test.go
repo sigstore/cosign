@@ -172,6 +172,7 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
 					if tc.newBundle {
 						keyOpts.NewBundleFormat = true
+						keyOpts.BundlePath = filepath.Join(td, "output.bundle")
 					}
 					at := AttestBlobCommand{
 						KeyOpts:        keyOpts,

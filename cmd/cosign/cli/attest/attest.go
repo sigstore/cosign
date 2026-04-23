@@ -147,7 +147,6 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.NewBundleFormat {
-		// TODO(#4534): Require bundle output or registry upload
 		if c.BundlePath != "" {
 			if err := os.WriteFile(c.BundlePath, bundleBytes, 0600); err != nil {
 				return fmt.Errorf("create bundle file: %w", err)

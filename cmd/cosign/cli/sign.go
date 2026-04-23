@@ -90,6 +90,12 @@ race conditions or (worse) malicious tampering.
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if o.NewBundleFormat && !o.Upload && o.BundlePath == "" {
+				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch o.Attachment {
 			case "sbom":

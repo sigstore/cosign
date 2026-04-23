@@ -348,7 +348,6 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		ociSigs[i] = ociSig
 	}
 
-	// TODO(#4534): Require bundle output or registry upload
 	outputSignature := signOpts.OutputSignature
 	if outputSignature != "" {
 		// Add digest to suffix to differentiate each image during recursive signing
