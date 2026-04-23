@@ -81,6 +81,8 @@ This shows how to:
 * verify the container image
 * explore broader keyless blob signing/verification flows in the [Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/)
 
+For private deployments that use an internal OIDC issuer, internal CA, RFC3161 TSA, and no Rekor dependency, see [Enterprise Private Infrastructure](./specs/PRIVATE_INFRASTRUCTURE_SPEC.md).
+
 ### Sign a container and store the signature in the registry
 
 Note that you should always sign images based on their digest (`@sha256:...`)
@@ -142,45 +144,36 @@ The following checks were performed on these signatures:
 
 ### Verify a container in an air-gapped environment
 
-**Note:** This section is out of date.
+Cosign's recommended air-gapped verification flow is bundle-first: move the artifact, its signatures, and a trusted root into the disconnected environment, then verify locally without depending on live Sigstore services.
 
-**Note:** Most verification workflows require periodically requesting service keys from a TUF repository.
-For airgapped verification of signatures using the public-good instance, you will need to retrieve the
-[trusted root](https://github.com/sigstore/root-signing/blob/main/targets/trusted_root.json) file from the production
-TUF repository. The contents of this file will change without notification. By not using TUF, you will need
-to build your own mechanism to keep your airgapped copy of this file up-to-date.
+There are two common trust models:
 
-Cosign can do completely offline verification by verifying a [bundle](./specs/SIGNATURE_SPEC.md#properties) which is typically distributed as an annotation on the image manifest.
-As long as this annotation is present, then offline verification can be done.
-This bundle annotation is always included by default for keyless signing, so the default `cosign sign` functionality will include all materials needed for offline verification.
+- Public-good Sigstore: mirror the current Sigstore trusted root and keep it updated with your own process.
+- Private infrastructure: distribute your own `trusted-root.json` that contains your internal CA, TSA, and any other verification material.
 
-To verify an image in an air-gapped environment, the image and signatures must be available locally on the filesystem.
+To prepare a local copy of an image and its signatures while connected:
 
-An image can be saved locally using `cosign save` (note, this step must be done with a network connection):
-
-```
-cosign initialize # This will pull in the latest TUF root
+```shell
 cosign save $IMAGE_NAME --dir ./path/to/dir
 ```
 
-Now, in an air-gapped environment, this local image can be verified:
+To verify in an air-gapped environment with keyless signatures and a trusted root:
 
 ```shell
 cosign verify \
   --certificate-identity $CERT_IDENTITY \
   --certificate-oidc-issuer $CERT_OIDC_ISSUER \
-  --offline=true \
-  --new-bundle-format=false \ # for artifacts signed without the new protobuf bundle format
-  --trusted-root ~/.sigstore/root/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json \ # default location of trusted root
+  --trusted-root /path/to/trusted-root.json \
   --local-image ./path/to/dir
 ```
 
-You'll need to pass in expected values for `$CERT_IDENTITY` and `$CERT_OIDC_ISSUER` to correctly verify this image.
-If you signed with a keypair, the same command will work, assuming the public key material is present locally:
+To verify in an air-gapped environment with a public key:
 
+```shell
+cosign verify --key cosign.pub --local-image ./path/to/dir
 ```
-cosign verify --key cosign.pub --offline --local-image ./path/to/dir
-```
+
+For private deployments that do not use Rekor, prefer a private trusted root and the workflows documented in [Enterprise Private Infrastructure](./specs/PRIVATE_INFRASTRUCTURE_SPEC.md).
 
 ### Identity-based blob signing and verification
 
