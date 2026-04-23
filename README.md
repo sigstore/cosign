@@ -81,7 +81,7 @@ This shows how to:
 * verify the container image
 * explore broader keyless blob signing/verification flows in the [Sigstore Cosign Quickstart](https://docs.sigstore.dev/quickstart/quickstart-cosign/)
 
-For private deployments that use an internal OIDC issuer, internal CA, RFC3161 TSA, and no Rekor dependency, see [Enterprise Private Infrastructure](./doc/enterprise-private-infrastructure.md).
+For private deployments that use an internal OIDC issuer, internal CA, RFC3161 TSA, and no Rekor dependency, see [Enterprise Private Infrastructure](./specs/PRIVATE_INFRASTRUCTURE_SPEC.md).
 
 ### Sign a container and store the signature in the registry
 
@@ -173,7 +173,7 @@ To verify in an air-gapped environment with a public key:
 cosign verify --key cosign.pub --local-image ./path/to/dir
 ```
 
-For private deployments that do not use Rekor, prefer a private trusted root and the workflows documented in [Enterprise Private Infrastructure](./doc/enterprise-private-infrastructure.md).
+For private deployments that do not use Rekor, prefer a private trusted root and the workflows documented in [Enterprise Private Infrastructure](./specs/PRIVATE_INFRASTRUCTURE_SPEC.md).
 
 ### Identity-based blob signing and verification
 

@@ -21,6 +21,11 @@ cosign trusted-root create \
     --ctfe="url=https://ctfe.sigstore.dev,public-key=/path/to/ctfe.pub,start-time=2024-01-01T00:00:00Z" \
     --tsa="url=https://timestamp.sigstore.dev/api/v1/timestamp,certificate-chain=/path/to/tsa.pem" \
     --out trusted-root.json
+
+cosign trusted-root create \
+    --fulcio="url=https://ca.internal.example.com,certificate-chain=/path/to/codesigning-chain.pem" \
+    --tsa="url=https://tsa.internal.example.com/api/v1/timestamp,certificate-chain=/path/to/tsa-chain.pem" \
+    --out trusted-root.json
 ```
 
 ### Options

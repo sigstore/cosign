@@ -1,21 +1,34 @@
 # Enterprise Private Infrastructure
 
-This guide shows how to use `cosign` in a private deployment that uses:
+This document describes how to use `cosign` in a private deployment that does not rely on public Sigstore services.
+The goal is to provide a consistent model for environments using:
 
-- an internal OIDC issuer
-- an internal CA or other bring-your-own PKI chain
-- an RFC3161 timestamp authority
-- no Rekor dependency
+- An internal OIDC issuer
+- An internal CA or other bring-your-own PKI chain
+- An RFC3161 timestamp authority
+- No Rekor dependency
 
-This model is useful when your trust and audit boundaries are private, and you want to verify signatures against internal trust roots instead of the public-good Sigstore services.
+This model is useful when your trust and audit boundaries are private, and you want to verify signatures against internal trust roots.
 
-## Recommended trust model
+## Sections
 
-For modern private deployments, prefer:
+- [Enterprise Private Infrastructure](#enterprise-private-infrastructure)
+  - [Sections](#sections)
+  - [Trust Model](#trust-model)
+  - [1. Create a trusted root](#1-create-a-trusted-root)
+  - [2. Create a signing config](#2-create-a-signing-config)
+  - [3. Sign with an internal certificate chain and TSA](#3-sign-with-an-internal-certificate-chain-and-tsa)
+  - [4. Verify against your private trusted root](#4-verify-against-your-private-trusted-root)
+  - [Which trust input should I use?](#which-trust-input-should-i-use)
+  - [Air-gapped private verification](#air-gapped-private-verification)
 
-- `cosign signing-config create` to define the service URLs used during signing
-- `cosign trusted-root create` to define the trust material used during verification
-- `--private-infrastructure` during verification when signatures are not uploaded to a public transparency log
+## Trust Model
+
+For private deployments, `cosign` supports a "Bring-Your-Own PKI" model. Prefer using:
+
+- `cosign signing-config create` to define the service URLs used during signing.
+- `cosign trusted-root create` to define the trust material used during verification.
+- `--private-infrastructure` during verification to explicitly skip public transparency log checks.
 
 Avoid treating `--tlog-upload=false` as the long-term configuration mechanism by itself. It is better to make the "no Rekor" choice explicit in your `signing-config`.
 
@@ -26,7 +39,7 @@ Create a trusted root that contains your internal certificate authority chain an
 ```shell
 cosign trusted-root create \
   --fulcio="url=https://ca.internal.example.com,certificate-chain=/path/to/codesigning-chain.pem" \
-  --tsa="url=https://tsa.internal.example.com/api/v1/timestamp,certificate-chain=/path/to/tsa-chain.pem" \
+  --tsa="url=https://tsa.internal.example.com/api/v1/timestamp,certificate-chain=tsa-chain.pem" \
   --out trusted-root.json
 ```
 
@@ -63,7 +76,7 @@ cosign sign \
   --timestamp-client-cert /path/to/tsa-client.crt \
   --timestamp-client-key /path/to/tsa-client.key \
   --timestamp-server-name tsa.internal.example.com \
-  $IMAGE_DIGEST
+  <IMAGE DIGEST>
 ```
 
 If your private keyless flow mints an identity token outside of `cosign`, you can also pass it with `--identity-token`, or expose it through one of the ambient providers such as `filesystem`, `envvar`, or `spiffe`.
@@ -78,7 +91,7 @@ cosign verify \
   --certificate-oidc-issuer "https://oidc.internal.example.com" \
   --trusted-root /path/to/trusted-root.json \
   --private-infrastructure \
-  $IMAGE_DIGEST
+  <IMAGE DIGEST>
 ```
 
 ## Which trust input should I use?
@@ -92,7 +105,7 @@ cosign verify \
 In an air-gapped environment, move the image, signatures, and your private `trusted-root.json` into the disconnected network and verify locally:
 
 ```shell
-cosign save $IMAGE_DIGEST --dir ./image-dir
+cosign save <IMAGE DIGEST> --dir ./image-dir
 cosign verify \
   --certificate-identity "spiffe://example.internal/sa/build-job" \
   --certificate-oidc-issuer "https://oidc.internal.example.com" \

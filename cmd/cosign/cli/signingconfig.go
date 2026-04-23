@@ -49,6 +49,13 @@ Each service is specified via a repeatable flag (--fulcio, --rekor, --oidc-provi
     --oidc-provider="url=https://oauth2.sigstore.dev/auth,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
     --tsa="url=https://timestamp.sigstore.dev/api/v1/timestamp,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
     --tsa-config="EXACT:1" \
+    --out signing-config.json
+
+cosign signing-config create \
+    --fulcio="url=https://ca.internal.example.com,api-version=1,start-time=2026-01-01T00:00:00Z,operator=internal-pki" \
+    --oidc-provider="url=https://oidc.internal.example.com,api-version=1,start-time=2026-01-01T00:00:00Z,operator=internal-identity" \
+    --tsa="url=https://tsa.internal.example.com/api/v1/timestamp,api-version=1,start-time=2026-01-01T00:00:00Z,operator=internal-pki" \
+    --tsa-config="EXACT:1" \
     --out signing-config.json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			scCreateCmd := &signingconfig.CreateCmd{
