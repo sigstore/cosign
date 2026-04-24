@@ -35,16 +35,8 @@ cosign verify [flags]
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
-  # verify image with local certificate and certificate chain
-  cosign verify --cert cosign.crt --cert-chain chain.crt <IMAGE>
-
-  # verify image with local certificate and certificate bundles of CA roots
-  # and (optionally) CA intermediates
-  cosign verify --cert cosign.crt --ca-roots ca-roots.pem --ca-intermediates ca-intermediates.pem <IMAGE>
-
-  # verify image using keyless verification with the given certificate
-  # chain and identity parameters, without Fulcio roots (for BYO PKI):
-  cosign verify --cert-chain chain.crt --certificate-oidc-issuer https://issuer.example.com --certificate-identity foo@example.com <IMAGE>
+  # verify image with a trusted root
+  cosign verify --trusted-root trusted_root.json <IMAGE>
 
   # verify image with public key provided by URL
   cosign verify --key https://host.for/[FILE] <IMAGE>
@@ -76,10 +68,6 @@ cosign verify [flags]
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        DEPRECATED, related image attachment to verify (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
-      --ca-intermediates string                                                                  path to a file of intermediate CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. The flag is optional and must be used together with --ca-roots, conflicts with --certificate-chain.
-      --ca-roots string                                                                          path to a bundle file of CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.
-      --certificate string                                                                       path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
-      --certificate-chain string                                                                 path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
       --certificate-github-workflow-name string                                                  contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string                                                   contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
       --certificate-github-workflow-repository string                                            contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon
@@ -115,7 +103,6 @@ cosign verify [flags]
       --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --timestamp-certificate-chain string                                                       path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
       --trusted-root string                                                                      Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
       --use-signed-timestamps                                                                    verify rfc3161 timestamps
 ```

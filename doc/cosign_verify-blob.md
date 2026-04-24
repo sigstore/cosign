@@ -5,8 +5,8 @@ Verify a signature on the supplied blob
 ### Synopsis
 
 Verify a signature on the supplied blob input using the specified key reference.
-You may specify either a key, a certificate or a kms reference to verify against.
-	If you use a key or a certificate, you must specify the path to them on disk.
+You may specify either a key, a bundle with trusted root, or a kms reference to verify against.
+	If you use a key, bundle, or trusted root, you must specify the path to them on disk.
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.
@@ -18,16 +18,13 @@ cosign verify-blob [flags]
 ### Examples
 
 ```
- cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
+ cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--bundle <bundle> --trusted-root <trusted root>) --signature <sig> <blob>
 
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-  # Verify a signature with certificate and CA certificate chain
-  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
-
-  # Verify a signature with CA roots and optional intermediate certificates
-  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+  # Verify a signature with a bundle and trusted root
+  cosign verify-blob --bundle <bundle> --trusted-root trusted_root.json --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg
@@ -56,8 +53,6 @@ cosign verify-blob [flags]
   # Verify a signature against GitLab with project id
   cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
 
-  # Verify a signature against a certificate
-  cosign verify-blob --certificate <cert> --signature $sig <blob>
 
 ```
 
@@ -65,10 +60,6 @@ cosign verify-blob [flags]
 
 ```
       --bundle string                                   path to bundle FILE
-      --ca-intermediates string                         path to a file of intermediate CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. The flag is optional and must be used together with --ca-roots, conflicts with --certificate-chain.
-      --ca-roots string                                 path to a bundle file of CA certificates in PEM format which will be needed when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.
-      --certificate string                              path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.
-      --certificate-chain string                        path to a list of CA certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.
       --certificate-github-workflow-name string         contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string          contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
       --certificate-github-workflow-repository string   contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon
@@ -92,7 +83,6 @@ cosign verify-blob [flags]
       --signature-digest-algorithm string               digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
       --use-signed-timestamps                           verify rfc3161 timestamps
 ```
