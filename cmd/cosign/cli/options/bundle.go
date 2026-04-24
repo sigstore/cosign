@@ -90,3 +90,29 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive("bundle", "certificate")
 	cmd.MarkFlagsMutuallyExclusive("bundle", "signature")
 }
+
+type BundleUpgradeOptions struct {
+	In       string
+	Out      string
+	InPlace  string
+	RekorURL string
+}
+
+var _ Interface = (*BundleUpgradeOptions)(nil)
+
+func (o *BundleUpgradeOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.In, "in", "", "path to the bundle file to upgrade")
+	_ = cmd.MarkFlagFilename("in", bundleExts...)
+
+	cmd.Flags().StringVar(&o.Out, "out", "", "path to the output upgraded bundle file")
+	_ = cmd.MarkFlagFilename("out", bundleExts...)
+
+	cmd.Flags().StringVar(&o.InPlace, "in-place", "", "path to the bundle file to upgrade in place")
+	_ = cmd.MarkFlagFilename("in-place", bundleExts...)
+
+	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "https://rekor.sigstore.dev", "address of rekor STL server")
+	_ = cmd.RegisterFlagCompletionFunc("rekor-url", cobra.NoFileCompletions)
+
+	cmd.MarkFlagsMutuallyExclusive("in", "in-place")
+	cmd.MarkFlagsMutuallyExclusive("out", "in-place")
+}

@@ -17,6 +17,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/bundle"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -31,6 +32,7 @@ func Bundle() *cobra.Command {
 	}
 
 	cmd.AddCommand(bundleCreate())
+	cmd.AddCommand(bundleUpgrade())
 
 	return cmd
 }
@@ -62,6 +64,36 @@ func bundleCreate() *cobra.Command {
 			defer cancel()
 
 			return bundleCreateCmd.Exec(ctx)
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func bundleUpgrade() *cobra.Command {
+	o := &options.BundleUpgradeOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "upgrade",
+		Short: "Upgrade a Sigstore protobuf bundle",
+		Long:  "Upgrade a Sigstore protobuf bundle to the latest version",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if o.InPlace == "" && (o.In == "" || o.Out == "") {
+				return fmt.Errorf("must specify both --in and --out, or use --in-place")
+			}
+
+			bundleUpgradeCmd := &bundle.UpgradeCmd{
+				In:       o.In,
+				Out:      o.Out,
+				InPlace:  o.InPlace,
+				RekorURL: o.RekorURL,
+			}
+
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
+
+			return bundleUpgradeCmd.Exec(ctx)
 		},
 	}
 
