@@ -81,7 +81,6 @@ cosign verify-attestation [flags]
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle (default true)
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files with policies to be used for validation
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure

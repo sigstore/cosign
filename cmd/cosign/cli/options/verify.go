@@ -65,6 +65,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
+	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.

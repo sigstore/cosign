@@ -42,7 +42,6 @@ cosign attest-blob [flags]
   -h, --help                             help for attest-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
-      --new-bundle-format                output bundle in new format that contains all verification material (default true)
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read
