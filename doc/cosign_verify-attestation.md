@@ -81,7 +81,6 @@ cosign verify-attestation [flags]
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle (default true)
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files with policies to be used for validation
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
@@ -92,9 +91,7 @@ cosign verify-attestation [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
-      --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string                                                       path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp

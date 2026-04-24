@@ -8,7 +8,8 @@ Verify a signature on the supplied blob input using the specified key reference.
 You may specify either a key, a certificate or a kms reference to verify against.
 	If you use a key or a certificate, you must specify the path to them on disk.
 
-The signature may be specified as a path to a file or a base64 encoded string.
+The preferred way to provide verification material is via a Sigstore bundle using --bundle,
+which contains the signature, certificate, and transparency log proof.
 The blob may be specified as a path to a file or - for stdin.
 
 ```
@@ -18,46 +19,31 @@ cosign verify-blob [flags]
 ### Examples
 
 ```
- cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--certificate <cert>) --signature <sig> <blob>
+ cosign verify-blob --bundle <bundle path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
-  # Verify a simple blob and message
-  cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
+  # Verify a blob (keyless, Fulcio-issued certificate)
+  cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com <blob>
 
-  # Verify a signature with certificate and CA certificate chain
-  cosign verify-blob --certificate cert.pem --certificate-chain certchain.pem --signature $sig <blob>
+  # Verify a blob with an on-disk public key
+  cosign verify-blob --bundle artifact.sigstore.json --key cosign.pub <blob>
 
-  # Verify a signature with CA roots and optional intermediate certificates
-  cosign verify-blob --certificate cert.pem --ca-roots caroots.pem [--ca-intermediates caintermediates.pem] --signature $sig <blob>
+  # Verify a blob against Azure Key Vault
+  cosign verify-blob --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
 
-  # Verify a signature from an environment variable
-  cosign verify-blob --key cosign.pub --signature $sig msg
+  # Verify a blob against AWS KMS
+  cosign verify-blob --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
 
-  # verify a signature with public key provided by URL
-  cosign verify-blob --key https://host.for/<FILE> --signature $sig msg
+  # Verify a blob against Google Cloud KMS
+  cosign verify-blob --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
 
-  # verify a signature with signature and key provided by URL
-  cosign verify-blob --key https://host.for/<FILE> --signature https://example.com/<SIG>
+  # Verify a blob against Hashicorp Vault
+  cosign verify-blob --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
-  # Verify a signature against Azure Key Vault
-  cosign verify-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <blob>
+  # Verify a blob against GitLab with project name
+  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[OWNER]/[PROJECT_NAME] <blob>
 
-  # Verify a signature against AWS KMS
-  cosign verify-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --signature $sig <blob>
-
-  # Verify a signature against Google Cloud KMS
-  cosign verify-blob --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] --signature $sig <blob>
-
-  # Verify a signature against Hashicorp Vault
-  cosign verify-blob --key hashivault://[KEY] --signature $sig <blob>
-
-  # Verify a signature against GitLab with project name
-  cosign verify-blob --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <blob>
-
-  # Verify a signature against GitLab with project id
-  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
-
-  # Verify a signature against a certificate
-  cosign verify-blob --certificate <cert> --signature $sig <blob>
+  # Verify a blob against GitLab with project id
+  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[PROJECT_ID] <blob>
 
 ```
 
@@ -84,12 +70,7 @@ cosign verify-blob [flags]
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle (default true)
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
-      --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
-      --sct string                                      path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
-      --signature string                                signature content or path or remote URL
-      --signature-digest-algorithm string               digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
