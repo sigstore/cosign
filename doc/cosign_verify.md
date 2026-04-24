@@ -28,10 +28,6 @@ cosign verify [flags]
   # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>
 
-  # verify image with an on-disk public key, manually specifying the
-  # signature digest algorithm
-  cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
-
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
