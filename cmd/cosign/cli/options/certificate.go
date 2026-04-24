@@ -101,7 +101,6 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
 			"If a certificate contains an SCT, verification will check both the detached and embedded SCTs.")
 	// _ = cmd.MarkFlagFilename("sct") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("sct", "please use --bundle to provide Signed Certificate Timestamp")
 	cmd.Flags().BoolVar(&o.IgnoreSCT, "insecure-ignore-sct", false,
 		"when set, verification will not check that a certificate contains an embedded SCT, a proof of "+
 			"inclusion in a certificate transparency log")

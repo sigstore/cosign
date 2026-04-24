@@ -196,6 +196,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 	o.CertVerify.AddFlags(cmd)
+	_ = cmd.Flags().MarkDeprecated("sct", "please use --bundle to provide Signed Certificate Timestamp")
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
@@ -260,6 +261,7 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Rekor.AddFlags(cmd)
 	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 	o.CertVerify.AddFlags(cmd)
+	_ = cmd.Flags().MarkDeprecated("sct", "please use --bundle to provide Signed Certificate Timestamp")
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
