@@ -93,7 +93,6 @@ cosign verify-attestation [flags]
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
-      --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string                                                       path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
