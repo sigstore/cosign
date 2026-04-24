@@ -200,6 +200,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")
+	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
