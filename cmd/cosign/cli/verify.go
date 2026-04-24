@@ -377,14 +377,29 @@ func VerifyBlobAttestation() *cobra.Command {
 		Use:   "verify-blob-attestation",
 		Short: "Verify an attestation on the supplied blob",
 		Long: `Verify an attestation on the supplied blob input using the specified key reference.
-You may specify either a key or a kms reference to verify against.
+You may specify either a key, a kms reference, or a bundle to verify against.
 
-The signature may be specified as a path to a file or a base64 encoded string.
+The --bundle flag is the preferred way to provide the attestation and verification material.
 The blob may be specified as a path to a file.`,
-		Example: ` cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+		Example: ` cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> [path to BLOB]
 
-  # Verify a simple blob attestation with a DSSE style signature
-  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+  # Verify a blob attestation (keyless)
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://token.actions.githubusercontent.com <blob>
+
+  # Verify a blob attestation with a public key
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key cosign.pub <blob>
+
+  # Verify a blob attestation with Azure KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
+
+  # Verify a blob attestation with AWS KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
+
+  # Verify a blob attestation with GCP KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
+
+  # Verify a blob attestation with Hashicorp Vault
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
 `,
 
