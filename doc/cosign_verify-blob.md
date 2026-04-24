@@ -5,8 +5,8 @@ Verify a signature on the supplied blob
 ### Synopsis
 
 Verify a signature on the supplied blob input using the specified key reference.
-You may specify either a key, a trusted root, or a kms reference to verify against.
-	If you use a key or a trusted root, you must specify the path to them on disk.
+You may specify either a key, a bundle with trusted root, or a kms reference to verify against.
+	If you use a key, bundle, or trusted root, you must specify the path to them on disk.
 
 The signature may be specified as a path to a file or a base64 encoded string.
 The blob may be specified as a path to a file or - for stdin.
@@ -18,13 +18,13 @@ cosign verify-blob [flags]
 ### Examples
 
 ```
- cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--trusted-root <trusted root>) --signature <sig> <blob>
+ cosign verify-blob (--key <key path>|<key url>|<kms uri>)|(--bundle <bundle> --trusted-root <trusted root>) --signature <sig> <blob>
 
   # Verify a simple blob and message
   cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
 
-  # Verify a signature with a trusted root
-  cosign verify-blob --trusted-root trusted_root.json --signature $sig <blob>
+  # Verify a signature with a bundle and trusted root
+  cosign verify-blob --bundle <bundle> --trusted-root trusted_root.json --signature $sig <blob>
 
   # Verify a signature from an environment variable
   cosign verify-blob --key cosign.pub --signature $sig msg

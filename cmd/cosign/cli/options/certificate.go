@@ -47,7 +47,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
 	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("certificate", "please use --trusted-root to provide the public certificate")
+	_ = cmd.Flags().MarkDeprecated("certificate", "please use --bundle with --trusted-root to provide the public certificate")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
