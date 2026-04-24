@@ -116,6 +116,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
 	_ = cmd.MarkFlagFilename("signature", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("signature", "signatures are automatically fetched from the OCI registry during image verification")
 
 	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
 		"payload path or remote URL")
