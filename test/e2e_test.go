@@ -5055,3 +5055,85 @@ func selfSignedCertificate() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	}
 	return cert, priv, nil
 }
+
+func TestSignVerifyDetachedKeyless(t *testing.T) {
+	td := t.TempDir()
+	err := setLocalEnv(t, td)
+	must(err, t)
+	must(fulcioroots.ReInit(), t)
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e-detached-keyless")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	identityToken, err := getOIDCToken()
+	must(err, t)
+
+	ctx := context.Background()
+	sigFile := filepath.Join(td, "sig.out")
+	certFile := filepath.Join(td, "cert.out")
+
+	// Verify should fail before signing
+	failCmd1 := cliverify.VerifyCommand{
+		RekorURL: rekorURL,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+	}
+	mustErr(failCmd1.Exec(ctx, []string{imgName}), t)
+
+	ko := options.KeyOpts{
+		FulcioURL:        fulcioURL,
+		RekorURL:         rekorURL,
+		IDToken:          identityToken,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:            true,
+		TlogUpload:        true,
+		OutputSignature:   sigFile,
+		OutputCertificate: certFile,
+		UseSigningConfig:  false,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	// Verify should fail with a detached signature but no certificate
+	failCmd2 := cliverify.VerifyCommand{
+		RekorURL:     rekorURL,
+		SignatureRef: sigFile,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+	}
+	mustErr(failCmd2.Exec(ctx, []string{imgName}), t)
+
+	// Now verify should work using the certificate
+	cmd := cliverify.VerifyCommand{
+		RekorURL:     rekorURL,
+		SignatureRef: sigFile,
+		CertRef:      certFile,
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+	}
+	must(cmd.Exec(ctx, []string{imgName}), t)
+
+	// Verify should also work with the certificate chain
+	cmdWithChain := cliverify.VerifyCommand{
+		RekorURL:     rekorURL,
+		SignatureRef: sigFile,
+		CertRef:      certFile,
+		CertChain:    os.Getenv("SIGSTORE_ROOT_FILE"),
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+	}
+	must(cmdWithChain.Exec(ctx, []string{imgName}), t)
+}
