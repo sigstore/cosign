@@ -37,7 +37,6 @@ cosign sign-blob [flags]
       --certificate string               path to the X.509 certificate for signing attestation
       --certificate-chain string         path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signed attestation. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate.
       --fulcio-auth-flow string          fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
-      --fulcio-url string                address of sigstore PKI server (default "https://fulcio.sigstore.dev")
   -h, --help                             help for sign-blob
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
