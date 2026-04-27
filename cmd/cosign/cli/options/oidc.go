@@ -58,7 +58,7 @@ var _ Interface = (*OIDCOptions)(nil)
 func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", DefaultOIDCIssuerURL,
 		"OIDC provider to be used to issue ID token")
-	_ = cmd.Flags().MarkDeprecated("oidc-issuer", "please use a signing config to specify the OIDC issuer; see `cosign signing-config --help`")
+	_ = cmd.Flags().MarkDeprecated("oidc-issuer", "please use a signing config to specify an OIDC issuer; see `cosign signing-config --help`")
 
 	cmd.Flags().StringVar(&o.ClientID, "oidc-client-id", "sigstore",
 		"OIDC client ID for application")

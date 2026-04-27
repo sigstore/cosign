@@ -145,7 +145,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
 	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-url", cobra.NoFileCompletions)
-	_ = cmd.Flags().MarkDeprecated("timestamp-server-url", "please use a signing config to specify the timestamp server url; see `cosign signing-config --help`")
+	_ = cmd.Flags().MarkDeprecated("timestamp-server-url", "please use a signing config to specify a timestamp server url; see `cosign signing-config --help`")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"write the RFC3161 timestamp to a file")
