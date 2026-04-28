@@ -1029,11 +1029,21 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
+// If co.ExperimentalOCI11 is set, attestations are discovered via the OCI 1.1 Referrers API.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
 		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
 	}
+
+	// Try first using OCI 1.1 behavior if experimental flag is set.
+	if co.ExperimentalOCI11 {
+		verified, bundleVerified, err := verifyImageAttestationsExperimentalOCI(ctx, signedImgRef, co)
+		if err == nil {
+			return verified, bundleVerified, nil
+		}
+	}
+
 	if co.NewBundleFormat {
 		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co, nameOpts...)
 	}
@@ -1665,6 +1675,55 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	}
 
 	return verifySignatures(ctx, sigs, h, co)
+}
+
+// verifyImageAttestationsExperimentalOCI verifies attestations using OCI 1.1+ Referrers API.
+func verifyImageAttestationsExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+
+	artifactType := types.IntotoPayloadType
+	index, err := ociremote.Referrers(digest, artifactType, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	results := index.Manifests
+	if len(results) == 0 {
+		return nil, false, fmt.Errorf("unable to locate reference with artifactType %s", artifactType)
+	} else if len(results) > 1 {
+		ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", len(results), artifactType)
+	}
+
+	var allAtts []oci.Signature
+	var anyBundleVerified bool
+	for _, result := range results {
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()))
+		if err != nil {
+			return nil, false, err
+		}
+		atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
+		if err != nil {
+			return nil, false, err
+		}
+		verified, bv, err := VerifyImageAttestation(ctx, atts, h, co)
+		if err != nil {
+			continue
+		}
+		allAtts = append(allAtts, verified...)
+		anyBundleVerified = anyBundleVerified || bv
+	}
+
+	if len(allAtts) == 0 {
+		return nil, false, fmt.Errorf("no valid attestations found via OCI 1.1 referrers with artifactType %s", artifactType)
+	}
+
+	return allAtts, anyBundleVerified, nil
 }
 
 func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOpts []ociremote.Option, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {

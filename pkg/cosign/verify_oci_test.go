@@ -16,6 +16,10 @@ package cosign
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	_ "embed"
 	"fmt"
 	"net/http/httptest"
@@ -27,12 +31,15 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/proto"
-
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/signed"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 //go:embed testdata/oci-attestation.sigstore.json
@@ -235,4 +242,98 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	assert.ErrorContains(t, err, "provided artifact digest does not match any digest in statement")
 	assert.False(t, bundleVerified)
 	assert.Len(t, atts, 0)
+}
+
+func TestVerifyImageAttestationsExperimentalOCI_NoImage(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	verifier, err := signature.LoadECDSAVerifier(&privKey.PublicKey, crypto.SHA256)
+	assert.NoError(t, err)
+
+	_, _, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
+		SigVerifier:       verifier,
+		ExperimentalOCI11: true,
+	})
+	assert.Error(t, err)
+}
+
+func TestVerifyImageAttestationsExperimentalOCI_NoReferrers(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	verifier, err := signature.LoadECDSAVerifier(&privKey.PublicKey, crypto.SHA256)
+	assert.NoError(t, err)
+
+	// ExperimentalOCI11 finds no referrers, falls through to tag-based
+	// lookup which also finds nothing.
+	_, _, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
+		SigVerifier:       verifier,
+		ExperimentalOCI11: true,
+	})
+	assert.Error(t, err)
+}
+
+func TestVerifyImageAttestationsExperimentalOCI_Discovery(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	desc, err := remote.Head(ref)
+	assert.NoError(t, err)
+	digestRef := ref.Context().Digest(desc.Digest.String())
+
+	// Write an attestation via the OCI 1.1 referrers path
+	si := signed.Image(empty.Image)
+	att, err := static.NewAttestation([]byte(`{"payloadType":"application/vnd.in-toto+json","payload":"dGVzdA==","signatures":[{"sig":"dGVzdA=="}]}`))
+	assert.NoError(t, err)
+	si, err = mutate.AttachAttestationToImage(si, att)
+	assert.NoError(t, err)
+	err = ociremote.WriteAttestationsReferrer(digestRef, si)
+	assert.NoError(t, err)
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(t, err)
+	verifier, err := signature.LoadECDSAVerifier(&privKey.PublicKey, crypto.SHA256)
+	assert.NoError(t, err)
+
+	// Verification fails (attestation content is synthetic), but this
+	// confirms the referrer discovery path is invoked. Without
+	// ExperimentalOCI11 the error would be about missing attestation
+	// tags, not about attestation content verification.
+	_, _, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
+		SigVerifier:       verifier,
+		ExperimentalOCI11: true,
+	})
+	assert.Error(t, err)
+	var errNoMatching *ErrNoMatchingAttestations
+	assert.ErrorAs(t, err, &errNoMatching)
 }
