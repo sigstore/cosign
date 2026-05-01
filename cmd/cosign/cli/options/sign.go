@@ -95,6 +95,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
 		"write the signed payload to FILE")
 	// _ = cmd.MarkFlagFilename("output-payload") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("output-payload", "please use --bundle to provide the output bundle location, which will include the payload")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
