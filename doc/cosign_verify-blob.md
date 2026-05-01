@@ -71,6 +71,7 @@ cosign verify-blob [flags]
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
+      --rekor-url string                                address of rekor STL server (default "https://rekor.sigstore.dev")
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-certificate-chain string              path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp
