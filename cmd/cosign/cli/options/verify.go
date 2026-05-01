@@ -99,6 +99,8 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.AnnotationOptions.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
@@ -154,6 +156,8 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 
@@ -194,6 +198,8 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
+
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -256,6 +262,8 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
+
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")

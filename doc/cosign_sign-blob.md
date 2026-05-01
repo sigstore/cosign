@@ -46,7 +46,6 @@ cosign sign-blob [flags]
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-provider string             Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
       --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key

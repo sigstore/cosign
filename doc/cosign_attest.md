@@ -75,7 +75,6 @@ cosign attest [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --replace                                                                                  
       --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
       --sk                                                                                       whether to use a hardware security key

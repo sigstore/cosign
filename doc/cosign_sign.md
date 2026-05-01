@@ -103,7 +103,6 @@ cosign sign [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --sign-container-identity strings                                                          manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature, this flag is comma delimited. ex: --sign-container-identity=identity1,identity2
       --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
       --sk                                                                                       whether to use a hardware security key

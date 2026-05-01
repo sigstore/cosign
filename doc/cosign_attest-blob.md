@@ -49,7 +49,6 @@ cosign attest-blob [flags]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --output-attestation string        write the attestation to FILE
       --predicate string                 path to the predicate file.
-      --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
