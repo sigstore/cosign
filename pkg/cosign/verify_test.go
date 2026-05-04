@@ -1843,6 +1843,65 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 }
 
+// TrustedMaterial with no TSAs — exercises the case where the caller's
+// TSA chain is the only place the signing TSA is configured.
+type noMatchingTSAsMaterial struct {
+	root.BaseTrustedMaterial
+}
+
+func TestVerifyRFC3161Timestamp_LegacyChainHonouredWithTrustedMaterial(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	client, err := tsaMock.NewTSAClient(tsaMock.TSAClientOptions{Time: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
+	if err != nil {
+		t.Fatalf("unexpected error marshalling cert chain: %v", err)
+	}
+	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	if err != nil {
+		t.Fatal("error splitting response into certificate chain")
+	}
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+
+	// Both TrustedMaterial AND the legacy TSA fields are set. TrustedMaterial
+	// has no matching TSA; the legacy fields contain the chain that actually
+	// signed the timestamp. Verification must use the legacy chain.
+	ts, err := VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TrustedMaterial:             &noMatchingTSAsMaterial{},
+		TSACertificate:              leaves[0],
+		TSAIntermediateCertificates: intermediates,
+		TSARootCertificates:         roots,
+	})
+	if err != nil {
+		t.Fatalf("expected verification to succeed when legacy TSA chain is set alongside TrustedMaterial, got: %v", err)
+	}
+	if ts == nil {
+		t.Fatalf("expected non-nil verified timestamp")
+	}
+	if err := CheckExpiry(leafCert, nil, ts.Time); err != nil {
+		t.Fatalf("unexpected error using time from timestamp to verify certificate: %v", err)
+	}
+}
+
 // This test verifies that artifact verification rejects signatures
 // where a CA certificate in the issuing chain is expired. This is a contrived
 // example because CAs shouldn't issue certificates where the leaf's validity
