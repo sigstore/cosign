@@ -1843,6 +1843,55 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 }
 
+// emptyTSATrustedMaterial is a TrustedMaterial whose TimestampingAuthorities()
+// returns an empty slice. Used to exercise the path where
+// verify.VerifySignedTimestamp returns (emptySlice, verifyErrs, nil) — i.e.
+// no top-level error, but no timestamps verified either.
+type emptyTSATrustedMaterial struct {
+	root.BaseTrustedMaterial
+}
+
+// Regression test for the panic where VerifyRFC3161Timestamp's TrustedMaterial
+// branch indexed verifiedTimestamps[0] without checking len(). When no
+// TimestampingAuthority in TrustedMaterial matches the timestamp under
+// verification, sigstore-go returns an empty slice with non-empty per-attempt
+// errors and a nil top-level error. The function should return that as a
+// regular verification error, not panic.
+func TestVerifyRFC3161Timestamp_NoMatchingTSAInTrustedMaterial(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+
+	client, err := tsaMock.NewTSAClient(tsaMock.TSAClientOptions{Time: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+
+	ociSig, _ := static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TrustedMaterial: &emptyTSATrustedMaterial{},
+	})
+	if err == nil {
+		t.Fatalf("expected error when TrustedMaterial has no matching TSA, got nil")
+	}
+	if !strings.Contains(err.Error(), "no signed timestamps verified") {
+		t.Fatalf("expected 'no signed timestamps verified' error, got: %v", err)
+	}
+}
+
 // This test verifies that artifact verification rejects signatures
 // where a CA certificate in the issuing chain is expired. This is a contrived
 // example because CAs shouldn't issue certificates where the leaf's validity
