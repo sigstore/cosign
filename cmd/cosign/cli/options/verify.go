@@ -65,6 +65,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
+	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
@@ -116,6 +117,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
 	_ = cmd.MarkFlagFilename("signature", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("signature", "signatures are automatically fetched from the OCI registry during image verification")
 
 	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
 		"payload path or remote URL")
@@ -192,6 +194,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
+	_ = cmd.Flags().MarkDeprecated("sct", "please use --bundle to provide Signed Certificate Timestamp")
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
@@ -200,6 +203,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")
+	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
@@ -254,6 +258,7 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
+	_ = cmd.Flags().MarkDeprecated("sct", "please use --bundle to provide Signed Certificate Timestamp")
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
@@ -262,6 +267,7 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
 		"path to base64-encoded signature over attestation in DSSE format")
+	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")

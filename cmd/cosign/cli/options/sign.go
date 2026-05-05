@@ -95,6 +95,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputPayload, "output-payload", "",
 		"write the signed payload to FILE")
 	// _ = cmd.MarkFlagFilename("output-payload") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("output-payload", "please use --bundle to provide the output bundle location, which will include the payload")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
@@ -153,6 +154,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false, "set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "expect the signature/attestation to be packaged in a Sigstore bundle")
+	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
