@@ -125,6 +125,60 @@ func TestGetBundles_Valid(t *testing.T) {
 	}
 }
 
+func TestGetBundles_WithTargetRepository(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+	host := u.Host
+
+	sourceRef, err := name.ParseReference(fmt.Sprintf("%s/source-repo:tag", host))
+	assert.NoError(t, err)
+
+	targetRepo, err := name.NewRepository(fmt.Sprintf("%s/target-repo", host))
+	assert.NoError(t, err)
+
+	// Write the source image.
+	assert.NoError(t, remote.Write(sourceRef, empty.Image))
+
+	// Get the source image digest.
+	desc, err := remote.Head(sourceRef)
+	assert.NoError(t, err)
+
+	// Write the attestation referrer into the target repo.
+	// Pass the source digest as subject (so WriteReferrer can HEAD it) and
+	// WithTargetRepository so the referrer manifest is stored in target-repo.
+	sourceDigestRef := sourceRef.Context().Digest(desc.Digest.String())
+	err = ociremote.WriteAttestationNewBundleFormat(sourceDigestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1",
+		ociremote.WithTargetRepository(targetRepo),
+	)
+	assert.NoError(t, err)
+
+	// Without WithTargetRepository, the bundle is not found in the source repo.
+	bundles, hash, err := GetBundles(context.Background(), sourceRef, []ociremote.Option{})
+	var noMatchErr *ErrNoMatchingAttestations
+	assert.ErrorAs(t, err, &noMatchErr)
+	assert.Len(t, bundles, 0)
+	assert.Nil(t, hash)
+
+	// With WithTargetRepository, the bundle is found in the target repo.
+	bundles, hash, err = GetBundles(context.Background(), sourceRef, []ociremote.Option{
+		ociremote.WithTargetRepository(targetRepo),
+	})
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.NotNil(t, hash)
+
+	expected := sgbundle.Bundle{}
+	err = expected.UnmarshalJSON(testAttestation)
+	assert.NoError(t, err)
+	if !proto.Equal(bundles[0].Bundle, &expected) {
+		t.Errorf("got %v, want %v", bundles[0].Bundle, &expected)
+	}
+}
+
 // TODO: This test is getting long and maybe should be refactored into a
 // table-based test to exercise more permutations.
 func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {

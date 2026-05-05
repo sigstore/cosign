@@ -1688,9 +1688,15 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 	if err != nil {
 		return nil, nil, err
 	}
+
+	bundleRepo := digest.Repository
+	if targetRepo := ociremote.TargetRepositoryFromOptions(registryClientOpts...); (targetRepo != name.Repository{}) {
+		bundleRepo = targetRepo
+	}
+
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, result.Digest.String()), nameOpts...)
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", bundleRepo, result.Digest.String()), nameOpts...)
 		if err != nil {
 			return nil, nil, err
 		}
