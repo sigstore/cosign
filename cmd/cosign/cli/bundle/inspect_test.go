@@ -447,6 +447,17 @@ func TestPopulateTlogEntrySummary(t *testing.T) {
 				"Version":   "0.0.1",
 			},
 		},
+		{
+			name: "with canonicalized body",
+			entry: &rekorv1.TransparencyLogEntry{
+				LogIndex:          888,
+				CanonicalizedBody: []byte(`{"body":"json"}`),
+			},
+			expectedPairs: map[string]string{
+				"Log Index":          "888",
+				"Canonicalized Body": "Present (15 bytes)",
+			},
+		},
 	}
 
 	for _, tc := range tests {
