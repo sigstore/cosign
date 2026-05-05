@@ -79,7 +79,6 @@ cosign verify-attestation [flags]
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --policy strings                                                                           specify CUE or Rego files with policies to be used for validation
-      --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
       --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
       --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry

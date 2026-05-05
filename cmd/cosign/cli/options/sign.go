@@ -153,6 +153,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 		"manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature, this flag is comma delimited. ex: --sign-container-identity=identity1,identity2")
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false, "set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value")
+	_ = cmd.Flags().MarkDeprecated("record-creation-timestamp", "not used with the new bundle format")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "expect the signature/attestation to be packaged in a Sigstore bundle")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")

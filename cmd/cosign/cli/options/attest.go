@@ -114,6 +114,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false,
 		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
+	_ = cmd.Flags().MarkDeprecated("record-creation-timestamp", "not used with the new bundle format")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")

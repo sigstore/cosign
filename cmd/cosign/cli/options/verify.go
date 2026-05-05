@@ -54,6 +54,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.PrivateInfrastructure, "private-infrastructure", false,
 		"skip transparency log verification when verifying artifacts in a privately deployed infrastructure")
+	_ = cmd.Flags().MarkDeprecated("private-infrastructure", "please use --insecure-ignore-tlog instead")
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
