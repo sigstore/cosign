@@ -31,6 +31,7 @@ func Bundle() *cobra.Command {
 	}
 
 	cmd.AddCommand(bundleCreate())
+	cmd.AddCommand(bundleInspect())
 
 	return cmd
 }
@@ -66,5 +67,22 @@ func bundleCreate() *cobra.Command {
 	}
 
 	o.AddFlags(cmd)
+	return cmd
+}
+
+func bundleInspect() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect BUNDLE",
+		Short: "Inspect a Sigstore protobuf bundle",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			bundleInspectCmd := &bundle.InspectCmd{
+				BundlePath: args[0],
+			}
+
+			return bundleInspectCmd.Exec()
+		},
+	}
+
 	return cmd
 }
