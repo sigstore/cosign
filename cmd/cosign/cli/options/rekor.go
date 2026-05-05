@@ -32,4 +32,5 @@ var _ Interface = (*RekorOptions)(nil)
 func (o *RekorOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.URL, "rekor-url", DefaultRekorURL,
 		"address of rekor STL server")
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use a signing config to specify a rekor url; see `cosign signing-config --help`")
 }
