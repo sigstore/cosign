@@ -47,6 +47,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Cert, "certificate", "",
 		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
 	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("certificate", "please use --bundle with --trusted-root to provide the public certificate")
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
@@ -83,10 +84,12 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 			"The flag is optional and must be used together with --ca-roots, conflicts with "+
 			"--certificate-chain.")
 	_ = cmd.MarkFlagFilename("ca-intermediates", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("ca-intermediates", "please use --trusted-root to provide CA certificates")
 	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
 		"path to a bundle file of CA certificates in PEM format which will be needed "+
 			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
 	_ = cmd.MarkFlagFilename("ca-roots", certificateExts...)
+	_ = cmd.Flags().MarkDeprecated("ca-roots", "please use --trusted-root to provide CA certificates")
 
 	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
 		"path to a list of CA certificates in PEM format which will be needed "+
@@ -96,6 +99,7 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
 	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
+	_ = cmd.Flags().MarkDeprecated("certificate-chain", "please use --trusted-root to provide the certificate chain")
 
 	cmd.Flags().StringVar(&o.SCT, "sct", "",
 		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
