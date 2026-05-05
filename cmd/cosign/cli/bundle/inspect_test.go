@@ -432,6 +432,21 @@ func TestPopulateTlogEntrySummary(t *testing.T) {
 				"Log":       "Rekor v2 (Staging)",
 			},
 		},
+		{
+			name: "with kind/version",
+			entry: &rekorv1.TransparencyLogEntry{
+				LogIndex: 777,
+				KindVersion: &rekorv1.KindVersion{
+					Kind:    "hashedrekord",
+					Version: "0.0.1",
+				},
+			},
+			expectedPairs: map[string]string{
+				"Log Index": "777",
+				"Kind":      "hashedrekord",
+				"Version":   "0.0.1",
+			},
+		},
 	}
 
 	for _, tc := range tests {
