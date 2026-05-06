@@ -1391,6 +1391,17 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		tsBytes = rawSig
 	}
 
+	// Honour the explicit TSA chain when set — TrustedMaterial may not
+	// contain the TSA used to sign this timestamp.
+	if co.TSARootCertificates != nil {
+		return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
+			tsaverification.VerifyOpts{
+				TSACertificate: co.TSACertificate,
+				Intermediates:  co.TSAIntermediateCertificates,
+				Roots:          co.TSARootCertificates,
+			})
+	}
+
 	if co.TrustedMaterial != nil {
 		entity := &signedEntityForTimestamp{
 			timestamp:  ts,
