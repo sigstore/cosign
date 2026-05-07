@@ -19,12 +19,12 @@ cosign verify-blob [flags]
 ### Examples
 
 ```
- cosign verify-blob --bundle <bundle> (--key <key path>|<key url>|<kms uri>) (--trusted-root <trusted root>) <blob>
+ cosign verify-blob --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
   # Verify a signature with a bundle and trusted root
   cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json <blob>
 
-  # Verify a blob (keyless, Fulcio-issued certificate)
+  # Verify a blob (keyless)
   cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
 
   # Verify a blob with an on-disk public key

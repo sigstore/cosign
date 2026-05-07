@@ -17,7 +17,7 @@ cosign verify-blob-attestation [flags]
 ### Examples
 
 ```
- cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> [path to BLOB]
+ cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
   # Verify a blob attestation (keyless)
   cosign verify-blob-attestation --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>

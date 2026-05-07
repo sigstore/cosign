@@ -276,12 +276,12 @@ You may specify either a key, a bundle (optionally with trusted root), or a kms 
 The preferred way to provide verification material is via a Sigstore bundle using --bundle,
 which contains the signature, certificate, and transparency log proof.
 The blob may be specified as a path to a file or - for stdin.`,
-		Example: ` cosign verify-blob --bundle <bundle> (--key <key path>|<key url>|<kms uri>) (--trusted-root <trusted root>) <blob>
+		Example: ` cosign verify-blob --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
   # Verify a signature with a bundle and trusted root
   cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json <blob>
 
-  # Verify a blob (keyless, Fulcio-issued certificate)
+  # Verify a blob (keyless)
   cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
 
   # Verify a blob with an on-disk public key
@@ -376,7 +376,7 @@ You may specify either a key or a kms reference to verify against.
 
 Signed material is provided with the --bundle flag.
 The blob may be specified as a path to a file.`,
-		Example: ` cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> [path to BLOB]
+		Example: ` cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
   # Verify a blob attestation (keyless)
   cosign verify-blob-attestation --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
