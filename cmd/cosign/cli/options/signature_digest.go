@@ -59,6 +59,7 @@ func (o *SignatureDigestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.AlgorithmName, "signature-digest-algorithm", "sha256",
 		fmt.Sprintf("digest algorithm to use when processing a signature (%s)", validSignatureDigestAlgorithms))
+	_ = cmd.Flags().MarkDeprecated("signature-digest-algorithm", "please use --bundle, which already includes the digest algorithm")
 }
 
 // HashAlgorithm converts the algorithm's name - provided as a string - into a crypto.Hash algorithm.

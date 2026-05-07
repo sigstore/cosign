@@ -50,10 +50,6 @@ against the transparency log.`,
   # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>
 
-  # verify image with an on-disk public key, manually specifying the
-  # signature digest algorithm
-  cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
-
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
@@ -277,43 +273,37 @@ func VerifyBlob() *cobra.Command {
 You may specify either a key, a bundle (optionally with trusted root), or a kms reference to verify against.
 	If you use a key, bundle, or trusted root, you must specify the path to them on disk.
 
-The signature may be specified as a path to a file or a base64 encoded string.
+The preferred way to provide verification material is via a Sigstore bundle using --bundle,
+which contains the signature, certificate, and transparency log proof.
 The blob may be specified as a path to a file or - for stdin.`,
 		Example: ` cosign verify-blob --bundle <bundle> (--key <key path>|<key url>|<kms uri>) (--trusted-root <trusted root>) <blob>
 
-  # Verify a simple blob and message
-  cosign verify-blob --key cosign.pub (--signature <sig path>|<sig url> msg)
-
   # Verify a signature with a bundle and trusted root
-  cosign verify-blob --bundle <bundle> --trusted-root trusted_root.json <blob>
+  cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json <blob>
 
-  # Verify a signature from an environment variable
-  cosign verify-blob --key cosign.pub --signature $sig msg
+  # Verify a blob (keyless, Fulcio-issued certificate)
+  cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
 
-  # verify a signature with public key provided by URL
-  cosign verify-blob --key https://host.for/<FILE> --signature $sig msg
+  # Verify a blob with an on-disk public key
+  cosign verify-blob --bundle artifact.sigstore.json --key cosign.pub <blob>
 
-  # verify a signature with signature and key provided by URL
-  cosign verify-blob --key https://host.for/<FILE> --signature https://example.com/<SIG>
+  # Verify a blob against Azure Key Vault
+  cosign verify-blob --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
 
-  # Verify a signature against Azure Key Vault
-  cosign verify-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --signature $sig <blob>
+  # Verify a blob against AWS KMS
+  cosign verify-blob --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
 
-  # Verify a signature against AWS KMS
-  cosign verify-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --signature $sig <blob>
+  # Verify a blob against Google Cloud KMS
+  cosign verify-blob --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
 
-  # Verify a signature against Google Cloud KMS
-  cosign verify-blob --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] --signature $sig <blob>
+  # Verify a blob against Hashicorp Vault
+  cosign verify-blob --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
-  # Verify a signature against Hashicorp Vault
-  cosign verify-blob --key hashivault://[KEY] --signature $sig <blob>
+  # Verify a blob against GitLab with project name
+  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[OWNER]/[PROJECT_NAME] <blob>
 
-  # Verify a signature against GitLab with project name
-  cosign verify-blob --key gitlab://[OWNER]/[PROJECT_NAME]  --signature $sig <blob>
-
-  # Verify a signature against GitLab with project id
-  cosign verify-blob --key gitlab://[PROJECT_ID]  --signature $sig <blob>
-
+  # Verify a blob against GitLab with project id
+  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[PROJECT_ID] <blob>
 `,
 
 		Args:             cobra.ExactArgs(1),
@@ -384,12 +374,27 @@ func VerifyBlobAttestation() *cobra.Command {
 		Long: `Verify an attestation on the supplied blob input using the specified key reference.
 You may specify either a key or a kms reference to verify against.
 
-The signature may be specified as a path to a file or a base64 encoded string.
+Signed material is provided with the --bundle flag.
 The blob may be specified as a path to a file.`,
-		Example: ` cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+		Example: ` cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> [path to BLOB]
 
-  # Verify a simple blob attestation with a DSSE style signature
-  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+  # Verify a blob attestation (keyless)
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
+
+  # Verify a blob attestation with a public key
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key cosign.pub <blob>
+
+  # Verify a blob attestation with Azure KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
+
+  # Verify a blob attestation with AWS KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
+
+  # Verify a blob attestation with GCP KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
+
+  # Verify a blob attestation with Hashicorp Vault
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
 `,
 

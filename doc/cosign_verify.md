@@ -28,10 +28,6 @@ cosign verify [flags]
   # verify image with an on-disk public key
   cosign verify --key cosign.pub <IMAGE>
 
-  # verify image with an on-disk public key, manually specifying the
-  # signature digest algorithm
-  cosign verify --key cosign.pub --signature-digest-algorithm sha512 <IMAGE>
-
   # verify image with an on-disk signed image from 'cosign save'
   cosign verify --key cosign.pub --local-image <PATH>
 
@@ -86,7 +82,6 @@ cosign verify [flags]
       --key string                                                                               path to the public key file, KMS URI or Kubernetes Secret
       --local-image                                                                              whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                                                          the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle (default true)
   -o, --output string                                                                            output format for the signing image information (json|text) (default "json")
       --payload string                                                                           payload path or remote URL
       --private-infrastructure                                                                   skip transparency log verification when verifying artifacts in a privately deployed infrastructure
@@ -97,9 +92,6 @@ cosign verify [flags]
       --registry-server-name string                                                              SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                                                                    registry bearer auth token
       --registry-username string                                                                 registry basic auth username
-      --sct string                                                                               path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
-      --signature string                                                                         signature content or path or remote URL
-      --signature-digest-algorithm string                                                        digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                                                                       whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                                                                      Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.

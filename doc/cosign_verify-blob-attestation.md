@@ -7,7 +7,7 @@ Verify an attestation on the supplied blob
 Verify an attestation on the supplied blob input using the specified key reference.
 You may specify either a key or a kms reference to verify against.
 
-The signature may be specified as a path to a file or a base64 encoded string.
+Signed material is provided with the --bundle flag.
 The blob may be specified as a path to a file.
 
 ```
@@ -17,10 +17,25 @@ cosign verify-blob-attestation [flags]
 ### Examples
 
 ```
- cosign verify-blob-attestation (--key <key path>|<key url>|<kms uri>) --signature <sig> [path to BLOB]
+ cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> [path to BLOB]
 
-  # Verify a simple blob attestation with a DSSE style signature
-  cosign verify-blob-attestation --key cosign.pub (--signature <sig path>|<sig url>)[path to BLOB]
+  # Verify a blob attestation (keyless)
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
+
+  # Verify a blob attestation with a public key
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key cosign.pub <blob>
+
+  # Verify a blob attestation with Azure KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
+
+  # Verify a blob attestation with AWS KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
+
+  # Verify a blob attestation with GCP KMS
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
+
+  # Verify a blob attestation with Hashicorp Vault
+  cosign verify-blob-attestation --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
 
 ```
@@ -47,11 +62,7 @@ cosign verify-blob-attestation [flags]
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                               expect the signature/attestation to be packaged in a Sigstore bundle (default true)
       --private-infrastructure                          skip transparency log verification when verifying artifacts in a privately deployed infrastructure
-      --sct string                                      path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. If a certificate contains an SCT, verification will check both the detached and embedded SCTs.
-      --signature string                                path to base64-encoded signature over attestation in DSSE format
-      --signature-digest-algorithm string               digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
