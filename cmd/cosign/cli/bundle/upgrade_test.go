@@ -16,8 +16,10 @@
 package bundle
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -196,49 +198,107 @@ func TestUpgradeBundle(t *testing.T) {
 
 func TestUpgradeCmd(t *testing.T) {
 	ctx := context.Background()
-	td := t.TempDir()
 
-	inputPath := filepath.Join(td, "input.json")
-	v01Bundle := `{
-		"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
-		"verificationMaterial": {
-			"x509CertificateChain": {
-				"certificates": [
-					{"rawBytes": "bGVhZg=="}
-				]
+	t.Run("File Output", func(t *testing.T) {
+		td := t.TempDir()
+
+		inputPath := filepath.Join(td, "input.json")
+		v01Bundle := `{
+			"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+			"verificationMaterial": {
+				"x509CertificateChain": {
+					"certificates": [
+						{"rawBytes": "bGVhZg=="}
+					]
+				}
 			}
+		}`
+		err := os.WriteFile(inputPath, []byte(v01Bundle), 0600)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}`
-	err := os.WriteFile(inputPath, []byte(v01Bundle), 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	outputPath := filepath.Join(td, "output.json")
+		outputPath := filepath.Join(td, "output.json")
 
-	cmd := UpgradeCmd{
-		In:  inputPath,
-		Out: outputPath,
-	}
+		cmd := UpgradeCmd{
+			Out: outputPath,
+		}
 
-	err = cmd.Exec(ctx)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		err = cmd.Exec(ctx, inputPath)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
-	data, err := os.ReadFile(outputPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+		data, err := os.ReadFile(outputPath)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	var m map[string]interface{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		t.Fatal(err)
-	}
+		var m map[string]interface{}
+		if err := json.Unmarshal(data, &m); err != nil {
+			t.Fatal(err)
+		}
 
-	if m["mediaType"] != "application/vnd.dev.sigstore.bundle.v0.3+json" {
-		t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
-	}
+		if m["mediaType"] != "application/vnd.dev.sigstore.bundle.v0.3+json" {
+			t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
+		}
+	})
+
+	t.Run("Stdout Fallback", func(t *testing.T) {
+		td := t.TempDir()
+
+		inputPath := filepath.Join(td, "input.json")
+		v01Bundle := `{
+			"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+			"verificationMaterial": {
+				"x509CertificateChain": {
+					"certificates": [
+						{"rawBytes": "bGVhZg=="}
+					]
+				}
+			}
+		}`
+		err := os.WriteFile(inputPath, []byte(v01Bundle), 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := UpgradeCmd{
+			Out: "",
+		}
+
+		reader, writer, err := os.Pipe()
+		if err != nil {
+			t.Fatal("failed to create a pipe for testing os.Stdout")
+		}
+		stdout := os.Stdout
+		os.Stdout = writer
+
+		err = cmd.Exec(ctx, inputPath)
+
+		os.Stdout = stdout
+		writer.Close()
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var buffer bytes.Buffer
+		_, err = io.Copy(&buffer, reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := buffer.Bytes()
+		var m map[string]interface{}
+		if err := json.Unmarshal(output, &m); err != nil {
+			t.Fatalf("unmarshaling stdout output: %v", err)
+		}
+
+		if m["mediaType"] != "application/vnd.dev.sigstore.bundle.v0.3+json" {
+			t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
+		}
+	})
 }
 
 func createMockLogEntryAnon() models.LogEntryAnon {

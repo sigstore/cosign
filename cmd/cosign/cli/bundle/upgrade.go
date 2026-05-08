@@ -32,19 +32,12 @@ import (
 )
 
 type UpgradeCmd struct {
-	In       string
 	Out      string
-	InPlace  string
 	RekorURL string
 }
 
-func (c *UpgradeCmd) Exec(ctx context.Context) error {
-	inputPath := c.In
-	if c.InPlace != "" {
-		inputPath = c.InPlace
-	}
-
-	data, err := os.ReadFile(inputPath)
+func (c *UpgradeCmd) Exec(ctx context.Context, bundlePath string) error {
+	data, err := os.ReadFile(bundlePath)
 	if err != nil {
 		return fmt.Errorf("reading input file: %w", err)
 	}
@@ -59,17 +52,16 @@ func (c *UpgradeCmd) Exec(ctx context.Context) error {
 		return fmt.Errorf("upgrading bundle: %w", err)
 	}
 
-	outputPath := c.Out
-	if c.InPlace != "" {
-		outputPath = c.InPlace
+	if c.Out != "" {
+		err = os.WriteFile(c.Out, upgradedBundle, 0600)
+		if err != nil {
+			return fmt.Errorf("writing upgraded bundle: %w", err)
+		}
+		ui.Infof(ctx, "Successfully upgraded bundle written to %s", c.Out)
+	} else {
+		fmt.Println(string(upgradedBundle))
 	}
 
-	err = os.WriteFile(outputPath, upgradedBundle, 0600)
-	if err != nil {
-		return fmt.Errorf("writing upgraded bundle: %w", err)
-	}
-
-	ui.Infof(ctx, "Successfully upgraded bundle written to %s", outputPath)
 	return nil
 }
 

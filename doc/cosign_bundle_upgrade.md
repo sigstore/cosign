@@ -7,15 +7,13 @@ Upgrade a Sigstore protobuf bundle
 Upgrade a Sigstore Protobuf bundle to the latest version. This command only supports standardized bundles.
 
 ```
-cosign bundle upgrade [flags]
+cosign bundle upgrade <bundle> [flags]
 ```
 
 ### Options
 
 ```
   -h, --help               help for upgrade
-      --in string          path to the bundle file to upgrade
-      --in-place string    path to the bundle file to upgrade in place
       --out string         path to the output upgraded bundle file
       --rekor-url string   URL of the transparency log (default "https://rekor.sigstore.dev")
 ```
