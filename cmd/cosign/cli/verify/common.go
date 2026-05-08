@@ -51,7 +51,7 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, c
 		"CertRef":              "certificate must be in bundle and may not be provided using --certificate",
 		"CertChain":            "certificate chain must be in bundle and may not be provided using --certificate-chain",
 		"CARoots":              "CA roots/intermediates must be provided using --trusted-root",
-		"CAIntermedias":        "CA roots/intermediates must be provided using --trusted-root",
+		"CAIntermediates":      "CA roots/intermediates must be provided using --trusted-root",
 		"TSACertChainPath":     "TSA certificate chain path may only be provided using --trusted-root",
 		"RFC3161TimestampPath": "RFC3161 timestamp may not be provided using --rfc3161-timestamp",
 		"SigRef":               "signature may not be provided using --signature",
