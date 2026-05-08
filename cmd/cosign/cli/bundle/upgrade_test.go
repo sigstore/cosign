@@ -18,11 +18,20 @@ package bundle
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/sigstore/rekor/pkg/generated/client"
 	"github.com/sigstore/rekor/pkg/generated/client/entries"
@@ -42,31 +51,46 @@ func (m *mockEntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByInde
 }
 
 func TestUpgradeBundle(t *testing.T) {
-	checkV03 := func(t *testing.T, output []byte) {
-		var m map[string]interface{}
-		err := json.Unmarshal(output, &m)
-		if err != nil {
-			t.Fatalf("unmarshaling output: %v", err)
-		}
+	checkV03 := func(expectedCertB64 string) func(t *testing.T, output []byte) {
+		return func(t *testing.T, output []byte) {
+			var m map[string]interface{}
+			err := json.Unmarshal(output, &m)
+			if err != nil {
+				t.Fatalf("unmarshaling output: %v", err)
+			}
 
-		if m["mediaType"] != "application/vnd.dev.sigstore.bundle.v0.3+json" {
-			t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
-		}
+			if m["mediaType"] != "application/vnd.dev.sigstore.bundle.v0.3+json" {
+				t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
+			}
 
-		vm, ok := m["verificationMaterial"].(map[string]interface{})
-		if !ok {
-			t.Fatal("missing verificationMaterial")
-		}
+			vm, ok := m["verificationMaterial"].(map[string]interface{})
+			if !ok {
+				t.Fatal("missing verificationMaterial")
+			}
 
-		cert, ok := vm["certificate"].(map[string]interface{})
-		if !ok {
-			t.Fatal("missing certificate field in verificationMaterial")
-		}
+			cert, ok := vm["certificate"].(map[string]interface{})
+			if !ok {
+				t.Fatal("missing certificate field in verificationMaterial")
+			}
 
-		if cert["rawBytes"] != "bGVhZg==" {
-			t.Fatalf("expected leaf certificate rawBytes to be 'bGVhZg==', got %v", cert["rawBytes"])
+			if cert["rawBytes"] != expectedCertB64 {
+				t.Fatalf("expected leaf certificate rawBytes to be %v, got %v", expectedCertB64, cert["rawBytes"])
+			}
 		}
 	}
+
+	genCert := func(cn string, emails []string, uris []string) string {
+		cert, _, err := selfSignedCertificate(cn, emails, uris)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return base64.StdEncoding.EncodeToString(cert.Raw)
+	}
+
+	certEmailB64 := genCert("cert", []string{"foo@bar.com"}, nil)
+	certURIB64 := genCert("cert", nil, []string{"https://example.com/workflow"})
+	certSubjectB64 := genCert("my-identity", nil, nil)
+	certNoneB64 := genCert("", nil, nil)
 
 	tests := []struct {
 		name        string
@@ -98,7 +122,7 @@ func TestUpgradeBundle(t *testing.T) {
 					}
 				}
 			}`,
-			checkOutput: checkV03,
+			checkOutput: checkV03("bGVhZg=="),
 		},
 		{
 			name: "Upgrade v0.2 to v0.3",
@@ -113,7 +137,63 @@ func TestUpgradeBundle(t *testing.T) {
 					}
 				}
 			}`,
-			checkOutput: checkV03,
+			checkOutput: checkV03("bGVhZg=="),
+		},
+		{
+			name: "Upgrade with Email SAN",
+			input: `{
+				"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+				"verificationMaterial": {
+					"x509CertificateChain": {
+						"certificates": [
+							{"rawBytes": "` + certEmailB64 + `"}
+						]
+					}
+				}
+			}`,
+			checkOutput: checkV03(certEmailB64),
+		},
+		{
+			name: "Upgrade with URI SAN",
+			input: `{
+				"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+				"verificationMaterial": {
+					"x509CertificateChain": {
+						"certificates": [
+							{"rawBytes": "` + certURIB64 + `"}
+						]
+					}
+				}
+			}`,
+			checkOutput: checkV03(certURIB64),
+		},
+		{
+			name: "Upgrade with Subject",
+			input: `{
+				"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+				"verificationMaterial": {
+					"x509CertificateChain": {
+						"certificates": [
+							{"rawBytes": "` + certSubjectB64 + `"}
+						]
+					}
+				}
+			}`,
+			checkOutput: checkV03(certSubjectB64),
+		},
+		{
+			name: "Upgrade with no identity",
+			input: `{
+				"mediaType": "application/vnd.dev.sigstore.bundle+json;version=0.1",
+				"verificationMaterial": {
+					"x509CertificateChain": {
+						"certificates": [
+							{"rawBytes": "` + certNoneB64 + `"}
+						]
+					}
+				}
+			}`,
+			checkOutput: checkV03(certNoneB64),
 		},
 		{
 			name:        "Missing VerificationMaterial",
@@ -325,4 +405,43 @@ func createMockLogEntryAnon() models.LogEntryAnon {
 			},
 		},
 	}
+}
+
+func selfSignedCertificate(commonName string, emails []string, uris []string) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var parsedURIs []*url.URL
+	for _, u := range uris {
+		parsed, _ := url.Parse(u)
+		parsedURIs = append(parsedURIs, parsed)
+	}
+
+	var subject pkix.Name
+	if commonName != "" {
+		subject.CommonName = commonName
+		subject.Organization = []string{"dev"}
+	}
+
+	ct := &x509.Certificate{
+		SerialNumber:   big.NewInt(1),
+		Subject:        subject,
+		EmailAddresses: emails,
+		URIs:           parsedURIs,
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		NotAfter:       time.Now().Add(24 * time.Hour),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}
+	certBytes, err := x509.CreateCertificate(rand.Reader, ct, ct, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, err
+	}
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cert, priv, nil
 }

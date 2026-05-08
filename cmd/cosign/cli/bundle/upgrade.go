@@ -100,7 +100,18 @@ func upgradeBundle(ctx context.Context, data []byte, rekorClient *client.Rekor) 
 					ui.Infof(ctx, "  Certificate %d: <unable to parse: %v>", i, err)
 					continue
 				}
-				ui.Infof(ctx, "  Certificate %d Subject: %s", i, parsedCert.Subject.String())
+
+				var identity string
+				if len(parsedCert.EmailAddresses) > 0 {
+					identity = parsedCert.EmailAddresses[0]
+				} else if len(parsedCert.URIs) > 0 {
+					identity = parsedCert.URIs[0].String()
+				} else if s := parsedCert.Subject.String(); s != "" {
+					identity = s
+				} else {
+					identity = "<none>"
+				}
+				ui.Infof(ctx, "  Certificate %d Identity: %s", i, identity)
 			}
 			bundle.VerificationMaterial.Content = &protobundle.VerificationMaterial_Certificate{
 				Certificate: certChain[0],
