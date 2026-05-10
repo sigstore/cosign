@@ -125,7 +125,15 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 				Retries: 1,
 				Version: rekorSvc.MajorAPIVersion,
 			}
-			bundleOpts.TransparencyLogs = append(bundleOpts.TransparencyLogs, sign.NewRekor(rekorOpts))
+			var transparency sign.Transparency = sign.NewRekor(rekorOpts)
+			// On Rekor v1, a re-signed image+predicate triggers a 409 with the existing
+			// entry's UUID. Wrap the transparency log so the conflict is treated as success,
+			// mirroring the v1 signing path in pkg/cosign/tlog.go. See issue #4851 and the
+			// earlier fix tracked in #3356.
+			if rekorSvc.MajorAPIVersion == 1 {
+				transparency = newIdempotentRekor(transparency, newRekorClientFactory(rekorSvc.URL))
+			}
+			bundleOpts.TransparencyLogs = append(bundleOpts.TransparencyLogs, transparency)
 		}
 	}
 	// When requesting a short-lived Fulcio certificate, a timestamp must be provided during
