@@ -14,8 +14,8 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/go-openapi/runtime v0.29.4
-	github.com/go-openapi/strfmt v0.26.1
+	github.com/go-openapi/runtime v0.29.5
+	github.com/go-openapi/strfmt v0.26.2
 	github.com/go-openapi/swag/conv v0.26.0
 	github.com/go-piv/piv-go/v2 v2.5.0
 	github.com/google/certificate-transparency-go v1.3.3
