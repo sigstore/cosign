@@ -1841,6 +1841,28 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
 		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
 	}
+
+	// failure with a trusted root that has no matching timestamping authority:
+	// verify.VerifySignedTimestamp returns zero verified timestamps without a
+	// top-level error, which must surface as an error rather than panic on
+	// indexing an empty slice (see issue #4846).
+	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
+	if err != nil {
+		t.Fatalf("unexpected error creating timestamp: %v", err)
+	}
+	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	ociSig, _ = static.NewSignature(payload,
+		base64.StdEncoding.EncodeToString(signature),
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithRFC3161Timestamp(&rfc3161TS))
+	emptyTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{TrustedMaterial: emptyTrustedRoot})
+	if err == nil || !strings.Contains(err.Error(), "no signed timestamps could be verified") {
+		t.Fatalf("expected error verifying timestamp with empty trusted root, got: %v", err)
+	}
 }
 
 // This test verifies that artifact verification rejects signatures

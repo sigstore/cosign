@@ -1403,6 +1403,9 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		if len(verifyErrs) > 0 {
 			log.Printf("Warning: subset of signed timestamps failed to verify: %v", verifyErrs)
 		}
+		if len(verifiedTimestamps) == 0 {
+			return nil, fmt.Errorf("no signed timestamps could be verified with the trusted root: %v", verifyErrs)
+		}
 		return &timestamp.Timestamp{Time: verifiedTimestamps[0].Time}, nil
 	}
 
