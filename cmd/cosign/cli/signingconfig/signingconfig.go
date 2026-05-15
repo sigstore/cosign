@@ -41,6 +41,7 @@ type CreateCmd struct {
 	NoDefaultRekor      bool
 	NoDefaultOIDC       bool
 	NoDefaultTSA        bool
+	RekorV2             bool
 }
 
 func (c *CreateCmd) Exec(_ context.Context) error {
@@ -60,7 +61,12 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	var err error
 
 	if c.WithDefaultServices {
-		sc, err := cosign.SigningConfig()
+		var sc *root.SigningConfig
+		if c.RekorV2 {
+			sc, err = cosign.SigningConfigRekorV2()
+		} else {
+			sc, err = cosign.SigningConfig()
+		}
 		if err != nil {
 			return fmt.Errorf("getting default trusted root: %w", err)
 		}

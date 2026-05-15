@@ -58,11 +58,12 @@ Each service is specified via a repeatable flag (--fulcio, --rekor, --oidc-provi
 				TSASpecs:            o.TSA,
 				TSAConfig:           o.TSAConfig,
 				RekorConfig:         o.RekorConfig,
-				WithDefaultServices: o.WithDefaultServices,
+				WithDefaultServices: o.WithDefaultServices || o.RekorV2,
 				NoDefaultFulcio:     o.NoDefaultFulcio,
 				NoDefaultRekor:      o.NoDefaultRekor,
 				NoDefaultOIDC:       o.NoDefaultOIDC,
 				NoDefaultTSA:        o.NoDefaultTSA,
+				RekorV2:             o.RekorV2,
 				Out:                 o.Out,
 			}
 

@@ -43,6 +43,7 @@ cosign signing-config create \
       --tsa stringArray             timestamping authority specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
       --tsa-config string           timestamping authority configuration. Required if --tsa is provided. One of: ANY, ALL, EXACT:<count>
+      --with-default-rekor-v2       use the Sigstore TUF root, with the Rekor v2 service, as default values to populate the signing config. Specifying the other service flags will override the default values.
       --with-default-services       use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.
 ```
 

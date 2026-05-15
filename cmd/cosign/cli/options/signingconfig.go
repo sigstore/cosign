@@ -32,6 +32,7 @@ type SigningConfigCreateOptions struct {
 	NoDefaultRekor      bool
 	NoDefaultTSA        bool
 	NoDefaultOIDC       bool
+	RekorV2             bool
 }
 
 var _ Interface = (*SigningConfigCreateOptions)(nil)
@@ -52,6 +53,7 @@ func (o *SigningConfigCreateOptions) AddFlags(cmd *cobra.Command) {
 		"rekor configuration. Required if --rekor is provided. One of: ANY, ALL, EXACT:<count>")
 
 	cmd.Flags().BoolVar(&o.WithDefaultServices, "with-default-services", false, "use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.")
+	cmd.Flags().BoolVar(&o.RekorV2, "with-default-rekor-v2", false, "use the Sigstore TUF root, with the Rekor v2 service, as default values to populate the signing config. Specifying the other service flags will override the default values.")
 	cmd.Flags().BoolVar(&o.NoDefaultFulcio, "no-default-fulcio", false, "removes the default Fulcio URLs from the signing config.")
 	cmd.Flags().BoolVar(&o.NoDefaultRekor, "no-default-rekor", false, "removes the default Rekor URLs from the signing config.")
 	cmd.Flags().BoolVar(&o.NoDefaultOIDC, "no-default-oidc", false, "removes the default OIDC provider URLs from the signing config.")
