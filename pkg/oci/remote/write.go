@@ -118,6 +118,7 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 			return err
 		}
 		manifest, err := v1.ParseManifest(fd)
+		fd.Close()
 		if err != nil || manifest.Subject == nil {
 			continue
 		}
