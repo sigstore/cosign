@@ -50,6 +50,22 @@ func SigningConfig() (*root.SigningConfig, error) {
 	return sc, nil
 }
 
+func SigningConfigRekorV2() (*root.SigningConfig, error) {
+	opts, err := setTUFOpts()
+	if err != nil {
+		return nil, fmt.Errorf("error setting TUF options: %w", err)
+	}
+	client, err := tuf.New(opts)
+	if err != nil {
+		return nil, fmt.Errorf("error creating TUF client: %w", err)
+	}
+	jsonBytes, err := client.GetTarget("signing_config_rekor_v2.v0.2.json")
+	if err != nil {
+		return nil, fmt.Errorf("error getting signing config from TUF: %w", err)
+	}
+	return root.NewSigningConfigFromJSON(jsonBytes)
+}
+
 // setTUFOpts sets the TUF cache directory, the mirror URL, and the root.json in the TUF options.
 // The cache directory is provided by the user as an environment variable TUF_ROOT, or the default $HOME/.sigstore/root is used.
 // The mirror URL is provided by the user as an environment variable TUF_MIRROR. If not overridden by the user, the value set during `cosign initialize` in remote.json in the cache directory is used.

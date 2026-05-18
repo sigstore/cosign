@@ -16,7 +16,11 @@ package signingconfig
 
 import (
 	"context"
+	"crypto"
+	"crypto/ed25519"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +29,8 @@ import (
 
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/theupdateframework/go-tuf/v2/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -197,10 +203,130 @@ func TestCreateCmd(t *testing.T) {
 		t.Fatal("expected error for missing tsa-config, but got none")
 	}
 	signingConfigCreate.TSAConfig = "ANY" // reset
+
+	// Test RekorV2
+	tufRepo := t.TempDir()
+	err = newTUF(tufRepo, map[string][]byte{
+		"signing_config_rekor_v2.v0.2.json": []byte(`{
+			"mediaType": "application/vnd.dev.sigstore.signingconfig.v0.2+json",
+			"rekorTlogConfig": {"selector": "EXACT", "count": 1},
+			"tsaConfig": {"selector": "ANY"}
+		}`),
+	})
+	checkErr(t, err)
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufRepo)).ServeHTTP(w, r)
+	}))
+	defer tufServer.Close()
+	t.Setenv("TUF_MIRROR", tufServer.URL)
+	t.Setenv("TUF_ROOT_JSON", filepath.Join(tufRepo, "1.root.json"))
+	t.Setenv("TUF_ROOT", t.TempDir())
+	signingConfigCreateRekorV2 := CreateCmd{
+		WithDefaultServices: true,
+		RekorV2:             true,
+		Out:                 filepath.Join(td, "signingconfig_rekor_v2.json"),
+	}
+	err = signingConfigCreateRekorV2.Exec(ctx)
+	checkErr(t, err)
 }
 
 func checkErr(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func newKey() (*metadata.Key, signature.Signer, error) {
+	pub, private, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	public, err := metadata.KeyFromPublicKey(pub)
+	if err != nil {
+		return nil, nil, err
+	}
+	signer, err := signature.LoadSigner(private, crypto.Hash(0))
+	if err != nil {
+		return nil, nil, err
+	}
+	return public, signer, nil
+}
+
+func newTUF(td string, targetList map[string][]byte) error {
+	expiration := time.Now().AddDate(0, 0, 1).UTC()
+	targets := metadata.Targets(expiration)
+	targetsDir := filepath.Join(td, "targets")
+	err := os.Mkdir(targetsDir, 0700)
+	if err != nil {
+		return err
+	}
+	for name, content := range targetList {
+		targetPath := filepath.Join(targetsDir, name)
+		err := os.WriteFile(targetPath, content, 0600)
+		if err != nil {
+			return err
+		}
+		targetFileInfo, err := metadata.TargetFile().FromFile(targetPath, "sha256")
+		if err != nil {
+			return err
+		}
+		targets.Signed.Targets[name] = targetFileInfo
+	}
+	snapshot := metadata.Snapshot(expiration)
+	timestamp := metadata.Timestamp(expiration)
+	root := metadata.Root(expiration)
+	root.Signed.ConsistentSnapshot = false
+	public, signer, err := newKey()
+	if err != nil {
+		return err
+	}
+	for _, name := range []string{"targets", "snapshot", "timestamp", "root"} {
+		err := root.Signed.AddKey(public, name)
+		if err != nil {
+			return err
+		}
+		switch name {
+		case "targets":
+			_, err = targets.Sign(signer)
+		case "snapshot":
+			_, err = snapshot.Sign(signer)
+		case "timestamp":
+			_, err = timestamp.Sign(signer)
+		case "root":
+			_, err = root.Sign(signer)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	err = targets.ToFile(filepath.Join(td, "targets.json"), false)
+	if err != nil {
+		return err
+	}
+	err = snapshot.ToFile(filepath.Join(td, "snapshot.json"), false)
+	if err != nil {
+		return err
+	}
+	err = timestamp.ToFile(filepath.Join(td, "timestamp.json"), false)
+	if err != nil {
+		return err
+	}
+	err = root.ToFile(filepath.Join(td, "1.root.json"), false)
+	if err != nil {
+		return err
+	}
+	err = root.VerifyDelegate("root", root)
+	if err != nil {
+		return err
+	}
+	err = root.VerifyDelegate("targets", targets)
+	if err != nil {
+		return err
+	}
+	err = root.VerifyDelegate("snapshot", snapshot)
+	if err != nil {
+		return err
+	}
+	err = root.VerifyDelegate("timestamp", timestamp)
+	return err
 }
