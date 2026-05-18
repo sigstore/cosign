@@ -150,7 +150,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
+			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false
 			}

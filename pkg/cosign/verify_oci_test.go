@@ -125,6 +125,43 @@ func TestGetBundles_Valid(t *testing.T) {
 	}
 }
 
+func TestGetBundles_WithTargetRepository(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	// Subject lives in repo-a; attestations live in repo-b.
+	subjectRef, err := name.ParseReference(fmt.Sprintf("%s/repo-a:tag", u.Host))
+	assert.NoError(t, err)
+	assert.NoError(t, remote.Write(subjectRef, empty.Image))
+	desc, err := remote.Head(subjectRef)
+	assert.NoError(t, err)
+	subjectDigest := subjectRef.Context().Digest(desc.Digest.String())
+
+	overrideRepo, err := name.NewRepository(fmt.Sprintf("%s/repo-b", u.Host))
+	assert.NoError(t, err)
+	opts := []ociremote.Option{ociremote.WithTargetRepository(overrideRepo)}
+
+	// Write attestation to the override repo with subject in repo-a.
+	err = ociremote.WriteAttestationNewBundleFormat(subjectDigest, testAttestation,
+		"https://cosign.sigstore.dev/attestation/v1", opts...)
+	assert.NoError(t, err)
+
+	// Read it back via GetBundles with the same override.
+	bundles, hash, err := GetBundles(context.Background(), subjectRef, opts)
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.NotNil(t, hash)
+
+	// Sanity: without the override, GetBundles should not find anything in repo-a.
+	_, _, err = GetBundles(context.Background(), subjectRef, []ociremote.Option{})
+	var noMatchErr *ErrNoMatchingAttestations
+	assert.ErrorAs(t, err, &noMatchErr)
+}
+
 // TODO: This test is getting long and maybe should be refactored into a
 // table-based test to exercise more permutations.
 func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {

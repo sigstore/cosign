@@ -4689,7 +4689,11 @@ func TestSignVerifyWithRepoOverride(t *testing.T) {
 	assert.Equal(t, tags[0], "latest", "expected tag name to be 'latest'")
 
 	// Verify should work with new bundle format
+	trustedRootPath := prepareTrustedRoot(t, "")
 	cmd := cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
 		KeyRef:          pubKeyPath,
 		RekorURL:        rekorURL,
 		NewBundleFormat: true,

@@ -151,6 +151,15 @@ func DockerContentDigest(ref name.Tag, opts ...Option) (name.Tag, error) {
 	return o.TargetRepository.Tag(normalizeWithSeparator(h, o.TagPrefix, "", ":")), nil
 }
 
+// ResolveTargetDigest returns d translated into the target repository
+// configured via WithTargetRepository (or COSIGN_REPOSITORY). If no
+// override is configured, the returned digest is in the same repository
+// as d.
+func ResolveTargetDigest(d name.Digest, opts ...Option) name.Digest {
+	o := makeOptions(d.Repository, opts...)
+	return o.TargetRepository.Digest(d.DigestStr())
+}
+
 func suffixTag(ref name.Reference, suffix string, algorithmSeparator string, o *options) (name.Tag, error) {
 	var h v1.Hash
 	if digest, ok := ref.(name.Digest); ok {
