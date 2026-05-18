@@ -68,7 +68,7 @@ func (ga *githubActions) Provide(ctx context.Context, audience string) (string, 
 
 	// Retry up to 3 times.
 	for i := 0; ; i++ {
-		req.Header.Add("Authorization", "bearer "+env.Getenv(env.VariableGitHubRequestToken))
+		req.Header.Set("Authorization", "bearer "+env.Getenv(env.VariableGitHubRequestToken))
 		resp, err := client.Do(req)
 		if err != nil {
 			if i == 2 {
