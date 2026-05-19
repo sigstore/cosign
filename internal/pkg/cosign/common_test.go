@@ -72,3 +72,22 @@ func Test_HashReader(t *testing.T) {
 		t.Errorf("Sum returned %s, want %s", gotHash, hash)
 	}
 }
+
+func Test_HashReaderRaw(t *testing.T) {
+	input := []byte("hello world")
+	r := NewHashReader(bytes.NewReader(input), crypto.Hash(0))
+
+	got, err := io.ReadAll(&r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(got, input) {
+		t.Errorf("io.ReadAll returned %s, want %s", got, input)
+	}
+
+	gotRaw := r.Sum(nil)
+	if !bytes.Equal(gotRaw, input) {
+		t.Errorf("Sum returned %s, want %s", gotRaw, input)
+	}
+}

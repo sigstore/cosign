@@ -24,6 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -239,4 +240,73 @@ func TestKMSKeypair_Methods(t *testing.T) {
 			t.Errorf("expected error 'signing failed', got '%s'", err.Error())
 		}
 	})
+}
+
+func TestSignerVerifierKeypairWithExplicitAlgorithm(t *testing.T) {
+	_, ed25519Priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ed25519 key: %v", err)
+	}
+	edSV, err := signature.LoadSignerVerifierFromAlgorithmDetails(ed25519Priv, mustAlgorithmDetails(t, protocommon.PublicKeyDetails_PKIX_ED25519))
+	if err != nil {
+		t.Fatalf("failed to load ed25519 signer verifier: %v", err)
+	}
+	edKP, err := NewSignerVerifierKeypairWithAlgorithm(edSV, mustAlgorithmDetails(t, protocommon.PublicKeyDetails_PKIX_ED25519))
+	if err != nil {
+		t.Fatalf("failed to create ed25519 keypair: %v", err)
+	}
+	data := []byte("some data to sign")
+	sig, digest, err := edKP.SignData(context.Background(), data)
+	if err != nil {
+		t.Fatalf("ed25519 SignData returned an error: %v", err)
+	}
+	if !ed25519.Verify(ed25519Priv.Public().(ed25519.PublicKey), data, sig) {
+		t.Fatal("ed25519 signature did not verify over raw data")
+	}
+	if !bytes.Equal(digest, data) {
+		t.Fatalf("ed25519 digest = %x, want raw data %x", digest, data)
+	}
+	if got, want := edKP.GetHashAlgorithm(), protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED; got != want {
+		t.Fatalf("ed25519 hash algorithm = %v, want %v", got, want)
+	}
+	if got, want := edKP.GetSigningAlgorithm(), protocommon.PublicKeyDetails_PKIX_ED25519; got != want {
+		t.Fatalf("ed25519 signing algorithm = %v, want %v", got, want)
+	}
+
+	edPhAlgo := mustAlgorithmDetails(t, protocommon.PublicKeyDetails_PKIX_ED25519_PH)
+	edPhSV, err := signature.LoadSignerVerifierFromAlgorithmDetails(ed25519Priv, edPhAlgo)
+	if err != nil {
+		t.Fatalf("failed to load ed25519ph signer verifier: %v", err)
+	}
+	edPhKP, err := NewSignerVerifierKeypairWithAlgorithm(edPhSV, edPhAlgo)
+	if err != nil {
+		t.Fatalf("failed to create ed25519ph keypair: %v", err)
+	}
+	sig, digest, err = edPhKP.SignData(context.Background(), data)
+	if err != nil {
+		t.Fatalf("ed25519ph SignData returned an error: %v", err)
+	}
+	digest512 := sha512.Sum512(data)
+	if err := edPhSV.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)); err != nil {
+		t.Fatalf("ed25519ph signature did not verify: %v", err)
+	}
+	if !bytes.Equal(digest, digest512[:]) {
+		t.Fatalf("ed25519ph digest = %x, want %x", digest, digest512)
+	}
+	if got, want := edPhKP.GetHashAlgorithm(), protocommon.HashAlgorithm_SHA2_512; got != want {
+		t.Fatalf("ed25519ph hash algorithm = %v, want %v", got, want)
+	}
+	if got, want := edPhKP.GetSigningAlgorithm(), protocommon.PublicKeyDetails_PKIX_ED25519_PH; got != want {
+		t.Fatalf("ed25519ph signing algorithm = %v, want %v", got, want)
+	}
+}
+
+func mustAlgorithmDetails(t *testing.T, keyDetails protocommon.PublicKeyDetails) signature.AlgorithmDetails {
+	t.Helper()
+
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	if err != nil {
+		t.Fatalf("failed to get algorithm details: %v", err)
+	}
+	return algo
 }

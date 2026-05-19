@@ -30,7 +30,7 @@ cosign wasm sign <module> [flags]
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-provider string             Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
+      --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-256-nistp384, ecdsa-sha2-256-nistp521, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, ed25519, ed25519-ph, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256, rsa-sign-pss-2048-sha256, rsa-sign-pss-3072-sha256, rsa-sign-pss-4096-sha256) (default "ecdsa-sha2-256-nistp256")
       --signing-config string            path to a signing config file. Must provide --bundle or --wasm-output, which will output verification material in the new format
       --sk                               whether to use a hardware security key
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)

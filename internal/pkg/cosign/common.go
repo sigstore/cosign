@@ -43,9 +43,18 @@ type HashReader struct {
 	r  io.Reader
 	h  hash.Hash
 	ch crypto.Hash
+	b  *bytesHash
 }
 
 func NewHashReader(r io.Reader, ch crypto.Hash) HashReader {
+	if ch == crypto.Hash(0) {
+		b := &bytesHash{}
+		return HashReader{
+			r:  io.TeeReader(r, b),
+			ch: ch,
+			b:  b,
+		}
+	}
 	h := ch.New()
 	return HashReader{
 		r:  io.TeeReader(r, h),
@@ -58,19 +67,77 @@ func NewHashReader(r io.Reader, ch crypto.Hash) HashReader {
 func (h *HashReader) Read(p []byte) (n int, err error) { return h.r.Read(p) }
 
 // Sum implements hash.Hash.
-func (h *HashReader) Sum(p []byte) []byte { return h.h.Sum(p) }
+func (h *HashReader) Sum(p []byte) []byte {
+	if h.ch == crypto.Hash(0) {
+		if h.b == nil {
+			return append(p, []byte{}...)
+		}
+		return h.b.Sum(p)
+	}
+	return h.h.Sum(p)
+}
 
 // Reset implements hash.Hash.
-func (h *HashReader) Reset() { h.h.Reset() }
+func (h *HashReader) Reset() {
+	if h.ch == crypto.Hash(0) {
+		if h.b == nil {
+			return
+		}
+		h.b.Reset()
+		return
+	}
+	h.h.Reset()
+}
 
 // Size implements hash.Hash.
-func (h *HashReader) Size() int { return h.h.Size() }
+func (h *HashReader) Size() int {
+	if h.ch == crypto.Hash(0) {
+		if h.b == nil {
+			return 0
+		}
+		return h.b.Size()
+	}
+	return h.h.Size()
+}
 
 // BlockSize implements hash.Hash.
-func (h *HashReader) BlockSize() int { return h.h.BlockSize() }
+func (h *HashReader) BlockSize() int {
+	if h.ch == crypto.Hash(0) {
+		if h.b == nil {
+			return 1
+		}
+		return h.b.BlockSize()
+	}
+	return h.h.BlockSize()
+}
 
 // Write implements hash.Hash
 func (h *HashReader) Write(p []byte) (int, error) { return 0, errors.New("not implemented") } //nolint: revive
 
 // HashFunc implements cosign.NamedHash
 func (h *HashReader) HashFunc() crypto.Hash { return h.ch }
+
+type bytesHash struct {
+	buf []byte
+}
+
+func (b *bytesHash) Write(p []byte) (int, error) {
+	b.buf = append(b.buf, p...)
+	return len(p), nil
+}
+
+func (b *bytesHash) Sum(p []byte) []byte {
+	return append(p, b.buf...)
+}
+
+func (b *bytesHash) Reset() {
+	b.buf = nil
+}
+
+func (b *bytesHash) Size() int {
+	return len(b.buf)
+}
+
+func (b *bytesHash) BlockSize() int {
+	return 1
+}

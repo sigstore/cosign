@@ -87,6 +87,21 @@ func loadKey(keyPath string, pf cosign.PassFunc, defaultLoadOptions *[]signature
 	return cosign.LoadPrivateKey(kb, pass, defaultLoadOptions)
 }
 
+func loadKeyWithAlgorithm(keyPath string, pf cosign.PassFunc, algo signature.AlgorithmDetails) (signature.SignerVerifier, error) {
+	kb, err := blob.LoadFileOrURL(keyPath)
+	if err != nil {
+		return nil, err
+	}
+	pass := []byte{}
+	if pf != nil {
+		pass, err = pf(false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cosign.LoadPrivateKeyWithAlgorithm(kb, pass, algo)
+}
+
 // LoadPublicKeyRaw loads a verifier from a PEM-encoded public key
 func LoadPublicKeyRaw(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
@@ -101,6 +116,14 @@ func SignerFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc) (s
 }
 
 func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption) (signature.SignerVerifier, error) {
+	return signerVerifierFromKeyRef(ctx, keyRef, pf, defaultLoadOptions, nil)
+}
+
+func SignerVerifierFromKeyRefWithAlgorithm(ctx context.Context, keyRef string, pf cosign.PassFunc, algo signature.AlgorithmDetails) (signature.SignerVerifier, error) {
+	return signerVerifierFromKeyRef(ctx, keyRef, pf, nil, &algo)
+}
+
+func signerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption, algo *signature.AlgorithmDetails) (signature.SignerVerifier, error) {
 	switch {
 	case strings.HasPrefix(keyRef, pkcs11key.ReferenceScheme):
 		pkcs11UriConfig := pkcs11key.NewPkcs11UriConfig()
@@ -129,6 +152,9 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		}
 
 		if len(s.Data) > 0 {
+			if algo != nil {
+				return cosign.LoadPrivateKeyWithAlgorithm(s.Data["cosign.key"], s.Data["cosign.password"], *algo)
+			}
 			return cosign.LoadPrivateKey(s.Data["cosign.key"], s.Data["cosign.password"], defaultLoadOptions)
 		}
 	case strings.HasPrefix(keyRef, gitlab.ReferenceScheme):
@@ -150,6 +176,9 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 			return nil, err
 		}
 
+		if algo != nil {
+			return cosign.LoadPrivateKeyWithAlgorithm([]byte(pk), []byte(pass), *algo)
+		}
 		return cosign.LoadPrivateKey([]byte(pk), []byte(pass), defaultLoadOptions)
 	}
 
@@ -165,6 +194,9 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		// ProviderNotFoundError is okay; loadKey handles other URL schemes
 	}
 
+	if algo != nil {
+		return loadKeyWithAlgorithm(keyRef, pf, *algo)
+	}
 	return loadKey(keyRef, pf, defaultLoadOptions)
 }
 

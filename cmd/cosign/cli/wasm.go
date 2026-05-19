@@ -87,6 +87,10 @@ func wasmSign() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			signingAlgorithm := ""
+			if cmd.Flags().Changed("signing-algorithm") {
+				signingAlgorithm = o.SigningAlgorithm
+			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -117,7 +121,7 @@ func wasmSign() *cobra.Command {
 				TSAServerURL:                   o.TSAServerURL,
 				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
-				SigningAlgorithm:               o.SigningAlgorithm,
+				SigningAlgorithm:               signingAlgorithm,
 			}
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,

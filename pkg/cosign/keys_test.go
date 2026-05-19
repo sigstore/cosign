@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/require"
 )
 
@@ -504,4 +506,57 @@ func TestImportPrivateKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetSupportedAlgorithmsIncludesSigstoreRegistryAlgorithms(t *testing.T) {
+	require.ElementsMatch(t, []string{
+		"ecdsa-sha2-256-nistp256",
+		"ecdsa-sha2-256-nistp384",
+		"ecdsa-sha2-256-nistp521",
+		"ecdsa-sha2-384-nistp384",
+		"ecdsa-sha2-512-nistp521",
+		"ed25519",
+		"ed25519-ph",
+		"rsa-sign-pkcs1-2048-sha256",
+		"rsa-sign-pkcs1-3072-sha256",
+		"rsa-sign-pkcs1-4096-sha256",
+		"rsa-sign-pss-2048-sha256",
+		"rsa-sign-pss-3072-sha256",
+		"rsa-sign-pss-4096-sha256",
+	}, GetSupportedAlgorithms())
+}
+
+func TestLoadPrivateKeyWithAlgorithm(t *testing.T) {
+	keys, err := GenerateKeyPairWithAlgorithm(mustAlgorithmDetails(t, v1.PublicKeyDetails_PKIX_ED25519), pass("hello"))
+	require.NoError(t, err)
+
+	algo := mustAlgorithmDetails(t, v1.PublicKeyDetails_PKIX_ED25519)
+	sv, err := LoadPrivateKeyWithAlgorithm(keys.PrivateBytes, []byte("hello"), *algo)
+	require.NoError(t, err)
+	require.NoError(t, ValidateAlgorithmForPublicKey(mustPublicKey(t, sv), *algo))
+
+	algo = mustAlgorithmDetails(t, v1.PublicKeyDetails_PKIX_ED25519_PH)
+	sv, err = LoadPrivateKeyWithAlgorithm(keys.PrivateBytes, []byte("hello"), *algo)
+	require.NoError(t, err)
+	require.NoError(t, ValidateAlgorithmForPublicKey(mustPublicKey(t, sv), *algo))
+
+	algo = mustAlgorithmDetails(t, v1.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256)
+	_, err = LoadPrivateKeyWithAlgorithm(keys.PrivateBytes, []byte("hello"), *algo)
+	require.ErrorContains(t, err, "signing algorithm PKIX_RSA_PSS_2048_SHA256 is not compatible with public key")
+}
+
+func mustAlgorithmDetails(t *testing.T, keyDetails v1.PublicKeyDetails) *signature.AlgorithmDetails {
+	t.Helper()
+
+	algo, err := signature.GetAlgorithmDetails(keyDetails)
+	require.NoError(t, err)
+	return &algo
+}
+
+func mustPublicKey(t *testing.T, sv signature.SignerVerifier) any {
+	t.Helper()
+
+	pubKey, err := sv.PublicKey()
+	require.NoError(t, err)
+	return pubKey
 }

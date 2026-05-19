@@ -121,7 +121,10 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 			return nil, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
-	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+	signOpts := cbundle.SignOptions{
+		TSAClientTransport: tsaClientTransport,
+		VerifierOptions:    cbundle.VerifierOptionsForKeypair(keypair),
+	}
 	bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, signOpts)
 	if err != nil {
 		return nil, fmt.Errorf("signing bundle: %w", err)

@@ -292,6 +292,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	cbundleOpts := cbundle.SignOptions{
 		TSAClientTransport:  tsaClientTransport,
 		CertificateProvider: certProvider,
+		VerifierOptions:     cbundle.VerifierOptionsForKeypair(keypair),
 	}
 
 	ociSigs := make([]oci.Signature, len(payloads))

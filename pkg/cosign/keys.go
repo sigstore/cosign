@@ -55,12 +55,17 @@ const (
 var SupportedKeyDetails = []v1.PublicKeyDetails{
 	v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 	v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+	v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_256,
 	v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
+	v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_256,
+	v1.PublicKeyDetails_PKIX_ED25519,
+	v1.PublicKeyDetails_PKIX_ED25519_PH,
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
 	v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256,
-	// Ed25519ph is not supported by Fulcio, so we don't support it here for now.
-	// v1.PublicKeyDetails_PKIX_ED25519_PH,
+	v1.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PSS_3072_SHA256,
+	v1.PublicKeyDetails_PKIX_RSA_PSS_4096_SHA256,
 }
 
 // PassFunc is the function to be called to retrieve the signer password. If
@@ -278,7 +283,36 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
 // and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
 func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.LoadOption) (signature.SignerVerifier, error) {
-	// Decrypt first
+	pk, err := decryptPrivateKey(key, pass)
+	if err != nil {
+		return nil, err
+	}
+	defaultLoadOptions = GetDefaultLoadOptions(defaultLoadOptions)
+	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+}
+
+// LoadPrivateKeyWithAlgorithm loads a cosign PEM private key encrypted with the
+// given passphrase, and returns a SignerVerifier for the provided algorithm.
+func LoadPrivateKeyWithAlgorithm(key []byte, pass []byte, algo signature.AlgorithmDetails) (signature.SignerVerifier, error) {
+	pk, err := decryptPrivateKey(key, pass)
+	if err != nil {
+		return nil, err
+	}
+	sv, err := signature.LoadSignerVerifierWithOpts(pk, LoadOptionsForAlgorithm(algo)...)
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("getting public key: %w", err)
+	}
+	if err := ValidateAlgorithmForPublicKey(pubKey, algo); err != nil {
+		return nil, err
+	}
+	return sv, nil
+}
+
+func decryptPrivateKey(key []byte, pass []byte) (crypto.PrivateKey, error) {
 	p, _ := pem.Decode(key)
 	if p == nil {
 		return nil, errors.New("invalid pem block")
@@ -295,8 +329,7 @@ func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.Loa
 	if err != nil {
 		return nil, fmt.Errorf("parsing private key: %w", err)
 	}
-	defaultLoadOptions = GetDefaultLoadOptions(defaultLoadOptions)
-	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+	return pk, nil
 }
 
 func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signature.LoadOption {
@@ -309,6 +342,37 @@ func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signat
 		return &[]signature.LoadOption{options.WithED25519ph()}
 	}
 	return defaultLoadOptions
+}
+
+func LoadOptionsForAlgorithm(algo signature.AlgorithmDetails) []signature.LoadOption {
+	opts := []signature.LoadOption{options.WithHash(algo.GetHashType())}
+	switch algo.GetSignatureAlgorithm() {
+	case v1.PublicKeyDetails_PKIX_ED25519_PH:
+		opts = append(opts, options.WithED25519ph())
+	case v1.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256,
+		v1.PublicKeyDetails_PKIX_RSA_PSS_3072_SHA256,
+		v1.PublicKeyDetails_PKIX_RSA_PSS_4096_SHA256:
+		opts = append(opts, options.WithRSAPSS(&rsa.PSSOptions{
+			Hash:       algo.GetHashType(),
+			SaltLength: rsa.PSSSaltLengthAuto,
+		}))
+	}
+	return opts
+}
+
+func ValidateAlgorithmForPublicKey(pubKey crypto.PublicKey, algo signature.AlgorithmDetails) error {
+	registry, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{algo.GetSignatureAlgorithm()})
+	if err != nil {
+		return err
+	}
+	permitted, err := registry.IsAlgorithmPermitted(pubKey, algo.GetHashType())
+	if err != nil {
+		return err
+	}
+	if !permitted {
+		return fmt.Errorf("signing algorithm %s is not compatible with public key", algo.GetSignatureAlgorithm())
+	}
+	return nil
 }
 
 // GetSupportedAlgorithms returns a list of supported algorithms sorted alphabetically.

@@ -85,13 +85,18 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 	var idToken string
 	var sv *SignerVerifier
 	var certBytes []byte
+	var algo *signature.AlgorithmDetails
 	var err error
 
-	sv, ephemeralKeypair, err = signerFromKeyOpts(ctx, cert, certChain, ko)
+	sv, ephemeralKeypair, algo, err = signerFromKeyOpts(ctx, cert, certChain, ko)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("getting signer: %w", err)
 	}
-	keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+	if algo != nil {
+		keypair, err = key.NewSignerVerifierKeypairWithAlgorithm(sv, *algo)
+	} else {
+		keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
+	}
 	if err != nil {
 		sv.Close()
 		return nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
@@ -163,24 +168,39 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	return true
 }
 
-func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
+func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, *signature.AlgorithmDetails, error) {
 	var sv *SignerVerifier
 	var err error
 	genKey := false
+	var algo *signature.AlgorithmDetails
+	if ko.SigningAlgorithm != "" {
+		keyDetails, err := ParseSignatureAlgorithmFlag(ko.SigningAlgorithm)
+		if err != nil {
+			return nil, false, nil, fmt.Errorf("parsing signature algorithm: %w", err)
+		}
+		algorithmDetails, err := signature.GetAlgorithmDetails(keyDetails)
+		if err != nil {
+			return nil, false, nil, fmt.Errorf("getting algorithm details: %w", err)
+		}
+		algo = &algorithmDetails
+	}
 	switch {
 	case ko.Sk:
+		if algo != nil {
+			return nil, false, nil, errors.New("--signing-algorithm is not supported with --sk")
+		}
 		sv, err = signerFromSecurityKey(ctx, ko.Slot)
 	case ko.KeyRef != "":
-		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions)
+		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions, algo)
 	default:
 		genKey = true
 		ui.Infof(ctx, "Generating ephemeral keys...")
 		sv, err = signerFromNewKey(ko.SigningAlgorithm, ko.DefaultLoadOptions)
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, false, nil, err
 	}
-	return sv, genKey, nil
+	return sv, genKey, algo, nil
 }
 
 func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier, error) {
@@ -217,8 +237,14 @@ func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier
 	}, nil
 }
 
-func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption) (*SignerVerifier, error) {
-	k, err := sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc, defaultLoadOptions)
+func signerFromKeyRef(ctx context.Context, certPath, certChainPath, keyRef string, passFunc cosign.PassFunc, defaultLoadOptions *[]signature.LoadOption, algo *signature.AlgorithmDetails) (*SignerVerifier, error) {
+	var k signature.SignerVerifier
+	var err error
+	if algo != nil {
+		k, err = sigs.SignerVerifierFromKeyRefWithAlgorithm(ctx, keyRef, passFunc, *algo)
+	} else {
+		k, err = sigs.SignerVerifierFromKeyRef(ctx, keyRef, passFunc, defaultLoadOptions)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("reading key: %w", err)
 	}
@@ -474,7 +500,10 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 			return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
-	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+	signOpts := cbundle.SignOptions{
+		TSAClientTransport: tsaClientTransport,
+		VerifierOptions:    cbundle.VerifierOptionsForKeypair(keypair),
+	}
 
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {

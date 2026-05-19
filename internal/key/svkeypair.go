@@ -49,6 +49,20 @@ func NewSignerVerifierKeypair(sv signature.SignerVerifier, defaultLoadOptions *[
 	if err != nil {
 		return nil, fmt.Errorf("getting public key: %w", err)
 	}
+	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *cosign.GetDefaultLoadOptions(defaultLoadOptions)...)
+	if err != nil {
+		return nil, fmt.Errorf("getting default algorithm details: %w", err)
+	}
+	return NewSignerVerifierKeypairWithAlgorithm(sv, algo)
+}
+
+// NewSignerVerifierKeypairWithAlgorithm creates a new SignerVerifierKeypair
+// from a SignerVerifier and explicit signature algorithm details.
+func NewSignerVerifierKeypairWithAlgorithm(sv signature.SignerVerifier, algo signature.AlgorithmDetails) (*SignerVerifierKeypair, error) {
+	pubKey, err := sv.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("getting public key: %w", err)
+	}
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(pubKey)
 	if err != nil {
 		return nil, fmt.Errorf("marshalling public key: %w", err)
@@ -66,11 +80,6 @@ func NewSignerVerifierKeypair(sv signature.SignerVerifier, defaultLoadOptions *[
 		keyAlg = "ED25519"
 	default:
 		return nil, errors.New("unsupported key type")
-	}
-
-	algo, err := signature.GetDefaultAlgorithmDetails(pubKey, *cosign.GetDefaultLoadOptions(defaultLoadOptions)...)
-	if err != nil {
-		return nil, fmt.Errorf("getting default algorithm details: %w", err)
 	}
 
 	return &SignerVerifierKeypair{
@@ -125,10 +134,17 @@ func (k *SignerVerifierKeypair) GetPublicKeyPem() (string, error) {
 
 // SignData signs the given data with the SignerVerifier.
 func (k *SignerVerifierKeypair) SignData(ctx context.Context, data []byte) ([]byte, []byte, error) {
-	h := k.sigAlg.GetHashType().New()
-	h.Write(data)
-	digest := h.Sum(nil)
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx), signatureoptions.WithDigest(digest)}
+	hashType := k.sigAlg.GetHashType()
+	digest := data
+	if hashType != crypto.Hash(0) {
+		h := hashType.New()
+		h.Write(data)
+		digest = h.Sum(nil)
+	}
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+	if hashType != crypto.Hash(0) {
+		sOpts = append(sOpts, signatureoptions.WithDigest(digest))
+	}
 	sig, err := k.sv.SignMessage(bytes.NewReader(data), sOpts...)
 	if err != nil {
 		return nil, nil, err

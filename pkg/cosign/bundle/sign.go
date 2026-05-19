@@ -16,6 +16,7 @@ package bundle
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -25,15 +26,18 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
+	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type SignOptions struct {
 	TSAClientTransport  http.RoundTripper
 	CertificateProvider sign.CertificateProvider
+	VerifierOptions     []signature.LoadOption
 }
 
 func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, opts SignOptions) ([]byte, error) {
@@ -72,7 +76,7 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		if err != nil {
 			log.Fatal(err)
 		}
-		verifier, err := signature.LoadDefaultVerifier(pubKey)
+		verifier, err := signature.LoadDefaultVerifier(pubKey, opts.VerifierOptions...)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -146,6 +150,21 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		return nil, fmt.Errorf("error signing bundle: %w", err)
 	}
 	return protojson.Marshal(bundle)
+}
+
+func VerifierOptionsForKeypair(keypair sign.Keypair) []signature.LoadOption {
+	opts := []signature.LoadOption{}
+	switch keypair.GetSigningAlgorithm() {
+	case protocommon.PublicKeyDetails_PKIX_ED25519_PH:
+		opts = append(opts, signatureoptions.WithED25519ph())
+	case protocommon.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256,
+		protocommon.PublicKeyDetails_PKIX_RSA_PSS_3072_SHA256,
+		protocommon.PublicKeyDetails_PKIX_RSA_PSS_4096_SHA256:
+		opts = append(opts, signatureoptions.WithRSAPSS(&rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthAuto,
+		}))
+	}
+	return opts
 }
 
 type verifyTrustedMaterial struct {

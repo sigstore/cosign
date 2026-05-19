@@ -28,6 +28,10 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/wasm"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestStripWasmSignatures(t *testing.T) {
@@ -156,6 +160,144 @@ func TestSignWasmBlobAppendsSignatureSection(t *testing.T) {
 	want := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
 	if !bytes.Equal(stripped, want) {
 		t.Fatalf("stripped module = %x, want %x", stripped, want)
+	}
+}
+
+func TestSignWasmBlobWithSigningAlgorithm(t *testing.T) {
+	oldTimeout := ro.Timeout
+	ro.Timeout = time.Minute
+	defer func() { ro.Timeout = oldTimeout }()
+
+	tests := []struct {
+		name              string
+		signingAlgorithm  protocommon.PublicKeyDetails
+		wantHashAlgorithm protocommon.HashAlgorithm
+	}{
+		{
+			name:              "ed25519",
+			signingAlgorithm:  protocommon.PublicKeyDetails_PKIX_ED25519,
+			wantHashAlgorithm: protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED,
+		},
+		{
+			name:              "ed25519ph",
+			signingAlgorithm:  protocommon.PublicKeyDetails_PKIX_ED25519_PH,
+			wantHashAlgorithm: protocommon.HashAlgorithm_SHA2_512,
+		},
+		{
+			name:              "rsa-pss",
+			signingAlgorithm:  protocommon.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256,
+			wantHashAlgorithm: protocommon.HashAlgorithm_SHA2_256,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := t.TempDir()
+
+			algo, err := signature.GetAlgorithmDetails(tt.signingAlgorithm)
+			if err != nil {
+				t.Fatal(err)
+			}
+			keys, err := cosign.GenerateKeyPairWithAlgorithm(&algo, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			keyPath := filepath.Join(td, "key.pem")
+			if err := os.WriteFile(keyPath, keys.PrivateBytes, 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			inputPath := filepath.Join(td, "input.wasm")
+			if err := os.WriteFile(inputPath, []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			outputPath := filepath.Join(td, "signed.wasm")
+			signingAlgorithm, err := signature.FormatSignatureAlgorithmFlag(tt.signingAlgorithm)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ko := options.KeyOpts{
+				KeyRef:           keyPath,
+				NewBundleFormat:  true,
+				SigningAlgorithm: signingAlgorithm,
+			}
+
+			if err := signWasmBlob(t.Context(), ko, inputPath, "", "", false, "", "", false, outputPath); err != nil {
+				t.Fatal(err)
+			}
+
+			signed, err := os.ReadFile(outputPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, sections, err := wasm.StripAndExtractSignatureSections(signed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := len(sections), 1; got != want {
+				t.Fatalf("len(sections) = %d, want %d", got, want)
+			}
+			var bundle protobundle.Bundle
+			if err := protojson.Unmarshal(sections[0], &bundle); err != nil {
+				t.Fatal(err)
+			}
+			gotHashAlgorithm := bundle.GetMessageSignature().GetMessageDigest().GetAlgorithm()
+			if gotHashAlgorithm != tt.wantHashAlgorithm {
+				t.Fatalf("message digest algorithm = %v, want %v", gotHashAlgorithm, tt.wantHashAlgorithm)
+			}
+		})
+	}
+}
+
+func TestWasmSignDoesNotForceDefaultSigningAlgorithmForKey(t *testing.T) {
+	td := t.TempDir()
+
+	algo, err := signature.GetAlgorithmDetails(protocommon.PublicKeyDetails_PKIX_ED25519_PH)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys, err := cosign.GenerateKeyPairWithAlgorithm(&algo, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := filepath.Join(td, "key.pem")
+	if err := os.WriteFile(keyPath, keys.PrivateBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	inputPath := filepath.Join(td, "input.wasm")
+	if err := os.WriteFile(inputPath, []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outputPath := filepath.Join(td, "signed.wasm")
+
+	ko := options.KeyOpts{
+		KeyRef:          keyPath,
+		NewBundleFormat: true,
+	}
+
+	if err := signWasmBlob(t.Context(), ko, inputPath, "", "", false, "", "", false, outputPath); err != nil {
+		t.Fatal(err)
+	}
+
+	signed, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, sections, err := wasm.StripAndExtractSignatureSections(signed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(sections), 1; got != want {
+		t.Fatalf("len(sections) = %d, want %d", got, want)
+	}
+	var bundle protobundle.Bundle
+	if err := protojson.Unmarshal(sections[0], &bundle); err != nil {
+		t.Fatal(err)
+	}
+	gotHashAlgorithm := bundle.GetMessageSignature().GetMessageDigest().GetAlgorithm()
+	if gotHashAlgorithm != protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED {
+		t.Fatalf("message digest algorithm = %v, want %v", gotHashAlgorithm, protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED)
 	}
 }
 
