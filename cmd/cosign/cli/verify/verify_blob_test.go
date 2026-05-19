@@ -46,6 +46,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
+	"github.com/sigstore/cosign/v3/pkg/wasm"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor/pkg/generated/models"
@@ -124,6 +125,62 @@ func TestSignaturesBundle(t *testing.T) {
 	}
 	if gotSig != b64sig {
 		t.Fatalf("unexpected signature, expected: %s got: %s", b64sig, gotSig)
+	}
+}
+
+func TestPrepareWasmBlobExtractsAllEmbeddedBundles(t *testing.T) {
+	td := t.TempDir()
+	module := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}
+
+	module, err := wasm.AppendSignatureSection(module, []byte("first-bundle"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	module, err = wasm.AppendSignatureSection(module, []byte("second-bundle"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	modulePath := filepath.Join(td, "module.wasm")
+	if err := os.WriteFile(modulePath, module, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := VerifyBlobCmd{
+		KeyOpts: options.KeyOpts{
+			NewBundleFormat: true,
+		},
+	}
+	payloadPath, bundlePaths, cleanup, err := cmd.prepareWasmBlob(context.Background(), modulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	payloadBytes, err := os.ReadFile(payloadPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(payloadBytes, []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00}) {
+		t.Fatalf("payload = %x, want minimal wasm module", payloadBytes)
+	}
+	if got, want := len(bundlePaths), 2; got != want {
+		t.Fatalf("len(bundlePaths) = %d, want %d", got, want)
+	}
+
+	firstBundle, err := os.ReadFile(bundlePaths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondBundle, err := os.ReadFile(bundlePaths[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(firstBundle, []byte("first-bundle")) {
+		t.Fatalf("first bundle = %q, want first-bundle", firstBundle)
+	}
+	if !bytes.Equal(secondBundle, []byte("second-bundle")) {
+		t.Fatalf("second bundle = %q, want second-bundle", secondBundle)
 	}
 }
 

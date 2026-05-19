@@ -183,6 +183,7 @@ type VerifyBlobOptions struct {
 	Key        string
 	Signature  string
 	BundlePath string
+	Wasm       bool
 
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
@@ -214,6 +215,9 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+
+	cmd.Flags().BoolVar(&o.Wasm, "wasm", false,
+		"treat the blob as a WebAssembly module and verify bytes with wasm-cosign custom sections removed")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")

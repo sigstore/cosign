@@ -38,6 +38,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/wasm"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
@@ -70,6 +71,7 @@ type VerifyBlobCmd struct {
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	HashAlgorithm                crypto.Hash
+	Wasm                         bool
 }
 
 // nolint
@@ -79,6 +81,46 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		c.HashAlgorithm = crypto.SHA256
 	}
 
+	if c.Wasm {
+		var cleanup func()
+		var embeddedBundlePaths []string
+		var err error
+		blobRef, embeddedBundlePaths, cleanup, err = c.prepareWasmBlob(ctx, blobRef)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+
+		if len(embeddedBundlePaths) > 0 {
+			originalBundlePath := c.BundlePath
+			originalKeyOptsBundlePath := c.KeyOpts.BundlePath
+			defer func() {
+				c.BundlePath = originalBundlePath
+				c.KeyOpts.BundlePath = originalKeyOptsBundlePath
+			}()
+
+			for i, bundlePath := range embeddedBundlePaths {
+				c.BundlePath = bundlePath
+				c.KeyOpts.BundlePath = bundlePath
+				if err := c.verify(ctx, blobRef); err != nil {
+					return fmt.Errorf("verifying embedded %q custom section %d of %d: %w", wasm.SignatureSectionName, i+1, len(embeddedBundlePaths), err)
+				}
+			}
+
+			ui.Infof(ctx, "Verified OK")
+			return nil
+		}
+	}
+
+	if err := c.verify(ctx, blobRef); err != nil {
+		return err
+	}
+
+	ui.Infof(ctx, "Verified OK")
+	return nil
+}
+
+func (c *VerifyBlobCmd) verify(ctx context.Context, blobRef string) error {
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
 		return fmt.Errorf("provide a key with --key or --sk, a certificate to verify against with --certificate, or a bundle with --bundle")
@@ -160,7 +202,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			return err
 		}
 
-		ui.Infof(ctx, "Verified OK")
 		return nil
 	}
 
@@ -288,7 +329,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return err
 	}
 
-	ui.Infof(ctx, "Verified OK")
 	return nil
 }
 
@@ -320,6 +360,79 @@ func base64signature(sigRef, bundlePath string) (string, error) {
 		return string(targetSig), nil
 	}
 	return base64.StdEncoding.EncodeToString(targetSig), nil
+}
+
+func (c *VerifyBlobCmd) prepareWasmBlob(ctx context.Context, blobRef string) (string, []string, func(), error) {
+	module, err := payloadBytes(blobRef)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	unsignedModule, embeddedBundles, err := wasm.StripAndExtractSignatureSections(module)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	payloadPath, cleanupPayload, err := writeTempFile("cosign-wasm-payload-*", unsignedModule)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	cleanupPaths := []func(){cleanupPayload}
+	embeddedBundlePaths := make([]string, 0, len(embeddedBundles))
+
+	if c.BundlePath == "" && c.SigRef == "" {
+		if !c.KeyOpts.NewBundleFormat {
+			cleanupAll(cleanupPaths)
+			return "", nil, nil, fmt.Errorf("--wasm embedded verification requires --new-bundle-format")
+		}
+		if len(embeddedBundles) == 0 {
+			cleanupAll(cleanupPaths)
+			return "", nil, nil, fmt.Errorf("wasm module does not contain a %q custom section; provide --bundle or --signature", wasm.SignatureSectionName)
+		}
+		if len(embeddedBundles) > 1 {
+			ui.Infof(ctx, "Found %d embedded %q custom sections; verifying all of them", len(embeddedBundles), wasm.SignatureSectionName)
+		}
+		for _, embeddedBundle := range embeddedBundles {
+			bundlePath, cleanupBundle, err := writeTempFile("cosign-wasm-bundle-*.json", embeddedBundle)
+			if err != nil {
+				cleanupAll(cleanupPaths)
+				return "", nil, nil, err
+			}
+			cleanupPaths = append(cleanupPaths, cleanupBundle)
+			embeddedBundlePaths = append(embeddedBundlePaths, bundlePath)
+		}
+	}
+
+	return payloadPath, embeddedBundlePaths, func() {
+		cleanupAll(cleanupPaths)
+	}, nil
+}
+
+func cleanupAll(cleanups []func()) {
+	for _, cleanup := range cleanups {
+		cleanup()
+	}
+}
+
+func writeTempFile(pattern string, contents []byte) (string, func(), error) {
+	f, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", nil, err
+	}
+	name := f.Name()
+	cleanup := func() {
+		_ = os.Remove(name)
+	}
+	if _, err := f.Write(contents); err != nil {
+		_ = f.Close()
+		cleanup()
+		return "", nil, err
+	}
+	if err := f.Close(); err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	return name, cleanup, nil
 }
 
 func payloadBytes(blobRef string) ([]byte, error) {

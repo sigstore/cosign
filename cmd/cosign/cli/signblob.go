@@ -16,15 +16,20 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
+	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/wasm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -54,15 +59,27 @@ func SignBlob() *cobra.Command {
   cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
 
   # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob --key hashivault://[KEY] <FILE>`,
+  cosign sign-blob --key hashivault://[KEY] <FILE>
+
+  # sign a WebAssembly module, appending the Sigstore bundle in a new wasm-cosign custom section
+  cosign sign-blob --wasm --wasm-output signed.wasm --key cosign.key module.wasm`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		PreRunE: func(_ *cobra.Command, _ []string) error {
+		PreRunE: func(_ *cobra.Command, args []string) error {
 			if options.NOf(o.Key, o.SecurityKey.Use) > 1 {
 				return &options.KeyParseError{}
 			}
 
-			if o.NewBundleFormat && o.BundlePath == "" {
+			if o.WasmOutput != "" {
+				o.Wasm = true
+			}
+			if o.WasmOutput != "" && len(args) != 1 {
+				return fmt.Errorf("--wasm-output can only be used when signing exactly one wasm module")
+			}
+			if o.WasmOutput != "" && !o.NewBundleFormat {
+				return fmt.Errorf("--wasm-output requires --new-bundle-format")
+			}
+			if o.NewBundleFormat && o.BundlePath == "" && o.WasmOutput == "" {
 				return fmt.Errorf("must specify --bundle with --new-bundle-format")
 			}
 
@@ -129,6 +146,13 @@ func SignBlob() *cobra.Command {
 					o.OutputSignature = o.Output
 				}
 
+				if o.Wasm {
+					if err := signWasmBlob(cmd.Context(), ko, blob, o.Cert, o.CertChain, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload, o.WasmOutput); err != nil {
+						return fmt.Errorf("signing wasm %s: %w", blob, err)
+					}
+					continue
+				}
+
 				if _, err := sign.SignBlobCmd(cmd.Context(), ro, ko, blob, o.Cert, o.CertChain, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
 					return fmt.Errorf("signing %s: %w", blob, err)
 				}
@@ -139,4 +163,87 @@ func SignBlob() *cobra.Command {
 
 	o.AddFlags(cmd)
 	return cmd
+}
+
+func signWasmBlob(ctx context.Context, ko options.KeyOpts, blobPath, certPath, certChainPath string, b64 bool, outputSignature, outputCertificate string, tlogUpload bool, wasmOutput string) error {
+	module, err := readWasmModule(blobPath)
+	if err != nil {
+		return err
+	}
+
+	unsignedModule, err := wasm.StripSignatureSections(module)
+	if err != nil {
+		return err
+	}
+
+	payloadPath, cleanupPayload, err := writeTempFile("cosign-wasm-payload-*", unsignedModule)
+	if err != nil {
+		return err
+	}
+	defer cleanupPayload()
+
+	bundlePath := ko.BundlePath
+	var cleanupBundle func()
+	if wasmOutput != "" && bundlePath == "" {
+		bundlePath, cleanupBundle, err = writeTempFile("cosign-wasm-bundle-*.json", nil)
+		if err != nil {
+			return err
+		}
+		defer cleanupBundle()
+		ko.BundlePath = bundlePath
+	}
+
+	if _, err := sign.SignBlobCmd(ctx, ro, ko, payloadPath, certPath, certChainPath, b64, outputSignature, outputCertificate, tlogUpload); err != nil {
+		return err
+	}
+
+	if wasmOutput == "" {
+		return nil
+	}
+
+	bundleBytes, err := os.ReadFile(filepath.Clean(bundlePath))
+	if err != nil {
+		return fmt.Errorf("reading bundle for wasm custom section: %w", err)
+	}
+	signedModule, err := wasm.AppendSignatureSection(module, bundleBytes)
+	if err != nil {
+		return err
+	}
+	if wasmOutput == "-" {
+		_, err = os.Stdout.Write(signedModule)
+		return err
+	}
+	if err := os.WriteFile(filepath.Clean(wasmOutput), signedModule, 0600); err != nil {
+		return fmt.Errorf("writing signed wasm module: %w", err)
+	}
+	ui.Infof(ctx, "Wrote signed wasm module to file %s", wasmOutput)
+	return nil
+}
+
+func readWasmModule(path string) ([]byte, error) {
+	if path == "-" {
+		return io.ReadAll(os.Stdin)
+	}
+	return os.ReadFile(filepath.Clean(path))
+}
+
+func writeTempFile(pattern string, contents []byte) (string, func(), error) {
+	f, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", nil, err
+	}
+	name := f.Name()
+	cleanup := func() {
+		_ = os.Remove(name)
+	}
+	if _, err := f.Write(contents); err != nil {
+		_ = f.Close()
+		cleanup()
+		return "", nil, err
+	}
+	if err := f.Close(); err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	return name, cleanup, nil
 }

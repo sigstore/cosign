@@ -44,4 +44,5 @@ A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign verify-blob](cosign_verify-blob.md)	 - Verify a signature on the supplied blob
 * [cosign verify-blob-attestation](cosign_verify-blob-attestation.md)	 - Verify an attestation on the supplied blob
 * [cosign version](cosign_version.md)	 - Prints the version
+* [cosign wasm](cosign_wasm.md)	 - Utilities for working with WebAssembly modules and embedded wasm-cosign signatures
 

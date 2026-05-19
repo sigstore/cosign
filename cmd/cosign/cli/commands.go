@@ -114,6 +114,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Save())
 	cmd.AddCommand(Sign())
 	cmd.AddCommand(SignBlob())
+	cmd.AddCommand(Wasm())
 	cmd.AddCommand(Upload())
 	cmd.AddCommand(Verify())
 	cmd.AddCommand(VerifyAttestation())

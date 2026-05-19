@@ -1,56 +1,18 @@
-## cosign verify-blob
+## cosign wasm verify
 
-Verify a signature on the supplied blob
-
-### Synopsis
-
-Verify a signature on the supplied blob input using the specified key reference.
-You may specify either a key, a bundle (optionally with trusted root), or a kms reference to verify against.
-	If you use a key, bundle, or trusted root, you must specify the path to them on disk.
-
-The preferred way to provide verification material is via a Sigstore bundle using --bundle,
-which contains the signature, certificate, and transparency log proof.
-The blob may be specified as a path to a file or - for stdin.
+Verify a WebAssembly module with embedded wasm-cosign signatures
 
 ```
-cosign verify-blob [flags]
+cosign wasm verify <module> [flags]
 ```
 
 ### Examples
 
 ```
- cosign verify-blob --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
+  cosign wasm verify --key cosign.pub module.wasm
 
-  # Verify a signature with a bundle and trusted root
-  cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json <blob>
-
-  # Verify a blob (keyless)
-  cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
-
-  # Verify a blob with an on-disk public key
-  cosign verify-blob --bundle artifact.sigstore.json --key cosign.pub <blob>
-
-  # Verify a blob against Azure Key Vault
-  cosign verify-blob --bundle artifact.sigstore.json --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <blob>
-
-  # Verify a blob against AWS KMS
-  cosign verify-blob --bundle artifact.sigstore.json --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <blob>
-
-  # Verify a blob against Google Cloud KMS
-  cosign verify-blob --bundle artifact.sigstore.json --key gcpkms://projects/[PROJECT ID]/locations/[LOCATION]/keyRings/[KEYRING]/cryptoKeys/[KEY] <blob>
-
-  # Verify a blob against Hashicorp Vault
-  cosign verify-blob --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
-
-  # Verify a blob against GitLab with project name
-  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[OWNER]/[PROJECT_NAME] <blob>
-
-  # Verify a blob against GitLab with project id
-  cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[PROJECT_ID] <blob>
-
-  # Verify a WebAssembly module with embedded wasm-cosign Sigstore bundle(s)
-  cosign verify-blob --wasm --key cosign.pub module.wasm
-
+  # verify all embedded wasm-cosign signatures in a module
+  cosign wasm verify --key cosign.pub module.wasm
 ```
 
 ### Options
@@ -67,7 +29,7 @@ cosign verify-blob [flags]
       --certificate-oidc-issuer string                  The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string           A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --experimental-oci11                              set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)
-  -h, --help                                            help for verify-blob
+  -h, --help                                            help for verify
       --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
@@ -76,7 +38,6 @@ cosign verify-blob [flags]
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
       --use-signed-timestamps                           verify rfc3161 timestamps
-      --wasm                                            treat the blob as a WebAssembly module and verify bytes with wasm-cosign custom sections removed
 ```
 
 ### Options inherited from parent commands
@@ -89,5 +50,5 @@ cosign verify-blob [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign wasm](cosign_wasm.md)	 - Utilities for working with WebAssembly modules and embedded wasm-cosign signatures
 

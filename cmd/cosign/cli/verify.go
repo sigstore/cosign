@@ -17,6 +17,7 @@ package cli
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -304,6 +305,9 @@ The blob may be specified as a path to a file or - for stdin.`,
 
   # Verify a blob against GitLab with project id
   cosign verify-blob --bundle artifact.sigstore.json --key gitlab://[PROJECT_ID] <blob>
+
+  # Verify a WebAssembly module with embedded wasm-cosign Sigstore bundle(s)
+  cosign verify-blob --wasm --key cosign.pub module.wasm
 `,
 
 		Args:             cobra.ExactArgs(1),
@@ -318,37 +322,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				return err
 			}
 
-			ko := options.KeyOpts{
-				KeyRef:               o.Key,
-				Sk:                   o.SecurityKey.Use,
-				Slot:                 o.SecurityKey.Slot,
-				RekorURL:             o.Rekor.URL,
-				BundlePath:           o.BundlePath,
-				RFC3161TimestampPath: o.RFC3161TimestampPath,
-				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
-				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
-			}
-			verifyBlobCmd := &verify.VerifyBlobCmd{
-				KeyOpts:                      ko,
-				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CARoots:                      o.CertVerify.CARoots,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				SigRef:                       o.Signature,
-				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
-				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
-				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
-				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
-				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
-				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
-				Offline:                      o.CommonVerifyOptions.Offline,
-				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
-				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
-				HashAlgorithm:                hashAlgorithm,
-			}
+			verifyBlobCmd := newVerifyBlobCmd(o, hashAlgorithm)
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
@@ -363,6 +337,41 @@ The blob may be specified as a path to a file or - for stdin.`,
 
 	o.AddFlags(cmd)
 	return cmd
+}
+
+func newVerifyBlobCmd(o *options.VerifyBlobOptions, hashAlgorithm crypto.Hash) *verify.VerifyBlobCmd {
+	ko := options.KeyOpts{
+		KeyRef:               o.Key,
+		Sk:                   o.SecurityKey.Use,
+		Slot:                 o.SecurityKey.Slot,
+		RekorURL:             o.Rekor.URL,
+		BundlePath:           o.BundlePath,
+		RFC3161TimestampPath: o.RFC3161TimestampPath,
+		TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
+		NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
+	}
+	return &verify.VerifyBlobCmd{
+		KeyOpts:                      ko,
+		CertVerifyOptions:            o.CertVerify,
+		CertRef:                      o.CertVerify.Cert,
+		CertChain:                    o.CertVerify.CertChain,
+		CARoots:                      o.CertVerify.CARoots,
+		CAIntermediates:              o.CertVerify.CAIntermediates,
+		SigRef:                       o.Signature,
+		CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
+		CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+		IgnoreSCT:                    o.CertVerify.IgnoreSCT,
+		SCTRef:                       o.CertVerify.SCT,
+		Offline:                      o.CommonVerifyOptions.Offline,
+		IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+		UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+		TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
+		HashAlgorithm:                hashAlgorithm,
+		Wasm:                         o.Wasm,
+	}
 }
 
 func VerifyBlobAttestation() *cobra.Command {

@@ -1,36 +1,18 @@
-## cosign sign-blob
+## cosign wasm sign
 
-Sign the supplied blob, outputting the base64-encoded signature to stdout.
+Sign a WebAssembly module with an embedded wasm-cosign custom section
 
 ```
-cosign sign-blob [flags]
+cosign wasm sign <module> [flags]
 ```
 
 ### Examples
 
 ```
-  cosign sign-blob --key <key path>|<kms uri> <blob>
+  cosign wasm sign --wasm-output signed.wasm --key cosign.key module.wasm
 
-  # sign a blob with a local key pair file
-  cosign sign-blob --key cosign.key <FILE>
-
-  # sign a blob with a key stored in an environment variable
-  cosign sign-blob --key env://[ENV_VAR] <FILE>
-
-  # sign a blob with a key pair stored in Azure Key Vault
-  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
-
-  # sign a blob with a key pair stored in AWS KMS
-  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
-
-  # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
-
-  # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob --key hashivault://[KEY] <FILE>
-
-  # sign a WebAssembly module, appending the Sigstore bundle in a new wasm-cosign custom section
-  cosign sign-blob --wasm --wasm-output signed.wasm --key cosign.key module.wasm
+  # append another wasm-cosign custom section to an already signed module
+  cosign wasm sign --wasm-output resigned.wasm --key cosign.key module.wasm
 ```
 
 ### Options
@@ -40,7 +22,7 @@ cosign sign-blob [flags]
       --certificate string               path to the X.509 certificate for signing attestation
       --certificate-chain string         path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signed attestation. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate.
       --fulcio-auth-flow string          fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
-  -h, --help                             help for sign-blob
+  -h, --help                             help for sign
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
@@ -58,7 +40,6 @@ cosign sign-blob [flags]
       --timestamp-server-name string     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
       --use-signing-config               whether to use a TUF-provided signing config for the service URLs. Must provide --bundle or --wasm-output, which will output verification material in the new format (default true)
-      --wasm                             treat the blob as a WebAssembly module and sign bytes with existing wasm-cosign custom sections removed
       --wasm-output string               write a signed WebAssembly module to FILE with the Sigstore bundle appended in a wasm-cosign custom section
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
@@ -73,5 +54,5 @@ cosign sign-blob [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign wasm](cosign_wasm.md)	 - Utilities for working with WebAssembly modules and embedded wasm-cosign signatures
 

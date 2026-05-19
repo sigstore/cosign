@@ -35,6 +35,8 @@ type SignBlobOptions struct {
 	Output               string // deprecated: TODO remove when the output flag is fully deprecated
 	OutputSignature      string // TODO: this should be the root output file arg.
 	OutputCertificate    string
+	Wasm                 bool
+	WasmOutput           string
 	SecurityKey          SecurityKeyOptions
 	Fulcio               FulcioOptions
 	Rekor                RekorOptions
@@ -105,15 +107,22 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
+	cmd.Flags().BoolVar(&o.Wasm, "wasm", false,
+		"treat the blob as a WebAssembly module and sign bytes with existing wasm-cosign custom sections removed")
+
+	cmd.Flags().StringVar(&o.WasmOutput, "wasm-output", "",
+		"write a signed WebAssembly module to FILE with the Sigstore bundle appended in a wasm-cosign custom section")
+	_ = cmd.MarkFlagFilename("wasm-output", wasmExts...)
+
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"output bundle in new format that contains all verification material")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format")
+		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle or --wasm-output, which will output verification material in the new format")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
-		"path to a signing config file. Must provide --bundle, which will output verification material in the new format")
+		"path to a signing config file. Must provide --bundle or --wasm-output, which will output verification material in the new format")
 
 	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
 
