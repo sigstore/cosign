@@ -56,19 +56,39 @@ func Test_FileExists(t *testing.T) {
 
 func Test_HashReader(t *testing.T) {
 	input := []byte("hello world")
-	r := NewHashReader(bytes.NewReader(input), crypto.SHA256)
 
-	got, err := io.ReadAll(&r)
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("SHA256", func(t *testing.T) {
+		r := NewHashReader(bytes.NewReader(input), crypto.SHA256)
 
-	if !bytes.Equal(got, input) {
-		t.Errorf("io.ReadAll returned %s, want %s", got, input)
-	}
+		got, err := io.ReadAll(&r)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	gotHash := r.Sum(nil)
-	if hash := sha256.Sum256(input); !bytes.Equal(gotHash, hash[:]) {
-		t.Errorf("Sum returned %s, want %s", gotHash, hash)
-	}
+		if !bytes.Equal(got, input) {
+			t.Errorf("io.ReadAll returned %s, want %s", got, input)
+		}
+
+		gotHash := r.Sum(nil)
+		if hash := sha256.Sum256(input); !bytes.Equal(gotHash, hash[:]) {
+			t.Errorf("Sum returned %s, want %s", gotHash, hash)
+		}
+	})
+
+	t.Run("unspecified hash algorithm", func(t *testing.T) {
+		r := NewHashReader(bytes.NewReader(input), crypto.Hash(0))
+
+		got, err := io.ReadAll(&r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(got, input) {
+			t.Errorf("io.ReadAll returned %s, want %s", got, input)
+		}
+
+		if gotHash := r.Sum(nil); gotHash != nil {
+			t.Errorf("Sum returned %s, want nil", gotHash)
+		}
+	})
 }
