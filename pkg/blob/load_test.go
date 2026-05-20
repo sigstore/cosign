@@ -99,6 +99,34 @@ func TestLoadURL(t *testing.T) {
 	}
 }
 
+func TestLoadURLNon2xxStatus(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{"NotFound", http.StatusNotFound},
+		{"InternalServerError", http.StatusInternalServerError},
+		{"Forbidden", http.StatusForbidden},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				rw.WriteHeader(tc.statusCode)
+				rw.Write([]byte("error page"))
+			}))
+			defer server.Close()
+
+			_, err := LoadFileOrURL(server.URL)
+			if err == nil {
+				t.Fatalf("LoadFileOrURL() with HTTP %d: expected error, got nil", tc.statusCode)
+			}
+			if !strings.Contains(err.Error(), "HTTP") {
+				t.Errorf("error should mention HTTP status, got: %v", err)
+			}
+		})
+	}
+}
+
 func TestLoadURLWithChecksum(t *testing.T) {
 	data := []byte("test")
 
