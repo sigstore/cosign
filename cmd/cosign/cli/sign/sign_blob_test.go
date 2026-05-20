@@ -15,7 +15,11 @@
 package sign
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -25,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 func TestSignBlobCmd(t *testing.T) {
@@ -78,6 +83,73 @@ func TestSignBlobCmd(t *testing.T) {
 	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, signCertPath, "", false, "", "", false)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
+	}
+
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	x509Encoded, err = x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encBytes, err = encrypted.Encrypt(x509Encoded, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemBytes = pem.EncodeToMemory(&pem.Block{
+		Bytes: encBytes,
+		Type:  cosign.SigstorePrivateKeyPemType,
+	})
+
+	// Test signing using Ed25519 key with custom signing config and no transparency log upload
+	edKeyRef := writeFile(t, td, string(pemBytes), "ed_key.pem")
+	keyOpts = options.KeyOpts{KeyRef: edKeyRef, BundlePath: bundlePath}
+	sc, err := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{},
+		nil,
+		root.ServiceConfiguration{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyOpts.SigningConfig = sc
+	sigBytes, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", true)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	decodedSig, err := base64.StdEncoding.DecodeString(string(sigBytes))
+	if err != nil {
+		t.Fatalf("failed to decode base64 signature: %v", err)
+	}
+	if !ed25519.Verify(pub, blob, decodedSig) {
+		errString := "expected ed25519 signature"
+		if ed25519.VerifyWithOptions(pub, blob, decodedSig, &ed25519.Options{Hash: crypto.SHA512}) == nil {
+			errString += ", received ed25519ph signature"
+		}
+		t.Fatal("signature verification failed: " + errString)
+	}
+
+	// Test signing using Ed25519 key with default signing config and no transparency log upload
+	keyOpts = options.KeyOpts{KeyRef: edKeyRef, BundlePath: bundlePath}
+	sigBytes, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	decodedSig, err = base64.StdEncoding.DecodeString(string(sigBytes))
+	if err != nil {
+		t.Fatalf("failed to decode base64 signature: %v", err)
+	}
+	if !ed25519.Verify(pub, blob, decodedSig) {
+		errString := "expected ed25519 signature"
+		if ed25519.VerifyWithOptions(pub, blob, decodedSig, &ed25519.Options{Hash: crypto.SHA512}) == nil {
+			errString += ", received ed25519ph signature"
+		}
+		t.Fatal("signature verification failed: " + errString)
 	}
 }
 
