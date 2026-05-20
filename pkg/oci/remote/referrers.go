@@ -16,10 +16,14 @@
 package remote
 
 import (
+	"sort"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
+
+var remoteReferrers = remote.Referrers
 
 // Referrers fetches references using registry options.
 func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexManifest, error) {
@@ -28,9 +32,16 @@ func Referrers(d name.Digest, artifactType string, opts ...Option) (*v1.IndexMan
 	if artifactType != "" {
 		rOpt = append(rOpt, remote.WithFilter("artifactType", artifactType))
 	}
-	idx, err := remote.Referrers(d, rOpt...)
+	idx, err := remoteReferrers(d, rOpt...)
 	if err != nil {
 		return nil, err
 	}
-	return idx.IndexManifest()
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(manifest.Manifests, func(i, j int) bool {
+		return manifest.Manifests[i].Digest.String() < manifest.Manifests[j].Digest.String()
+	})
+	return manifest, nil
 }
