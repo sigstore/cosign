@@ -190,6 +190,9 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots
 		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
 		co.TrustedMaterial, err = cosign.TrustedRoot()
 		if err != nil {
+			if co.NewBundleFormat {
+				return fmt.Errorf("getting trusted root from TUF for new bundle verification: %w", err)
+			}
 			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 		}
 	}
