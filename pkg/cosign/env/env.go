@@ -47,6 +47,7 @@ const (
 	VariableExperimental            Variable = "COSIGN_EXPERIMENTAL"
 	VariableDockerMediaTypes        Variable = "COSIGN_DOCKER_MEDIA_TYPES"
 	VariablePassword                Variable = "COSIGN_PASSWORD"
+	VariableNewPassword             Variable = "COSIGN_NEW_PASSWORD" //nolint:gosec
 	VariablePKCS11Pin               Variable = "COSIGN_PKCS11_PIN"
 	VariablePKCS11ModulePath        Variable = "COSIGN_PKCS11_MODULE_PATH"
 	VariablePKCS11IgnoreCertificate Variable = "COSIGN_PKCS11_IGNORE_CERTIFICATE"
@@ -98,6 +99,11 @@ var (
 		VariablePassword: {
 			Description: "overrides password inputs with this value",
 			Expects:     "string with a password (asks on stdin by default)",
+			Sensitive:   true,
+		},
+		VariableNewPassword: {
+			Description: "overrides new password input for the update-key-pair command",
+			Expects:     "string with the new password (asks on stdin by default)",
 			Sensitive:   true,
 		},
 		VariablePKCS11Pin: {

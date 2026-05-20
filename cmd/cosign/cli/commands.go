@@ -105,6 +105,7 @@ func New() *cobra.Command {
 	cmd.AddCommand(Generate())
 	cmd.AddCommand(GenerateKeyPair())
 	cmd.AddCommand(ImportKeyPair())
+	cmd.AddCommand(UpdateKeyPair())
 	cmd.AddCommand(Initialize())
 	cmd.AddCommand(Load())
 	cmd.AddCommand(Manifest())

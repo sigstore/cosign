@@ -275,21 +275,31 @@ func PemToECDSAKey(pemBytes []byte) (*ecdsa.PublicKey, error) {
 	return ecdsaPub, nil
 }
 
+// decryptPrivatePEMKey decodes keyBytes as a PEM block, validates that it is a supported
+// cosign/sigstore private key type, and decrypts it using pass.
+// It returns the decoded PEM block (so the caller can preserve its Type) and the raw
+// PKCS #8 DER bytes.
+func decryptPrivatePEMKey(key []byte, pass []byte) (*pem.Block, []byte, error) {
+	p, _ := pem.Decode(key)
+	if p == nil {
+		return nil, nil, errors.New("invalid pem block")
+	}
+	if p.Type != CosignPrivateKeyPemType && p.Type != SigstorePrivateKeyPemType {
+		return nil, nil, fmt.Errorf("unsupported pem type: %s", p.Type)
+	}
+	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
+	if err != nil {
+		return nil, nil, fmt.Errorf("decrypt: %w", err)
+	}
+	return p, x509Encoded, nil
+}
+
 // LoadPrivateKey loads a cosign PEM private key encrypted with the given passphrase,
 // and returns a SignerVerifier instance. The private key must be in the PKCS #8 format.
 func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.LoadOption) (signature.SignerVerifier, error) {
-	// Decrypt first
-	p, _ := pem.Decode(key)
-	if p == nil {
-		return nil, errors.New("invalid pem block")
-	}
-	if p.Type != CosignPrivateKeyPemType && p.Type != SigstorePrivateKeyPemType {
-		return nil, fmt.Errorf("unsupported pem type: %s", p.Type)
-	}
-
-	x509Encoded, err := encrypted.Decrypt(p.Bytes, pass)
+	_, x509Encoded, err := decryptPrivatePEMKey(key, pass)
 	if err != nil {
-		return nil, fmt.Errorf("decrypt: %w", err)
+		return nil, err
 	}
 	pk, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
@@ -297,6 +307,35 @@ func LoadPrivateKey(key []byte, pass []byte, defaultLoadOptions *[]signature.Loa
 	}
 	defaultLoadOptions = GetDefaultLoadOptions(defaultLoadOptions)
 	return signature.LoadDefaultSignerVerifier(pk, *defaultLoadOptions...)
+}
+
+// UpdateKeyPair re-encrypts a PEM-encoded private key (ENCRYPTED SIGSTORE or COSIGN PRIVATE KEY)
+// using a new password obtained from pf. The old password must be provided via oldPass to
+// decrypt the key first.
+// Returns the new PEM-encoded private key bytes on success.
+func UpdateKeyPair(key []byte, pass []byte, pf PassFunc) ([]byte, error) {
+	// Decode, validate and decrypt with the old password.
+	p, x509Encoded, err := decryptPrivatePEMKey(key, pass)
+	if err != nil {
+		return nil, err
+	}
+
+	// Obtain and confirm the new password.
+	newPass, err := pf(true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Re-encrypt with the new password.
+	encBytes, err := encrypted.Encrypt(x509Encoded, newPass)
+	if err != nil {
+		return nil, err
+	}
+
+	return pem.EncodeToMemory(&pem.Block{
+		Bytes: encBytes,
+		Type:  p.Type,
+	}), nil
 }
 
 func GetDefaultLoadOptions(defaultLoadOptions *[]signature.LoadOption) *[]signature.LoadOption {
