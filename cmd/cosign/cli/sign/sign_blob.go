@@ -59,14 +59,6 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
 	defer cancel()
 
-	// TODO - this does not take ko.SigningConfig into account
-	if !tlogUpload {
-		// To maintain backwards compatibility with older cosign versions,
-		// we do not use ed25519ph for ed25519 keys when the signatures are not
-		// uploaded to the Tlog.
-		ko.DefaultLoadOptions = &[]signature.LoadOption{}
-	}
-
 	var shouldUpload bool
 	var err error
 
@@ -79,6 +71,15 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
+	} else {
+		shouldUpload = len(ko.SigningConfig.RekorLogURLs()) > 0
+	}
+
+	if !shouldUpload {
+		// To maintain backwards compatibility with older cosign versions,
+		// we do not use ed25519ph for ed25519 keys when the signatures are not
+		// uploaded to the Tlog.
+		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
 	keypair, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
