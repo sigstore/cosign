@@ -4693,6 +4693,7 @@ func TestSignVerifyWithRepoOverride(t *testing.T) {
 		KeyRef:          pubKeyPath,
 		RekorURL:        rekorURL,
 		NewBundleFormat: true,
+		IgnoreTlog:      true,
 	}
 
 	ctx := context.Background()
