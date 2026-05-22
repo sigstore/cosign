@@ -50,6 +50,9 @@ func LoadFileOrURL(fileRef string) ([]byte, error) {
 				return nil, err
 			}
 			defer resp.Body.Close()
+			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+				return nil, fmt.Errorf("loading URL %s: server returned HTTP %d", fileRef, resp.StatusCode)
+			}
 			raw, err = io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, err
