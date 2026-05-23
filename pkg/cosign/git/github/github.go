@@ -57,12 +57,16 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	var client *github.Client
 	if host, ok := env.LookupEnv(env.VariableGitHubHost); ok {
 		var err error
-		client, err = github.NewClient(httpClient).WithEnterpriseURLs(host, host)
+		client, err = github.NewClient(github.WithHTTPClient(httpClient), github.WithEnterpriseURLs(host, host))
 		if err != nil {
 			return fmt.Errorf("could not create github enterprise client: %w", err)
 		}
 	} else {
-		client = github.NewClient(httpClient)
+		var err error
+		client, err = github.NewClient(github.WithHTTPClient(httpClient))
+		if err != nil {
+			return fmt.Errorf("could not create github client: %w", err)
+		}
 	}
 
 	keys, err := cosign.GenerateKeyPair(pf)
