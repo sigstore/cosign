@@ -32,19 +32,19 @@ steps:
         echo "Checking out ${_GIT_TAG}"
         git checkout ${_GIT_TAG}
 
-  - name: 'ghcr.io/sigstore/cosign/cosign:v3.0.4-dev@sha256:782e916a04d4b879fdadb94366f9b58fdf13b6b2e24635a9c9b6cbf57799df02'
+  - name: 'ghcr.io/sigstore/cosign/cosign:v3.0.6-dev@sha256:fd2e25faec7ea4c47bfbe6f50f00ff0e465fcea1f6d121eed7491b79278b19f7'
     dir: "go/src/sigstore/cosign"
     env:
       - TUF_ROOT=/tmp
     args:
       - 'verify'
-      - 'ghcr.io/gythialy/golang-cross:v1.25.7-0@sha256:a0387993e09553d95e73e0a0d6e1fc9b4989f5b5eea9759e0a6bbfba464840d2'
+      - 'ghcr.io/gythialy/golang-cross:v1.26.3-0@sha256:9f7a53d7205e2f1f2742d624ff0b6e1531e8c22863dfb24ca966be5efbdee48b'
       - '--certificate-oidc-issuer'
       - "https://token.actions.githubusercontent.com"
       - '--certificate-identity'
       - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.25.7-0"
   # maybe we can build our own image and use that to be more in a safe side
-  - name: ghcr.io/gythialy/golang-cross:v1.25.7-0@sha256:a0387993e09553d95e73e0a0d6e1fc9b4989f5b5eea9759e0a6bbfba464840d2
+  - name: ghcr.io/gythialy/golang-cross:v1.26.3-0@sha256:9f7a53d7205e2f1f2742d624ff0b6e1531e8c22863dfb24ca966be5efbdee48b
     entrypoint: /bin/sh
     dir: "go/src/sigstore/cosign"
     env:
@@ -67,7 +67,7 @@ steps:
         gcloud auth configure-docker \
         && make release
 
-  - name: ghcr.io/gythialy/golang-cross:v1.25.7-0@sha256:a0387993e09553d95e73e0a0d6e1fc9b4989f5b5eea9759e0a6bbfba464840d2
+  - name: ghcr.io/gythialy/golang-cross:v1.26.3-0@sha256:9f7a53d7205e2f1f2742d624ff0b6e1531e8c22863dfb24ca966be5efbdee48b
     entrypoint: 'bash'
     dir: "go/src/sigstore/cosign"
     env:
@@ -93,7 +93,7 @@ steps:
         echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
         && make sign-release-images || true
 
-  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+  - name: 'ghcr.io/oras-project/oras:v1.3.2@sha256:46c55ba0eac848ade573594ef23fa5b1784227f151dab6eac38de2afd0b9c382'
     env:
       - 'DOCKER_CONFIG=/workspace/.docker'
     args:
@@ -102,7 +102,7 @@ steps:
       - 'gcr.io/${PROJECT_ID}/cosign:${_GIT_TAG}'
       - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}'
 
-  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+  - name: 'ghcr.io/oras-project/oras:v1.3.2@sha256:46c55ba0eac848ade573594ef23fa5b1784227f151dab6eac38de2afd0b9c382'
     env:
       - 'DOCKER_CONFIG=/workspace/.docker'
     args:
@@ -111,7 +111,7 @@ steps:
       - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}'
       - '${_GHCR_PREFIX}/cosign:latest'
 
-  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+  - name: 'ghcr.io/oras-project/oras:v1.3.2@sha256:46c55ba0eac848ade573594ef23fa5b1784227f151dab6eac38de2afd0b9c382'
     env:
       - 'DOCKER_CONFIG=/workspace/.docker'
     args:
@@ -120,7 +120,7 @@ steps:
       - 'gcr.io/${PROJECT_ID}/cosign:${_GIT_TAG}-dev'
       - '${_GHCR_PREFIX}/cosign:${_GIT_TAG}-dev'
 
-  - name: 'ghcr.io/oras-project/oras:v1.3.1@sha256:96ef3b6ddc71d8a6b7bcdae517f6b696bcb4f8abac4ea62beec1ee482f433a83'
+  - name: 'ghcr.io/oras-project/oras:v1.3.2@sha256:46c55ba0eac848ade573594ef23fa5b1784227f151dab6eac38de2afd0b9c382'
     env:
       - 'DOCKER_CONFIG=/workspace/.docker'
     args:
