@@ -477,7 +477,7 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 }
 
 func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	var tmp map[string]interface{}
