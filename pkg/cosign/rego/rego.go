@@ -138,7 +138,10 @@ func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings 
 func evaluateRegoEvalMapResult(query string, response []interface{}) (warning error, retErr error) {
 	retErr = fmt.Errorf("policy is not compliant for query %q", query) //nolint: revive
 	for _, r := range response {
-		rMap := r.(map[string]interface{})
+		rMap, ok := r.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("policy is not compliant for query '%s': unexpected result type %T", query, r)
+		}
 		mapBytes, err := json.Marshal(rMap)
 		if err != nil {
 			return nil, fmt.Errorf("policy is not compliant for query '%s' due to parsing errors: %w", query, err)
