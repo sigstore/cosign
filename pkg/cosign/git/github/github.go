@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v73/github"
+	"github.com/google/go-github/v88/github"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/oauth2"
 

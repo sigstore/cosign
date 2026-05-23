@@ -21,7 +21,7 @@ require (
 	github.com/google/certificate-transparency-go v1.3.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.5
-	github.com/google/go-github/v73 v73.0.0
+	github.com/google/go-github/v88 v88.0.0
 	github.com/in-toto/attestation v1.2.0
 	github.com/in-toto/in-toto-golang v0.11.0
 	github.com/kelseyhightower/envconfig v1.4.0
