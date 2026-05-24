@@ -53,7 +53,7 @@ func (c *UpgradeCmd) Exec(ctx context.Context, bundlePath string) error {
 	}
 
 	if c.Out != "" {
-		err = os.WriteFile(c.Out, upgradedBundle, 0600)
+		err = os.WriteFile(c.Out, upgradedBundle, 0600) // #nosec G703 -- user-supplied output path is intentional
 		if err != nil {
 			return fmt.Errorf("writing upgraded bundle: %w", err)
 		}

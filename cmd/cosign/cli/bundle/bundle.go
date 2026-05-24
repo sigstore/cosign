@@ -211,7 +211,7 @@ func (c *CreateCmd) Exec(ctx context.Context) (err error) {
 	}
 
 	if c.Out != "" {
-		err = os.WriteFile(c.Out, bundleBytes, 0600)
+		err = os.WriteFile(c.Out, bundleBytes, 0600) // #nosec G703 -- user-supplied output path is intentional
 		if err != nil {
 			return err
 		}

@@ -118,7 +118,7 @@ func main() {
 		}
 
 	default:
-		log.Fatalf("Unsupported command %q", os.Args[1])
+		log.Fatalf("Unsupported command %q", os.Args[1]) // #nosec G706 -- CLI tool, args are operator-supplied
 	}
 
 	if bundlePath != nil {
@@ -149,12 +149,12 @@ func main() {
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
-	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204
+	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
 	err := initCmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	cmd := exec.Command(filepath.Join(dir, "cosign"), args...) // #nosec G204
+	cmd := exec.Command(filepath.Join(dir, "cosign"), args...) // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
 	var out strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &out
