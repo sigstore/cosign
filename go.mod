@@ -15,12 +15,12 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-openapi/runtime v0.29.4
-	github.com/go-openapi/strfmt v0.26.1
+	github.com/go-openapi/strfmt v0.26.2
 	github.com/go-openapi/swag/conv v0.26.0
 	github.com/go-piv/piv-go/v2 v2.6.0
 	github.com/google/certificate-transparency-go v1.3.3
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.5
+	github.com/google/go-containerregistry v0.21.6
 	github.com/google/go-github/v88 v88.0.0
 	github.com/in-toto/attestation v1.2.0
 	github.com/in-toto/in-toto-golang v0.11.0
@@ -32,24 +32,24 @@ require (
 	github.com/mozillazg/docker-credential-acr-helper v0.4.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/open-policy-agent/opa v1.16.2
-	github.com/secure-systems-lab/go-securesystemslib v0.10.0
+	github.com/secure-systems-lab/go-securesystemslib v0.11.0
 	github.com/sigstore/fulcio v1.8.5
 	github.com/sigstore/protobuf-specs v0.5.1
 	github.com/sigstore/rekor v1.5.1
 	github.com/sigstore/rekor-tiles/v2 v2.2.1
-	github.com/sigstore/sigstore v1.10.5
+	github.com/sigstore/sigstore v1.10.6
 	github.com/sigstore/sigstore-go v1.1.4
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.5
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.5
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.6
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.6
 	github.com/sigstore/timestamp-authority/v2 v2.0.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/spiffe/go-spiffe/v2 v2.6.0
 	github.com/stretchr/testify v1.11.1
-	github.com/theupdateframework/go-tuf/v2 v2.4.1
+	github.com/theupdateframework/go-tuf/v2 v2.4.2
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go v1.46.0
@@ -138,14 +138,13 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.18.2 // indirect
 	github.com/coreos/go-oidc/v3 v3.17.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v29.4.0+incompatible // indirect
+	github.com/docker/cli v29.4.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
@@ -266,7 +265,6 @@ require (
 	github.com/transparency-dev/formats v0.0.0-20251017110053-404c0d5b696c // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
-	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.32 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -283,12 +281,12 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260406210006-6f92a3bedf2d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
