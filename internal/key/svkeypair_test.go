@@ -141,7 +141,7 @@ func TestNewKMSKeypair(t *testing.T) {
 	}
 }
 
-func TestKMSKeypair_Methods(t *testing.T) {
+func TestKMSKeypair_ECDSA_Methods(t *testing.T) {
 	ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatalf("failed to generate ecdsa key: %v", err)
@@ -237,6 +237,84 @@ func TestKMSKeypair_Methods(t *testing.T) {
 			t.Error("expected an error, but got none")
 		} else if err.Error() != "signing failed" {
 			t.Errorf("expected error 'signing failed', got '%s'", err.Error())
+		}
+	})
+}
+
+func TestKMSKeypair_ED25519_Methods(t *testing.T) {
+	_, ed25519Priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ed25519 key: %v", err)
+	}
+	sv := &mockSignerVerifier{pubKey: ed25519Priv.Public()}
+	kp, err := NewSignerVerifierKeypair(sv, &[]signature.LoadOption{})
+	if err != nil {
+		t.Fatalf("failed to create KMSKeypair: %v", err)
+	}
+
+	t.Run("GetHashAlgorithm", func(t *testing.T) {
+		if kp.GetHashAlgorithm() != protocommon.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED {
+			t.Errorf("expected HASH_ALGORITHM_UNSPECIFIED, got %v", kp.GetHashAlgorithm())
+		}
+	})
+
+	t.Run("GetSigningAlgorithm", func(t *testing.T) {
+		if kp.GetSigningAlgorithm() != protocommon.PublicKeyDetails_PKIX_ED25519 {
+			t.Errorf("expected PKIX_ED25519, got %v", kp.GetSigningAlgorithm())
+		}
+	})
+
+	t.Run("GetHint", func(t *testing.T) {
+		pubKeyBytes, err := x509.MarshalPKIXPublicKey(ed25519Priv.Public())
+		if err != nil {
+			t.Fatalf("marshalling public key: %v", err)
+		}
+		hashedBytes := sha256.Sum256(pubKeyBytes)
+		expectedHint := base64.StdEncoding.EncodeToString(hashedBytes[:])
+
+		if string(kp.GetHint()) != expectedHint {
+			t.Errorf("expected hint %s, got %s", expectedHint, string(kp.GetHint()))
+		}
+	})
+
+	t.Run("GetKeyAlgorithm", func(t *testing.T) {
+		if kp.GetKeyAlgorithm() != "ED25519" {
+			t.Errorf("expected ED25519, got %s", kp.GetKeyAlgorithm())
+		}
+	})
+
+	t.Run("GetPublicKey", func(t *testing.T) {
+		pub := kp.GetPublicKey()
+		if !pub.(ed25519.PublicKey).Equal(ed25519Priv.Public()) {
+			t.Error("public keys do not match")
+		}
+	})
+
+	t.Run("GetPublicKeyPem", func(t *testing.T) {
+		pem, err := kp.GetPublicKeyPem()
+		if err != nil {
+			t.Fatalf("GetPublicKeyPem returned an error: %v", err)
+		}
+		pub, err := cryptoutils.UnmarshalPEMToPublicKey([]byte(pem))
+		if err != nil {
+			t.Fatalf("failed to unmarshal pem: %v", err)
+		}
+		if !pub.(ed25519.PublicKey).Equal(ed25519Priv.Public()) {
+			t.Error("public keys do not match")
+		}
+	})
+
+	t.Run("SignData", func(t *testing.T) {
+		data := []byte("some data to sign")
+		sig, digest, err := kp.SignData(context.Background(), data)
+		if err != nil {
+			t.Fatalf("SignData returned an error: %v", err)
+		}
+		if string(sig) != "mock-signature" {
+			t.Errorf("expected signature 'mock-signature', got '%s'", string(sig))
+		}
+		if len(digest) != 0 {
+			t.Errorf("expected empty digest, got %x", digest)
 		}
 	})
 }
