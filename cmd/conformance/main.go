@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
@@ -89,13 +90,18 @@ func main() {
 
 	args := []string{}
 
+	useCosignSign := env.Getenv("COSIGN_SIGN_CONFORMANCE") != "" && os.Args[1] == "sign-bundle"
+
 	switch os.Args[1] {
 	case "sign-bundle":
+		cmdName := "sign"
 		if inToto {
-			args = append(args, "attest-blob")
-		} else {
-			args = append(args, "sign-blob")
+			cmdName = "attest"
 		}
+		if !useCosignSign {
+			cmdName += "-blob"
+		}
+		args = append(args, cmdName)
 		args = append(args, "-y")
 
 	case "verify-bundle":
@@ -123,7 +129,9 @@ func main() {
 
 	if bundlePath != nil {
 		args = append(args, "--bundle", *bundlePath)
-		args = append(args, "--new-bundle-format")
+		if !useCosignSign {
+			args = append(args, "--new-bundle-format")
+		}
 	}
 	if identityToken != nil {
 		args = append(args, "--identity-token", *identityToken)
@@ -143,20 +151,25 @@ func main() {
 	if keyPath != nil {
 		args = append(args, "--key", *keyPath)
 	}
-	if inToto {
+	if inToto && !useCosignSign {
 		args = append(args, "--statement")
 	}
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
-	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
+	binaryName := "cosign"
+	if useCosignSign {
+		binaryName = "cosign-sign"
+	}
+
+	initCmd := exec.Command(filepath.Join(dir, binaryName), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
 	initCmd.Stdout = os.Stdout
 	initCmd.Stderr = os.Stderr
 	err := initCmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	cmd := exec.Command(filepath.Join(dir, "cosign"), args...) // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
+	cmd := exec.Command(filepath.Join(dir, binaryName), args...) // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
 	var out strings.Builder
 	cmd.Stdout = &out
 	cmd.Stderr = &out

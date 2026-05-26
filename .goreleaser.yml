@@ -11,7 +11,8 @@ env:
 before:
   hooks:
     - go mod tidy
-    - git --no-pager diff --exit-code go.mod go.sum
+    - go mod tidy -C cmd/cosign-sign
+    - git --no-pager diff --exit-code go.mod go.sum cmd/cosign-sign/go.mod cmd/cosign-sign/go.sum
 
 gomod:
   proxy: true
@@ -150,6 +151,47 @@ builds:
     tags:
       - pivkey
       - pkcs11key
+
+  - id: cosign-sign-linux
+    binary: cosign-sign-linux-{{ .Arch }}
+    no_unique_dist_dir: true
+    dir: cmd/cosign-sign
+    main: .
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+      - riscv64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
+
+  - id: cosign-sign-darwin-windows
+    binary: cosign-sign-{{ .Os }}-{{ .Arch }}
+    no_unique_dist_dir: true
+    dir: cmd/cosign-sign
+    main: .
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
 
 signs:
   - id: cosign
