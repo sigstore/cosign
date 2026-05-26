@@ -150,6 +150,8 @@ func main() {
 
 	dir := filepath.Dir(os.Args[0])
 	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
+	initCmd.Stdout = os.Stdout
+	initCmd.Stderr = os.Stderr
 	err := initCmd.Run()
 	if err != nil {
 		log.Fatal(err)
