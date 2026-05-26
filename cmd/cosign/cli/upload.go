@@ -25,8 +25,9 @@ import (
 
 func Upload() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "upload",
-		Short: "Provides utilities for uploading artifacts to a registry",
+		Use:        "upload",
+		Short:      "Provides utilities for uploading artifacts to a registry",
+		Deprecated: "upload will be removed in v4.0.0 (see https://github.com/sigstore/cosign/issues/4696). Instead, please use `oras blob push` for uploading artifacts to a registry; https://oras.land/docs/commands/oras_blob_push",
 	}
 
 	cmd.AddCommand(
