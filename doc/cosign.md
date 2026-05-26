@@ -18,7 +18,6 @@ A tool for Container Signing, Verification and Storage in an OCI registry.
 * [cosign bundle](cosign_bundle.md)	 - Interact with a Sigstore protobuf bundle
 * [cosign clean](cosign_clean.md)	 - Remove all signatures from an image.
 * [cosign completion](cosign_completion.md)	 - Generate completion script
-* [cosign dockerfile](cosign_dockerfile.md)	 - Provides utilities for discovering images in and performing operations on Dockerfiles
 * [cosign download](cosign_download.md)	 - Provides utilities for downloading artifacts and attached artifacts in a registry
 * [cosign env](cosign_env.md)	 - Prints Cosign environment variables
 * [cosign generate](cosign_generate.md)	 - Generates (unsigned) signature payloads from the supplied container image.
