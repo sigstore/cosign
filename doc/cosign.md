@@ -13,7 +13,6 @@ A tool for Container Signing, Verification and Storage in an OCI registry.
 
 ### SEE ALSO
 
-* [cosign attach](cosign_attach.md)	 - Provides utilities for attaching artifacts to other artifacts in a registry
 * [cosign attest](cosign_attest.md)	 - Attest the supplied container image.
 * [cosign attest-blob](cosign_attest-blob.md)	 - Attest the supplied blob.
 * [cosign bundle](cosign_bundle.md)	 - Interact with a Sigstore protobuf bundle
