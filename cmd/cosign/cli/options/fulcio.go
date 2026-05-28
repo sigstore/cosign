@@ -46,6 +46,5 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 		"fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials")
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
-		"skip verifying fulcio published to the SCT (this should only be used for testing).")
-	_ = cmd.Flags().MarkDeprecated("insecure-skip-verify", "SCT verification is no longer performed during signing/attestation.")
+		"skip strict certificate verification, useful for BYOC workflows.")
 }
