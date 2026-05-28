@@ -34,12 +34,14 @@ import (
 type SignOptions struct {
 	TSAClientTransport  http.RoundTripper
 	CertificateProvider sign.CertificateProvider
+	InsecureSkipVerify  bool
 }
 
 func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, opts SignOptions) ([]byte, error) {
 	var bundleOpts sign.BundleOptions
 
-	if trustedMaterial != nil {
+	// Do not pass TrustedRoot if we are skipping verification
+	if trustedMaterial != nil && !opts.InsecureSkipVerify {
 		bundleOpts.TrustedRoot = trustedMaterial
 	}
 

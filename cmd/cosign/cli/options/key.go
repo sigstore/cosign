@@ -54,9 +54,9 @@ type KeyOpts struct {
 	// for valid values.
 	FulcioAuthFlow string
 
-	// Deprecated: SCT verification is no longer performed during signing/attestation.
 	// Modeled after InsecureSkipVerify in tls.Config, this disables
-	// verifying the SCT.
+	// strict leaf certificate verification, which is necessary for BYOC
+	// (Bring Your Own Certificate) workflows.
 	InsecureSkipFulcioVerify bool
 
 	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
