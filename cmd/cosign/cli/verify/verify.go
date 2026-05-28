@@ -221,7 +221,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 					return err
 				}
 			}
-			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
+			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified, c.CertRef != "")
 			PrintVerification(ctx, verified, c.Output)
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
@@ -252,7 +252,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				}
 			}
 
-			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)
+			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified, c.CertRef != "")
 			PrintVerification(ctx, verified, c.Output)
 		}
 	}
