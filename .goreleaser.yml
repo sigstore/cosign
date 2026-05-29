@@ -12,7 +12,8 @@ before:
   hooks:
     - go mod tidy
     - go mod tidy -C cmd/cosign-sign
-    - git --no-pager diff --exit-code go.mod go.sum cmd/cosign-sign/go.mod cmd/cosign-sign/go.sum
+    - go mod tidy -C cmd/cosign-verify
+    - git --no-pager diff --exit-code go.mod go.sum cmd/cosign-sign/go.mod cmd/cosign-sign/go.sum cmd/cosign-verify/go.mod cmd/cosign-verify/go.sum
 
 gomod:
   proxy: true
@@ -178,6 +179,47 @@ builds:
     binary: cosign-sign-{{ .Os }}-{{ .Arch }}
     no_unique_dist_dir: true
     dir: cmd/cosign-sign
+    main: .
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
+
+  - id: cosign-verify-linux
+    binary: cosign-verify-linux-{{ .Arch }}
+    no_unique_dist_dir: true
+    dir: cmd/cosign-verify
+    main: .
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+      - riscv64
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
+    env:
+      - CGO_ENABLED=0
+
+  - id: cosign-verify-darwin-windows
+    binary: cosign-verify-{{ .Os }}-{{ .Arch }}
+    no_unique_dist_dir: true
+    dir: cmd/cosign-verify
     main: .
     flags:
       - -trimpath

@@ -90,7 +90,8 @@ func main() {
 
 	args := []string{}
 
-	useCosignSign := env.Getenv("COSIGN_SIGN_CONFORMANCE") != "" && os.Args[1] == "sign-bundle"
+	useCosignSign := env.Getenv("COSIGN_SIGN_CONFORMANCE") == "true" && os.Args[1] == "sign-bundle"
+	useCosignVerify := env.Getenv("COSIGN_VERIFY_CONFORMANCE") == "true" && os.Args[1] == "verify-bundle"
 
 	switch os.Args[1] {
 	case "sign-bundle":
@@ -105,7 +106,15 @@ func main() {
 		args = append(args, "-y")
 
 	case "verify-bundle":
-		args = append(args, "verify-blob")
+		if useCosignVerify {
+			if inToto {
+				args = append(args, "verify-attestation")
+			} else {
+				args = append(args, "verify")
+			}
+		} else {
+			args = append(args, "verify-blob")
+		}
 
 		// How do we know if we should expect signed timestamps or not?
 		// Let's crack open the bundle
@@ -129,7 +138,7 @@ func main() {
 
 	if bundlePath != nil {
 		args = append(args, "--bundle", *bundlePath)
-		if !useCosignSign {
+		if !useCosignSign && !useCosignVerify {
 			args = append(args, "--new-bundle-format")
 		}
 	}
@@ -151,15 +160,18 @@ func main() {
 	if keyPath != nil {
 		args = append(args, "--key", *keyPath)
 	}
-	if inToto && !useCosignSign {
+	if inToto && !useCosignSign && !useCosignVerify {
 		args = append(args, "--statement")
 	}
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
 	binaryName := "cosign"
-	if useCosignSign {
+	switch {
+	case useCosignSign:
 		binaryName = "cosign-sign"
+	case useCosignVerify:
+		binaryName = "cosign-verify"
 	}
 
 	initCmd := exec.Command(filepath.Join(dir, binaryName), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary

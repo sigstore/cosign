@@ -84,6 +84,9 @@ cosign: $(SRCS)
 cosign-sign: $(SRCS)
 	CGO_ENABLED=0 $(GOEXE) build -C cmd/cosign-sign -trimpath -ldflags "$(LDFLAGS)" -o ../../$@ .
 
+cosign-verify: $(SRCS)
+	CGO_ENABLED=0 $(GOEXE) build -C cmd/cosign-verify -trimpath -ldflags "$(LDFLAGS)" -o ../../$@ .
+
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
@@ -118,6 +121,7 @@ test:
 clean:
 	rm -rf cosign
 	rm -rf cosign-sign
+	rm -rf cosign-verify
 	rm -rf dist/
 
 KOCACHE_PATH=/tmp/ko
@@ -228,4 +232,5 @@ include test/ci.mk
 docgen:
 	$(GOEXE) run -tags pivkey,pkcs11key,cgo ./cmd/help/
 	cd cmd/cosign-sign && $(GOEXE) run ./help --dir ../../doc
+	cd cmd/cosign-verify && $(GOEXE) run ./help --dir ../../doc
 

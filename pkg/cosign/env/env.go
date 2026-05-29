@@ -53,6 +53,7 @@ const (
 	VariableRepository              Variable = "COSIGN_REPOSITORY"
 	VariableMaxAttachmentSize       Variable = "COSIGN_MAX_ATTACHMENT_SIZE"
 	VariableCosignSignConformance   Variable = "COSIGN_SIGN_CONFORMANCE"
+	VariableCosignVerifyConformance Variable = "COSIGN_VERIFY_CONFORMANCE"
 
 	// Sigstore environment variables
 	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
@@ -129,6 +130,11 @@ var (
 		VariableCosignSignConformance: {
 			Description: "routes sign-bundle and attest-bundle conformance calls through cosign-sign",
 			Expects:     "true to route conformance tests through cosign-sign (empty by default)",
+			Sensitive:   false,
+		},
+		VariableCosignVerifyConformance: {
+			Description: "routes verify-bundle conformance calls through cosign-verify",
+			Expects:     "true to route conformance tests through cosign-verify (empty by default)",
 			Sensitive:   false,
 		},
 		VariableSigstoreCTLogPublicKeyFile: {

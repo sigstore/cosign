@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        client: [cosign, cosign-sign]
+        client: [cosign, cosign-sign, cosign-verify]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -46,12 +46,13 @@ jobs:
           check-latest: true
           cache: false
 
-      - run: make cosign cosign-sign conformance
+      - run: make cosign cosign-sign cosign-verify conformance
 
       - name: Run ${{ matrix.client }} conformance tests
         uses: sigstore/sigstore-conformance@4d66ba3cb0c9c95f705c757c0f5e226d3f4d5151 # v0.0.27
         env:
           COSIGN_SIGN_CONFORMANCE: ${{ matrix.client == 'cosign-sign' && 'true' || '' }}
+          COSIGN_VERIFY_CONFORMANCE: ${{ matrix.client == 'cosign-verify' && 'true' || '' }}
         with:
           entrypoint: ${{ github.workspace }}/conformance
           xfail: "test_verify*PATH-message-digest-mismatch_fail]"
