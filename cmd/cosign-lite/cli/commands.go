@@ -32,6 +32,8 @@ func New() *cobra.Command {
 	rootCmd.AddCommand(
 		Initialize(),
 		GenerateKeyPair(),
+		Sign(),
+		Attest(),
 	)
 
 	return rootCmd
@@ -84,6 +86,71 @@ func GenerateKeyPair() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&outputKeyPrefix, "output-key-prefix", "cosign", "name used for generated .pub and .key files")
+
+	return cmd
+}
+
+func Sign() *cobra.Command {
+	var o SignOptions
+
+	cmd := &cobra.Command{
+		Use:   "sign",
+		Short: "Sign the supplied payload blob.",
+		Long: `Sign the supplied payload blob using a Sigstore OIDC identity token (keyless flow)
+or a local on-disk key pair, and generate a standardized Sigstore verification bundle.`,
+		Example: `  # Sign a payload keylessly using OIDC and write the bundle to a file
+  cosign-lite sign --bundle payload.bundle.json payload.txt
+
+  # Sign a payload using a local private key and write the bundle to a file
+  cosign-lite sign --key cosign.key --bundle payload.bundle.json payload.txt
+
+  # Sign a payload using OIDC without uploading to the transparency log (Rekor)
+  cosign-lite sign --bundle payload.bundle.json --tlog-upload=false payload.txt`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			payloadPath := args[0]
+
+			ro, ko, err := o.ToRootAndKeyOpts(getPass)
+			if err != nil {
+				return err
+			}
+
+			return signBundle(cmd.Context(), ro, ko, payloadPath, o.CertPath, o.CertChainPath, o.TlogUpload, false)
+		},
+	}
+
+	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func Attest() *cobra.Command {
+	var o SignOptions
+
+	cmd := &cobra.Command{
+		Use:   "attest",
+		Short: "Attest the supplied in-toto statement.",
+		Long: `Sign a pre-constructed in-toto statement JSON using a Sigstore OIDC identity token (keyless flow)
+or a local on-disk key pair, wrapping it in a DSSE envelope, and generate a standardized Sigstore verification bundle.`,
+		Example: `  # Sign a statement keylessly using OIDC and write the bundle to a file
+  cosign-lite attest --bundle statement.bundle.json statement.json
+
+  # Sign a statement using a local private key and write the bundle to a file
+  cosign-lite attest --key cosign.key --bundle statement.bundle.json statement.json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			payloadPath := args[0]
+
+			ro, ko, err := o.ToRootAndKeyOpts(getPass)
+			if err != nil {
+				return err
+			}
+
+			return signBundle(cmd.Context(), ro, ko, payloadPath, o.CertPath, o.CertChainPath, o.TlogUpload, true)
+		},
+	}
+
+	o.AddFlags(cmd)
 
 	return cmd
 }
