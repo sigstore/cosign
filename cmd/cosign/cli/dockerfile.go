@@ -26,8 +26,9 @@ import (
 
 func Dockerfile() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "dockerfile",
-		Short: "Provides utilities for discovering images in and performing operations on Dockerfiles",
+		Use:        "dockerfile",
+		Short:      "Provides utilities for discovering images in and performing operations on Dockerfiles",
+		Deprecated: "dockerfile will be removed in v4.0.0 (see https://github.com/sigstore/cosign/issues/4696). Instead, please use `cosign verify` for each image in your Dockerfile",
 	}
 
 	cmd.AddCommand(

@@ -26,8 +26,9 @@ import (
 
 func Attach() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attach",
-		Short: "Provides utilities for attaching artifacts to other artifacts in a registry",
+		Use:        "attach",
+		Short:      "Provides utilities for attaching artifacts to other artifacts in a registry",
+		Deprecated: "attach will be removed in v4.0.0 (see https://github.com/sigstore/cosign/issues/4696). Instead, please use oras for attaching artifacts to other artifacts in a registry",
 	}
 
 	cmd.AddCommand(
