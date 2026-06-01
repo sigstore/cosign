@@ -15,6 +15,8 @@
 package cli
 
 import (
+	"fmt"
+
 	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +31,7 @@ func New() *cobra.Command {
 
 	rootCmd.AddCommand(
 		Initialize(),
+		GenerateKeyPair(),
 	)
 
 	return rootCmd
@@ -60,6 +63,27 @@ func Initialize() *cobra.Command {
 	cmd.Flags().StringVar(&rootPath, "root", "", "path to trusted initial root. defaults to embedded root")
 	cmd.Flags().StringVar(&rootChecksum, "root-checksum", "", "checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>")
 	cmd.Flags().BoolVar(&staging, "staging", false, "use the staging TUF repository")
+
+	return cmd
+}
+
+func GenerateKeyPair() *cobra.Command {
+	var outputKeyPrefix string
+
+	cmd := &cobra.Command{
+		Use:   "generate-key-pair",
+		Short: "Generate a local password-encrypted key pair",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := generateKeyPair(outputKeyPrefix, getPass); err != nil {
+				return err
+			}
+			fmt.Println("Private key written to", outputKeyPrefix+".key")
+			fmt.Println("Public key written to", outputKeyPrefix+".pub")
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&outputKeyPrefix, "output-key-prefix", "cosign", "name used for generated .pub and .key files")
 
 	return cmd
 }
