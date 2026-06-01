@@ -1,4 +1,4 @@
-## cosign-verify verify-attestation
+## cosign-lite verify-attestation
 
 Verify a signed in-toto statement and output its payload to stdout
 
@@ -8,17 +8,17 @@ Verify a signed in-toto statement wrapped in a DSSE envelope inside a standard S
 Outputs the verified JSON statement to stdout.
 
 ```
-cosign-verify verify-attestation [payload-file] [flags]
+cosign-lite verify-attestation [payload-file] [flags]
 ```
 
 ### Examples
 
 ```
   # Verify an attestation using a local public key
-  cosign-verify verify-attestation --bundle statement.bundle.json --key cosign.pub
+  cosign-lite verify-attestation --bundle statement.bundle.json --key cosign.pub
 
   # Verify and assert the statement describes a specific local file
-  cosign-verify verify-attestation --bundle statement.bundle.json --key cosign.pub payload.txt
+  cosign-lite verify-attestation --bundle statement.bundle.json --key cosign.pub payload.txt
 ```
 
 ### Options
@@ -48,5 +48,5 @@ cosign-verify verify-attestation [payload-file] [flags]
 
 ### SEE ALSO
 
-* [cosign-verify](cosign-verify.md)	 - cosign-verify is a minimal verification utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

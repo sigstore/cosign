@@ -52,8 +52,7 @@ const (
 	VariablePKCS11IgnoreCertificate Variable = "COSIGN_PKCS11_IGNORE_CERTIFICATE"
 	VariableRepository              Variable = "COSIGN_REPOSITORY"
 	VariableMaxAttachmentSize       Variable = "COSIGN_MAX_ATTACHMENT_SIZE"
-	VariableCosignSignConformance   Variable = "COSIGN_SIGN_CONFORMANCE"
-	VariableCosignVerifyConformance Variable = "COSIGN_VERIFY_CONFORMANCE"
+	VariableCosignLiteConformance   Variable = "COSIGN_LITE_CONFORMANCE"
 
 	// Sigstore environment variables
 	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
@@ -127,14 +126,9 @@ var (
 			Expects:     "human-readable unit of memory, e.g. 5120, 20K, 3M, 45MiB, 1GB",
 			Sensitive:   false,
 		},
-		VariableCosignSignConformance: {
-			Description: "routes sign-bundle and attest-bundle conformance calls through cosign-sign",
-			Expects:     "true to route conformance tests through cosign-sign (empty by default)",
-			Sensitive:   false,
-		},
-		VariableCosignVerifyConformance: {
-			Description: "routes verify-bundle conformance calls through cosign-verify",
-			Expects:     "true to route conformance tests through cosign-verify (empty by default)",
+		VariableCosignLiteConformance: {
+			Description: "routes conformance calls through cosign-lite",
+			Expects:     "true to route conformance tests through cosign-lite (empty by default)",
 			Sensitive:   false,
 		},
 		VariableSigstoreCTLogPublicKeyFile: {

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sigstore/cosign/v3/cmd/cosign-verify/cli"
+	"github.com/sigstore/cosign/v3/cmd/cosign-lite/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
@@ -27,7 +27,7 @@ func main() {
 	var dir string
 	root := &cobra.Command{
 		Use:          "gendoc",
-		Short:        "Generate cosign-verify's help docs",
+		Short:        "Generate cosign-lite's help docs",
 		SilenceUsage: true,
 		Args:         cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {

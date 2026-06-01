@@ -1,9 +1,9 @@
-## cosign-sign generate-key-pair
+## cosign-lite generate-key-pair
 
 Generate a local password-encrypted key pair
 
 ```
-cosign-sign generate-key-pair [flags]
+cosign-lite generate-key-pair [flags]
 ```
 
 ### Options
@@ -15,5 +15,5 @@ cosign-sign generate-key-pair [flags]
 
 ### SEE ALSO
 
-* [cosign-sign](cosign-sign.md)	 - cosign-sign is a minimal signing utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

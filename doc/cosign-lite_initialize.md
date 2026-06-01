@@ -1,9 +1,9 @@
-## cosign-sign initialize
+## cosign-lite initialize
 
 Initialize TUF roots of trust
 
 ```
-cosign-sign initialize [flags]
+cosign-lite initialize [flags]
 ```
 
 ### Options
@@ -18,5 +18,5 @@ cosign-sign initialize [flags]
 
 ### SEE ALSO
 
-* [cosign-sign](cosign-sign.md)	 - cosign-sign is a minimal signing utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

@@ -75,8 +75,7 @@ jobs:
       - name: Run Go tests
         run: |
           go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
-          go test -C cmd/cosign-sign -covermode atomic -coverprofile coverage-cosign-sign.txt ./...
-          go test -C cmd/cosign-verify -covermode atomic -coverprofile coverage-cosign-verify.txt ./...
+          go test -C cmd/cosign-lite -covermode atomic -coverprofile coverage-cosign-lite.txt ./...
 
       - name: Upload Coverage Report
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
@@ -87,8 +86,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           go test -race $(go list ./... | grep -v third_party/)
-          go test -C cmd/cosign-sign -race ./...
-          go test -C cmd/cosign-verify -race ./...
+          go test -C cmd/cosign-lite -race ./...
 
   e2e-tests:
     name: Run e2e tests

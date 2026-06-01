@@ -141,7 +141,7 @@ func verifyBundle(ctx context.Context, vo VerifyOpts, payloadPath string, isAtte
 				if err != nil {
 					return err
 				}
-				defer closeR()
+				defer func() { _ = closeR() }()
 				policyOpt = sgverify.WithArtifact(r)
 			}
 		default:
@@ -162,7 +162,7 @@ func verifyBundle(ctx context.Context, vo VerifyOpts, payloadPath string, isAtte
 			if err != nil {
 				return err
 			}
-			defer closeR()
+			defer func() { _ = closeR() }()
 			policyOpt = sgverify.WithArtifact(r)
 		}
 	}

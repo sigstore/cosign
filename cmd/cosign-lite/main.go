@@ -15,29 +15,17 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/sigstore/cosign/v3/cmd/cosign-sign/cli"
-	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
+	"github.com/sigstore/cosign/v3/cmd/cosign-lite/cli"
+
+	_ "github.com/sigstore/cosign/v3/pkg/providers/envvar"
+	_ "github.com/sigstore/cosign/v3/pkg/providers/filesystem"
+	_ "github.com/sigstore/cosign/v3/pkg/providers/github"
 )
 
 func main() {
-	var dir string
-	root := &cobra.Command{
-		Use:          "gendoc",
-		Short:        "Generate cosign-sign's help docs",
-		SilenceUsage: true,
-		Args:         cobra.NoArgs,
-		RunE: func(*cobra.Command, []string) error {
-			return doc.GenMarkdownTree(cli.New(), dir)
-		},
-	}
-	root.Flags().StringVarP(&dir, "dir", "d", "doc", "Path to directory in which to generate docs")
-
-	if err := root.Execute(); err != nil {
-		fmt.Println(err)
+	if err := cli.New().Execute(); err != nil {
 		os.Exit(1)
 	}
 }

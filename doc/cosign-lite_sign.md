@@ -1,4 +1,4 @@
-## cosign-sign sign
+## cosign-lite sign
 
 Sign the supplied payload blob and generate a Sigstore bundle
 
@@ -8,20 +8,20 @@ Sign the supplied payload blob using a Sigstore OIDC identity token (keyless flo
 or a local on-disk key pair, and generate a standardized Sigstore verification bundle.
 
 ```
-cosign-sign sign <payload> [flags]
+cosign-lite sign <payload> [flags]
 ```
 
 ### Examples
 
 ```
   # Sign a payload keylessly using OIDC and write the bundle to a file
-  cosign-sign sign --bundle payload.bundle.json payload.txt
+  cosign-lite sign --bundle payload.bundle.json payload.txt
 
   # Sign a payload using a local private key and write the bundle to a file
-  cosign-sign sign --key cosign.key --bundle payload.bundle.json payload.txt
+  cosign-lite sign --key cosign.key --bundle payload.bundle.json payload.txt
 
   # Sign a payload using OIDC without uploading to the transparency log (Rekor)
-  cosign-sign sign --bundle payload.bundle.json --tlog-upload=false payload.txt
+  cosign-lite sign --bundle payload.bundle.json --tlog-upload=false payload.txt
 ```
 
 ### Options
@@ -50,5 +50,5 @@ cosign-sign sign <payload> [flags]
 
 ### SEE ALSO
 
-* [cosign-sign](cosign-sign.md)	 - cosign-sign is a minimal signing utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

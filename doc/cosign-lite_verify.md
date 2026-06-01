@@ -1,24 +1,24 @@
-## cosign-verify verify
+## cosign-lite verify
 
 Verify a plain payload blob against a standardized Sigstore bundle
 
 ### Synopsis
 
-Verify the supplied payload blob against a standardized Sigstore verification bundle 
+Verify the supplied payload blob against a standardized Sigstore verification bundle
 using either a local public key or certificate identities loaded from the bundle.
 
 ```
-cosign-verify verify <payload-file> [flags]
+cosign-lite verify <payload-file> [flags]
 ```
 
 ### Examples
 
 ```
   # Verify a payload using a local public key
-  cosign-verify verify --bundle payload.bundle.json --key cosign.pub payload.txt
+  cosign-lite verify --bundle payload.bundle.json --key cosign.pub payload.txt
 
   # Verify a payload keylessly using an OIDC identity subject and issuer
-  cosign-verify verify --bundle payload.bundle.json \
+  cosign-lite verify --bundle payload.bundle.json \
     --certificate-identity "user@example.com" \
     --certificate-oidc-issuer "https://accounts.google.com" \
     payload.txt
@@ -49,5 +49,5 @@ cosign-verify verify <payload-file> [flags]
 
 ### SEE ALSO
 
-* [cosign-verify](cosign-verify.md)	 - cosign-verify is a minimal verification utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

@@ -1,4 +1,4 @@
-## cosign-sign attest
+## cosign-lite attest
 
 Sign the supplied in-toto statement and generate a Sigstore bundle with a DSSE envelope
 
@@ -8,17 +8,17 @@ Sign a pre-constructed in-toto statement JSON using Sigstore OIDC identity token
 or a local on-disk key pair, wrapping it in a DSSE envelope, and generate a standardized Sigstore verification bundle.
 
 ```
-cosign-sign attest <statement-file> [flags]
+cosign-lite attest <statement-file> [flags]
 ```
 
 ### Examples
 
 ```
   # Sign a statement keylessly using OIDC and write the bundle to a file
-  cosign-sign attest --bundle statement.bundle.json statement.json
+  cosign-lite attest --bundle statement.bundle.json statement.json
 
   # Sign a statement using a local private key and write the bundle to a file
-  cosign-sign attest --key cosign.key --bundle statement.bundle.json statement.json
+  cosign-lite attest --key cosign.key --bundle statement.bundle.json statement.json
 ```
 
 ### Options
@@ -47,5 +47,5 @@ cosign-sign attest <statement-file> [flags]
 
 ### SEE ALSO
 
-* [cosign-sign](cosign-sign.md)	 - cosign-sign is a minimal signing utility for Sigstore
+* [cosign-lite](cosign-lite.md)	 - cosign-lite is a lightweight Sigstore signing and verification utility
 

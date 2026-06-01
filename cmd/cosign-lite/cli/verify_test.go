@@ -83,7 +83,7 @@ func TestParsePayloadDigest(t *testing.T) {
 }
 
 func TestAttestationToPayloadJSON(t *testing.T) {
-	makeMockPayload := func(predicateType string, innerPayload map[string]interface{}) []byte {
+	makeMockPayload := func(predicateType string, _ map[string]interface{}) []byte {
 		statement := map[string]interface{}{
 			"predicateType": predicateType,
 		}
@@ -228,11 +228,11 @@ func TestVerifyCmd(t *testing.T) {
 
 	// 5. Invoke verifyBundle offline with the standard public key!
 	vo := VerifyOpts{
-		KeyRef:      pubKeyPath,
-		BundlePath:  bundlePath,
-		Offline:     true,
-		IgnoreTlog:  true,
-		IgnoreSCT:   true,
+		KeyRef:     pubKeyPath,
+		BundlePath: bundlePath,
+		Offline:    true,
+		IgnoreTlog: true,
+		IgnoreSCT:  true,
 	}
 
 	err = verifyBundle(t.Context(), vo, payloadPath, false)
@@ -289,10 +289,10 @@ func TestVerifyAttestationCmd(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Standard DSSE signing signs the Pre-Authentication Encoding (PAE) bytes using securesystemslib/dsse
 	pae := ssldsse.PAE("application/vnd.in-toto+json", statementBytes)
-	
+
 	hash := sha256.Sum256(pae)
 	sig, err := ecdsa.SignASN1(rand.Reader, privKey, hash[:])
 	if err != nil {
