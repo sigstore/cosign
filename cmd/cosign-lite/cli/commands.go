@@ -15,7 +15,9 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	tufv1 "github.com/sigstore/sigstore/pkg/tuf"
 	"github.com/spf13/cobra"
@@ -34,6 +36,8 @@ func New() *cobra.Command {
 		GenerateKeyPair(),
 		Sign(),
 		Attest(),
+		Verify(),
+		VerifyAttestation(),
 	)
 
 	return rootCmd
@@ -151,6 +155,85 @@ or a local on-disk key pair, wrapping it in a DSSE envelope, and generate a stan
 	}
 
 	o.AddFlags(cmd)
+
+	return cmd
+}
+
+func Verify() *cobra.Command {
+	var vo VerifyOpts
+	var timeout time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "verify",
+		Short: "Verify a signature on the supplied payload blob.",
+		Long: `Verify the supplied payload blob against a standardized Sigstore verification bundle
+using either a local public key or certificate identities loaded from the bundle.`,
+		Example: `  # Verify a payload using a local public key
+  cosign-lite verify --bundle payload.bundle.json --key cosign.pub payload.txt
+
+  # Verify a payload keylessly using an OIDC identity subject and issuer
+  cosign-lite verify --bundle payload.bundle.json \
+    --certificate-identity "user@example.com" \
+    --certificate-oidc-issuer "https://accounts.google.com" \
+    payload.txt`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			payloadPath := args[0]
+
+			if err := vo.Validate(); err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+			ctx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			return verifyBundle(ctx, vo, payloadPath, false)
+		},
+	}
+
+	vo.AddFlags(cmd)
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", 3*time.Minute, "timeout for commands")
+
+	return cmd
+}
+
+func VerifyAttestation() *cobra.Command {
+	var vo VerifyOpts
+	var timeout time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "verify-attestation",
+		Short: "Verify an attestation on the supplied blob.",
+		Long:  "Verify a signed in-toto statement wrapped in a DSSE envelope inside a standard Sigstore bundle.",
+		Example: `  # Verify an attestation and assert it describes a specific payload file
+  cosign-lite verify-attestation --bundle statement.bundle.json --key cosign.pub payload.txt
+
+  # Verify the attestation signature without asserting it describes a specific file
+  cosign-lite verify-attestation --bundle statement.bundle.json --key cosign.pub --check-claims=false`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var payloadPath string
+			if len(args) > 0 {
+				payloadPath = args[0]
+			}
+
+			if err := vo.Validate(); err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+			ctx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			return verifyBundle(ctx, vo, payloadPath, true)
+		},
+	}
+
+	vo.AddFlags(cmd)
+	cmd.Flags().StringVar(&vo.PredicateType, "predicate-type", "custom", "specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI")
+	cmd.Flags().BoolVar(&vo.CheckClaims, "check-claims", true, "if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified.")
+	cmd.Flags().DurationVarP(&timeout, "timeout", "t", 3*time.Minute, "timeout for commands")
 
 	return cmd
 }
