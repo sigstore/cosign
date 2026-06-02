@@ -81,6 +81,9 @@ log-%:
 cosign: $(SRCS)
 	CGO_ENABLED=0 $(GOEXE) build -trimpath -ldflags "$(LDFLAGS)" -o $@ ./cmd/cosign
 
+cosign-lite: $(SRCS)
+	CGO_ENABLED=0 $(GOEXE) build -C cmd/cosign-lite -trimpath -ldflags "$(LDFLAGS)" -o ../../$@ .
+
 cosign-pivkey-pkcs11key: $(SRCS)
 	CGO_ENABLED=1 $(GOEXE) build -trimpath -tags=pivkey,pkcs11key -ldflags "$(LDFLAGS)" -o cosign ./cmd/cosign
 
@@ -114,6 +117,7 @@ test:
 
 clean:
 	rm -rf cosign
+	rm -rf cosign-lite
 	rm -rf dist/
 
 KOCACHE_PATH=/tmp/ko
@@ -154,9 +158,12 @@ conformance-runner-build:
 	cd $(CONFORMANCE_RUNNER_PATH) && $(MAKE) dev
 
 CONFORMANCE_BIN = $(shell pwd)/conformance
-.PHONY: conformance-tests
+.PHONY: conformance-tests conformance-tests-sign
 conformance-tests:
 	cd $(CONFORMANCE_RUNNER_PATH) && env/bin/pytest test --entrypoint=$(CONFORMANCE_BIN)
+
+conformance-tests-sign:
+	cd $(CONFORMANCE_RUNNER_PATH) && COSIGN_SIGN_CONFORMANCE=true env/bin/pytest test --entrypoint=$(CONFORMANCE_BIN)
 
 ##########
 # ko build
@@ -220,3 +227,5 @@ include test/ci.mk
 .PHONY: docgen
 docgen:
 	$(GOEXE) run -tags pivkey,pkcs11key,cgo ./cmd/help/
+	cd cmd/cosign-lite && $(GOEXE) run ./help --dir ../../doc
+
