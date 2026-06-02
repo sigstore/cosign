@@ -52,6 +52,7 @@ const (
 	VariablePKCS11IgnoreCertificate Variable = "COSIGN_PKCS11_IGNORE_CERTIFICATE"
 	VariableRepository              Variable = "COSIGN_REPOSITORY"
 	VariableMaxAttachmentSize       Variable = "COSIGN_MAX_ATTACHMENT_SIZE"
+	VariableCosignLiteConformance   Variable = "COSIGN_LITE_CONFORMANCE"
 
 	// Sigstore environment variables
 	VariableSigstoreCTLogPublicKeyFile Variable = "SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"
@@ -125,7 +126,11 @@ var (
 			Expects:     "human-readable unit of memory, e.g. 5120, 20K, 3M, 45MiB, 1GB",
 			Sensitive:   false,
 		},
-
+		VariableCosignLiteConformance: {
+			Description: "routes conformance calls through cosign-lite",
+			Expects:     "true to route conformance tests through cosign-lite (empty by default)",
+			Sensitive:   false,
+		},
 		VariableSigstoreCTLogPublicKeyFile: {
 			Description: "overrides what is used to validate the SCT coming back from Fulcio",
 			Expects:     "path to the public key file",
