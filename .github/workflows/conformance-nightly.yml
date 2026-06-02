@@ -26,6 +26,9 @@ permissions:
 jobs:
   conformance:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [ production, staging ]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -45,6 +48,7 @@ jobs:
       - uses: sigstore/sigstore-conformance@main
         with:
           entrypoint: ${{ github.workspace }}/conformance
+          environment: ${{ matrix.environment }}
           xfail: "test_verify*PATH-message-digest-mismatch_fail]"
 
       - name: Create Issue on Failure
@@ -55,8 +59,8 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const runId = context.runId;
-            const issueTitle = 'Conformance Tests Failed';
-            const issueBody = `The nightly conformance tests have failed. Please check the logs for more details.\n\nWorkflow run: https://github.com/${owner}/${repo}/actions/runs/${runId}\n\ncc @sigstore/security-response-team @sigstore/cosign-codeowners`;
+            const issueTitle = 'Conformance Tests Failed (${{ matrix.environment }})';
+            const issueBody = `The nightly conformance tests have failed on ${{ matrix.environment }}. Please check the logs for more details.\n\nWorkflow run: https://github.com/${owner}/${repo}/actions/runs/${runId}\n\ncc @sigstore/security-response-team @sigstore/cosign-codeowners`;
             const issueLabel = 'bug';
 
             const existingIssues = await github.rest.issues.listForRepo({

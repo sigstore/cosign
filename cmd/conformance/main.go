@@ -33,22 +33,17 @@ var trustedRootPath *string
 var signingConfigPath *string
 var keyPath *string
 var inToto bool
+var staging bool
 
 func usage() {
 	fmt.Println("Usage:")
-	fmt.Printf("\t%s sign-bundle [--in-toto] --identity-token TOKEN [--signing-config FILE] [--trusted-root FILE] --bundle FILE FILE\n", os.Args[0])
-	fmt.Printf("\t%s verify-bundle --bundle FILE [--certificate-identity IDENTITY --certificate-oidc-issuer URL] [--key FILE] [--trusted-root FILE] FILE\n", os.Args[0])
+	fmt.Printf("\t%s sign-bundle [--staging] [--in-toto] --identity-token TOKEN [--signing-config FILE] [--trusted-root FILE] --bundle FILE FILE\n", os.Args[0])
+	fmt.Printf("\t%s verify-bundle [--staging] --bundle FILE [--certificate-identity IDENTITY --certificate-oidc-issuer URL] [--key FILE] [--trusted-root FILE] FILE\n", os.Args[0])
 }
 
 func parseArgs() {
 	for i := 2; i < len(os.Args); {
 		switch os.Args[i] {
-		// TODO: support staging (see https://github.com/sigstore/cosign/issues/2434)
-		//
-		// Today cosign signing does not yet use sigstore-go, and so we would
-		// need to make some clever invocation of `cosign initialize` to
-		// support staging. Instead it might make sense to wait for cosign
-		// signing to use sigstore-go.
 		case "--bundle":
 			bundlePath = &os.Args[i+1]
 			i += 2
@@ -72,6 +67,9 @@ func parseArgs() {
 			i += 2
 		case "--in-toto":
 			inToto = true
+			i++
+		case "--staging":
+			staging = true
 			i++
 		default:
 			i++
@@ -149,7 +147,11 @@ func main() {
 	args = append(args, os.Args[len(os.Args)-1])
 
 	dir := filepath.Dir(os.Args[0])
-	initCmd := exec.Command(filepath.Join(dir, "cosign"), "initialize") // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
+	initArgs := []string{"initialize"}
+	if staging {
+		initArgs = append(initArgs, "--staging")
+	}
+	initCmd := exec.Command(filepath.Join(dir, "cosign"), initArgs...) // #nosec G204,G702 -- conformance harness invokes the sibling cosign binary
 	initCmd.Stdout = os.Stdout
 	initCmd.Stderr = os.Stderr
 	err := initCmd.Run()
