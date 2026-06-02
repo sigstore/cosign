@@ -70,7 +70,7 @@ cosign verify-blob [flags]
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
+      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
       --use-signed-timestamps                           verify rfc3161 timestamps
 ```
 
