@@ -64,7 +64,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 		"the amount of maximum workers for parallel executions")
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
-		"Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.")
+		"Path to a Sigstore TrustedRoot JSON file")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")

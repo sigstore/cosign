@@ -129,10 +129,10 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
+		"whether to use a TUF-provided signing config for the service URLs")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
-		"path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format")
+		"path to a signing config file")
 
 	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
 

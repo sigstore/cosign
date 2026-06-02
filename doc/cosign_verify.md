@@ -90,7 +90,7 @@ cosign verify [flags]
       --registry-username string                        registry basic auth username
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
-      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
+      --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
       --use-signed-timestamps                           verify rfc3161 timestamps
 ```
 
