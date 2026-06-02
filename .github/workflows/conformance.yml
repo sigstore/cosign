@@ -28,6 +28,9 @@ permissions:
 jobs:
   conformance:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [ production, staging ]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -47,4 +50,5 @@ jobs:
       - uses: sigstore/sigstore-conformance@e2cc8e51870bb9af4e4ae3342e97cf5f7ea2cdd8 # v0.0.28
         with:
           entrypoint: ${{ github.workspace }}/conformance
+          environment: ${{ matrix.environment }}
           xfail: "test_verify*PATH-message-digest-mismatch_fail]"
