@@ -75,24 +75,24 @@ func (c *SignerVerifier) Close() {
 // For an ephemeral key, it also uses the key to fetch an OIDC token, the pair of which are later used to get a Fulcio cert.
 //
 // Ensure the returned SignerVerifier is closed via calling SignerVerifier.Close.
-func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, []byte, string, error) {
+func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, []byte, []byte, string, error) {
 	var keypair sign.Keypair
 	var ephemeralKeypair bool
 	var idToken string
 	var sv *SignerVerifier
-	var certBytes []byte
 	var err error
 
 	sv, ephemeralKeypair, err = signerFromKeyOpts(ctx, cert, certChain, ko)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("getting signer: %w", err)
+		return nil, nil, nil, "", fmt.Errorf("getting signer: %w", err)
 	}
 	keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
 	if err != nil {
 		sv.Close()
-		return nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
+		return nil, nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
 	}
-	certBytes = sv.Cert
+	certBytes := sv.Cert
+	chainBytes := sv.Chain
 
 	if ephemeralKeypair || ko.IssueCertificateForExistingKey {
 		idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
@@ -108,11 +108,11 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 		})
 		if err != nil {
 			sv.Close()
-			return nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
+			return nil, nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
 		}
 	}
 
-	return keypair, certBytes, idToken, nil
+	return keypair, certBytes, chainBytes, idToken, nil
 }
 
 // ShouldUploadToTlog determines whether the user wants to upload the entry to Rekor.
@@ -363,7 +363,7 @@ type CommonBundleOpts struct {
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
 func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, string, pb_go_v1.HashAlgorithm, error) {
-	keypair, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+	keypair, certBytes, chainBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
 		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
 	}
@@ -385,7 +385,7 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
-	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial, signOpts)
+	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
 		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
 	}

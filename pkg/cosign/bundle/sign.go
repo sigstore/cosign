@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -36,7 +37,7 @@ type SignOptions struct {
 	CertificateProvider sign.CertificateProvider
 }
 
-func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, opts SignOptions) ([]byte, error) {
+func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, idToken string, cert []byte, certChain []byte, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial, opts SignOptions) ([]byte, error) {
 	var bundleOpts sign.BundleOptions
 
 	if trustedMaterial != nil {
@@ -60,6 +61,8 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		bundleOpts.CertificateProviderOptions = &sign.CertificateProviderOptions{
 			IDToken: idToken,
 		}
+	case cert != nil && len(certChain) > 0:
+		bundleOpts.CertificateChainProvider = &localCertChainProvider{cert: cert, chain: certChain}
 	case cert != nil:
 		bundleOpts.CertificateProvider = &localCertProvider{cert}
 	default:
@@ -141,7 +144,6 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 	defer spinner.Stop()
 
 	bundle, err := sign.Bundle(content, keypair, bundleOpts)
-
 	if err != nil {
 		return nil, fmt.Errorf("error signing bundle: %w", err)
 	}
@@ -167,6 +169,31 @@ func (c *localCertProvider) GetCertificate(_ context.Context, _ sign.Keypair, _ 
 		return nil, fmt.Errorf("could not decode cert")
 	}
 	return certBlock.Bytes, nil
+}
+
+type localCertChainProvider struct {
+	cert  []byte
+	chain []byte
+}
+
+func (c *localCertChainProvider) GetCertificateChain(_ context.Context, _ sign.Keypair, _ *sign.CertificateProviderOptions) ([][]byte, error) {
+	leafCerts, err := cryptoutils.UnmarshalCertificatesFromPEM(c.cert)
+	if err != nil || len(leafCerts) == 0 {
+		return nil, fmt.Errorf("could not decode leaf certificate")
+	}
+	chainCerts, err := cryptoutils.UnmarshalCertificatesFromPEM(c.chain)
+	if err != nil || len(chainCerts) == 0 {
+		return nil, fmt.Errorf("could not decode certificate chain")
+	}
+
+	leaf := leafCerts[0]
+	derChain := [][]byte{leaf.Raw}
+	for _, cert := range chainCerts {
+		if !cert.Equal(leaf) {
+			derChain = append(derChain, cert.Raw)
+		}
+	}
+	return derChain, nil
 }
 
 type cachingCertProvider struct {
