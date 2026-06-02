@@ -140,14 +140,14 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	case options.CleanTypeSignature:
 		cleanTags = []name.Reference{sigRef}
 		if len(referrerRefs) > 0 {
-			ui.Warnf(ctx, "image has referrers, consider using --referrer")
+			ui.Warnf(ctx, "image has referrers, consider using --type referrer")
 		}
 	case options.CleanTypeSbom:
 		cleanTags = []name.Reference{sbomRef}
 	case options.CleanTypeAttestation:
 		cleanTags = []name.Reference{attRef}
 		if len(referrerRefs) > 0 {
-			ui.Warnf(ctx, "image has referrers, consider using --referrer")
+			ui.Warnf(ctx, "image has referrers, consider using --type referrer")
 		}
 	case options.CleanTypeReferrer:
 		cleanTags = referrerRefs
