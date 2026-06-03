@@ -33,11 +33,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v3/internal/auth"
 	"github.com/sigstore/cosign/v3/internal/key"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -52,8 +50,6 @@ import (
 	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
-	rekorclient "github.com/sigstore/rekor/pkg/generated/client"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -356,71 +352,6 @@ func signerFromNewKey(signingAlgorithm string, defaultLoadOptions *[]signature.L
 	}, nil
 }
 
-// GetRFC3161Timestamp fetches an RFC3161 timestamp as raw bytes and as a RFC3161Timestamp object.
-// It either returns both objects to be assembled into a bundle by the calling function,
-// or writes the formatted timestamp to the provided file path if not using the new bundle format.
-func GetRFC3161Timestamp(payload []byte, ko options.KeyOpts) ([]byte, *cbundle.RFC3161Timestamp, error) {
-	if ko.TSAServerURL == "" {
-		return nil, nil, nil
-	}
-	if ko.RFC3161TimestampPath == "" && !ko.NewBundleFormat {
-		return nil, nil, fmt.Errorf("expected either new bundle or an rfc3161-timestamp path when using a TSA server")
-	}
-	tc := client.NewTSAClient(ko.TSAServerURL)
-	if ko.TSAClientCert != "" {
-		tc = client.NewTSAClientMTLS(
-			ko.TSAServerURL,
-			ko.TSAClientCACert,
-			ko.TSAClientCert,
-			ko.TSAClientKey,
-			ko.TSAServerName,
-		)
-	}
-	timestampBytes, err := tsa.GetTimestampedSignature(payload, tc)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting timestamped signature: %w", err)
-	}
-	rfc3161Timestamp := cbundle.TimestampToRFC3161Timestamp(timestampBytes)
-	if rfc3161Timestamp == nil {
-		return nil, nil, fmt.Errorf("rfc3161 timestamp is nil")
-	}
-	if ko.NewBundleFormat || ko.RFC3161TimestampPath == "" {
-		return timestampBytes, rfc3161Timestamp, nil
-	}
-	ts, err := json.Marshal(rfc3161Timestamp)
-	if err != nil {
-		return nil, nil, fmt.Errorf("marshalling timestamp: %w", err)
-	}
-	if err := os.WriteFile(ko.RFC3161TimestampPath, ts, 0600); err != nil {
-		return nil, nil, fmt.Errorf("creating RFC3161 timestamp file: %w", err)
-	}
-	fmt.Fprintln(os.Stderr, "RFC3161 timestamp written to file ", ko.RFC3161TimestampPath)
-	return timestampBytes, rfc3161Timestamp, nil
-}
-
-type tlogUploadFn func(*rekorclient.Rekor, []byte) (*models.LogEntryAnon, error)
-
-// UploadToTlog uploads an entry to rekor v1 and returns the response from rekor.
-func UploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool, rekorBytes []byte, upload tlogUploadFn) (*models.LogEntryAnon, error) {
-	shouldUpload, err := ShouldUploadToTlog(ctx, ko, ref, tlogUpload)
-	if err != nil {
-		return nil, fmt.Errorf("checking upload to tlog: %w", err)
-	}
-	if !shouldUpload {
-		return nil, nil
-	}
-	rekorClient, err := rekor.NewClient(ko.RekorURL)
-	if err != nil {
-		return nil, fmt.Errorf("creating rekor client: %w", err)
-	}
-	entry, err := upload(rekorClient, rekorBytes)
-	if err != nil {
-		return nil, fmt.Errorf("uploading to rekor: %w", err)
-	}
-	fmt.Fprintln(os.Stderr, "tlog entry created with index:", *entry.LogIndex)
-	return entry, nil
-}
-
 type CommonBundleOpts struct {
 	Payload       []byte
 	Digest        name.Digest
@@ -428,28 +359,6 @@ type CommonBundleOpts struct {
 	BundlePath    string
 	Upload        bool
 	OCIRemoteOpts []ociremote.Option
-}
-
-// WriteBundle compiles a protobuf bundle from components and writes the bundle to the OCI remote layer.
-func WriteBundle(ctx context.Context, sv *SignerVerifier, rekorEntry *models.LogEntryAnon, bundleOpts CommonBundleOpts, signedPayload, signerBytes, timestampBytes []byte) error {
-	pubKey, err := sv.PublicKey()
-	if err != nil {
-		return err
-	}
-	bundleBytes, err := cbundle.MakeNewBundle(pubKey, rekorEntry, bundleOpts.Payload, signedPayload, signerBytes, timestampBytes)
-	if err != nil {
-		return err
-	}
-	if bundleOpts.BundlePath != "" {
-		if err := os.WriteFile(bundleOpts.BundlePath, bundleBytes, 0600); err != nil {
-			return fmt.Errorf("creating bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", bundleOpts.BundlePath)
-	}
-	if !bundleOpts.Upload {
-		return nil
-	}
-	return ociremote.WriteAttestationNewBundleFormat(bundleOpts.Digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...)
 }
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
