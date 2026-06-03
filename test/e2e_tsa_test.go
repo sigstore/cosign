@@ -405,6 +405,7 @@ func setUpTSAServerWithTLS(t *testing.T, td, timestampCACert, timestampServerKey
 	viper.Set("timestamp-signer", "memory")
 	viper.Set("timestamp-signer-hash", "sha256")
 	viper.Set("disable-ntp-monitoring", true)
+	viper.Set("default-policy-oid", "1.3.6.1.4.1.57264.2")
 	viper.Set("tls-host", "0.0.0.0")
 	viper.Set("tls-port", 3000)
 	viper.Set("tls-ca", timestampCACert)
