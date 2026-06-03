@@ -62,10 +62,11 @@ import (
 )
 
 const (
-	rekorURL  = "http://127.0.0.1:3000"
-	fulcioURL = "http://127.0.0.1:5555"
-	tsaURL    = "http://127.0.0.1:3004"
-	certID    = "foo@bar.com"
+	rekorURL   = "http://127.0.0.1:3000"
+	rekorV2URL = "http://127.0.0.1:3003"
+	fulcioURL  = "http://127.0.0.1:5555"
+	tsaURL     = "http://127.0.0.1:3004"
+	certID     = "foo@bar.com"
 )
 
 var keyPass = []byte("hello")
