@@ -1288,9 +1288,7 @@ func TestSignRekorV2NoTSA(t *testing.T) {
 
 // TestSignAttestVerifyRekorV2 exercises the full sign/attest/verify path
 // against rekor-tiles (Rekor v2). It asserts that both signatures and DSSE
-// attestations land as hashedrekord/0.0.2 tlog entries — which is what
-// sigstore-go v1.2.0+ produces on Rekor v2 (DSSE envelopes are encoded as
-// hashedrekord rather than the dsse type used on v1).
+// attestations land as hashedrekord/0.0.2 tlog entries.
 func TestSignAttestVerifyRekorV2(t *testing.T) {
 	scaffoldingTR := os.Getenv("TRUSTED_ROOT")
 	if scaffoldingTR == "" {
@@ -1368,9 +1366,9 @@ func TestSignAttestVerifyRekorV2(t *testing.T) {
 	}, []string{imgName}), t)
 	assertRekorV2HashedrekordEntry(t, signBundlePath)
 
-	// Attest — capture the bundle and assert the same. This is the
-	// behavior change introduced by sigstore-go v1.2.0: DSSE attestations
-	// encoded as hashedrekord on Rekor v2.
+	// Attest — capture the bundle and assert the same. A DSSE attestation
+	// landing as hashedrekord (rather than a dedicated dsse entry) is the
+	// behavior this test most needs to pin down on Rekor v2.
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
 	must(os.WriteFile(predicatePath, []byte(predicate), 0o644), t)
