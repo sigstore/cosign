@@ -82,12 +82,14 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
+	"google.golang.org/protobuf/encoding/protojson"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
@@ -1215,7 +1217,7 @@ func TestSignRekorV2NoTSA(t *testing.T) {
 	// Create signing config with Rekor v2 and no TSA
 	startTime := "2024-01-01T00:00:00Z"
 	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
-	rekorSpec := fmt.Sprintf("url=%s,api-version=2,operator=rekor-op,start-time=%s", rekorURL, startTime)
+	rekorSpec := fmt.Sprintf("url=%s,api-version=2,operator=rekor-op,start-time=%s", rekorV2URL, startTime)
 
 	downloadDirectory := t.TempDir()
 	signingConfigPath := filepath.Join(downloadDirectory, "signing_config.v0.2.json")
@@ -1281,6 +1283,153 @@ func TestSignRekorV2NoTSA(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "timestamp authority must be provided") {
 		t.Fatalf("expected error about timestamp authority, got: %v", err)
+	}
+}
+
+// TestSignAttestVerifyRekorV2 exercises the full sign/attest/verify path
+// against rekor-tiles (Rekor v2). It asserts that both signatures and DSSE
+// attestations land as hashedrekord/0.0.2 tlog entries.
+func TestSignAttestVerifyRekorV2(t *testing.T) {
+	scaffoldingTR := os.Getenv("TRUSTED_ROOT")
+	if scaffoldingTR == "" {
+		t.Skip("TRUSTED_ROOT env var not set; this test requires the scaffolding e2e env")
+	}
+
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	defer tufServer.Close()
+	mirror := tufServer.URL
+
+	// Build a signing config pointing exclusively at Rekor v2 + TSA.
+	// Rekor v2 mandates a TSA, so this is the minimal viable shape.
+	startTime := "2024-01-01T00:00:00Z"
+	fulcioSpec := fmt.Sprintf("url=%s,api-version=1,operator=fulcio-op,start-time=%s", fulcioURL, startTime)
+	rekorSpec := fmt.Sprintf("url=%s,api-version=2,operator=rekor-op,start-time=%s", rekorV2URL, startTime)
+	tsaSpec := fmt.Sprintf("url=%s/api/v1/timestamp,api-version=1,operator=tsa-op,start-time=%s", tsaURL, startTime)
+
+	signingConfigPath := filepath.Join(t.TempDir(), "signing_config.v0.2.json")
+	must((&signingconfig.CreateCmd{
+		FulcioSpecs: []string{fulcioSpec},
+		RekorSpecs:  []string{rekorSpec},
+		TSASpecs:    []string{tsaSpec},
+		RekorConfig: "EXACT:1",
+		TSAConfig:   "EXACT:1",
+		Out:         signingConfigPath,
+	}).Exec(context.TODO()), t)
+
+	// Use the scaffolding-provided trusted root (it already includes the
+	// rekor-tiles ed25519 key); pair it with our v2-only signing config.
+	_, err := newTUF(tufMirror, []targetInfo{
+		{name: "trusted_root.json", source: scaffoldingTR},
+		{name: "signing_config.v0.2.json", source: signingConfigPath},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	identityToken, err := getOIDCToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo, stop := reg(t)
+	defer stop()
+	imgName := path.Join(repo, "cosign-e2e-rekor-v2")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+
+	// Sign — capture the bundle and assert the tlog entry kind/version.
+	signBundlePath := filepath.Join(t.TempDir(), "sign.bundle")
+	ko := options.KeyOpts{
+		IDToken:          identityToken,
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+		TrustedMaterial:  trustedMaterial,
+		SigningConfig:    signingConfig,
+	}
+	must(sign.SignCmd(ctx, ro, ko, options.SignOptions{
+		Upload:          true,
+		NewBundleFormat: true,
+		TlogUpload:      true,
+		BundlePath:      signBundlePath,
+	}, []string{imgName}), t)
+	assertRekorV2HashedrekordEntry(t, signBundlePath)
+
+	// Attest — capture the bundle and assert the same. A DSSE attestation
+	// landing as hashedrekord (rather than a dedicated dsse entry) is the
+	// behavior this test most needs to pin down on Rekor v2.
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
+	must(os.WriteFile(predicatePath, []byte(predicate), 0o644), t)
+
+	ko.BundlePath = filepath.Join(t.TempDir(), "att.bundle")
+	must((&attest.AttestCommand{
+		KeyOpts:        ko,
+		PredicatePath:  predicatePath,
+		PredicateType:  "slsaprovenance",
+		Timeout:        30 * time.Second,
+		RekorEntryType: "dsse",
+		TlogUpload:     true,
+	}).Exec(ctx, imgName), t)
+	assertRekorV2HashedrekordEntry(t, ko.BundlePath)
+
+	// Verify image signature.
+	must((&cliverify.VerifyCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+		NewBundleFormat:     true,
+		UseSignedTimestamps: true,
+	}).Exec(ctx, []string{imgName}), t)
+
+	// Verify attestation.
+	must((&cliverify.VerifyAttestationCommand{
+		CertVerifyOptions: options.CertVerifyOptions{
+			CertOidcIssuer: os.Getenv("ISSUER_URL"),
+			CertIdentity:   certID,
+		},
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
+		PredicateType:       "slsaprovenance",
+		UseSignedTimestamps: true,
+		CheckClaims:         true,
+	}).Exec(ctx, []string{imgName}), t)
+}
+
+// assertRekorV2HashedrekordEntry asserts that every tlog entry in a written
+// bundle file is hashedrekord at version 0.0.2 — what Rekor v2 produces.
+func assertRekorV2HashedrekordEntry(t *testing.T, bundlePath string) {
+	t.Helper()
+	raw, err := os.ReadFile(bundlePath)
+	must(err, t)
+	var pb protobundle.Bundle
+	must(protojson.Unmarshal(raw, &pb), t)
+	entries := pb.GetVerificationMaterial().GetTlogEntries()
+	if len(entries) == 0 {
+		t.Fatalf("bundle %s has no tlog entries", bundlePath)
+	}
+	for i, entry := range entries {
+		kv := entry.GetKindVersion()
+		if kv == nil {
+			t.Fatalf("bundle %s tlog entry %d missing KindVersion", bundlePath, i)
+		}
+		if kv.Kind != "hashedrekord" || kv.Version != "0.0.2" {
+			t.Errorf("bundle %s tlog entry %d: want hashedrekord/0.0.2, got %s/%s",
+				bundlePath, i, kv.Kind, kv.Version)
+		}
 	}
 }
 
