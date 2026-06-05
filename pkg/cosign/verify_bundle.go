@@ -23,10 +23,15 @@ import (
 
 // VerifyNewBundle verifies a Sigstore bundle with the given parameters
 func VerifyNewBundle(_ context.Context, co *CheckOpts, artifactPolicyOption verify.ArtifactPolicyOption, bundle verify.SignedEntity) (*verify.VerificationResult, error) {
-	if err := rekorV2Bundle(bundle, co); err != nil {
+	// Copy co so rekorV2Bundle's UseSignedTimestamps write stays per-call and
+	// doesn't race a *CheckOpts shared across goroutines.
+	// TODO(cody)(cosign v4): Consider changing function signature to take a
+	// non-pointer CheckOpts and avoid this copy.
+	coCopy := *co
+	if err := rekorV2Bundle(bundle, &coCopy); err != nil {
 		return nil, err
 	}
-	trustedMaterial, verifierOptions, policyOptions, err := co.verificationOptions()
+	trustedMaterial, verifierOptions, policyOptions, err := coCopy.verificationOptions()
 	if err != nil {
 		return nil, err
 	}

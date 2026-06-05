@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -453,6 +454,67 @@ func makeTlogEntry(t *testing.T, integratedTime int64) *tlog.Entry {
 		t.Fatal(err)
 	}
 	return entry
+}
+
+// rekorV2Entity wraps a real SignedEntity but reports caller-supplied tlog
+// entries, letting a test force the Rekor v2 code path (an entry with no
+// integrated time) that makes rekorV2Bundle write co.UseSignedTimestamps.
+type rekorV2Entity struct {
+	verify.SignedEntity
+	entries []*tlog.Entry
+}
+
+func (e *rekorV2Entity) TlogEntries() ([]*tlog.Entry, error) {
+	return e.entries, nil
+}
+
+// TestVerifyNewBundleConcurrentNoDataRace guards against the data race where the
+// attestation verification fan-out shares one *CheckOpts across goroutines:
+// VerifyNewBundle -> rekorV2Bundle writes co.UseSignedTimestamps for a Rekor v2
+// bundle while sibling goroutines read it in co.verificationOptions(). Run with
+// -race; without VerifyNewBundle copying co, the detector fires.
+func TestVerifyNewBundleConcurrentNoDataRace(t *testing.T) {
+	virtualSigstore, err := ca.NewVirtualSigstore()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	artifact := []byte("artifact")
+	digest := sha256.Sum256(artifact)
+	digestHex := hex.EncodeToString(digest[:])
+	statement := []byte(fmt.Sprintf(`{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://example.com/predicateType","subject":[{"name":"subject","digest":{"sha256":"%s"}}],"predicate":{}}`, digestHex))
+	attestation, err := virtualSigstore.Attest("foo@example.com", "example issuer", statement)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Report a single Rekor v2 entry (zero integrated time, no v1 entry) so
+	// rekorV2Bundle sets co.UseSignedTimestamps during verification.
+	bundle := &rekorV2Entity{SignedEntity: attestation, entries: []*tlog.Entry{makeTlogEntry(t, 0)}}
+
+	// One *CheckOpts shared across goroutines, exactly as verifyImageAttestationsSigstoreBundle shares it.
+	co := &CheckOpts{
+		Identities:      []Identity{{Issuer: "example issuer", Subject: "foo@example.com"}},
+		IgnoreSCT:       true,
+		TrustedMaterial: virtualSigstore,
+	}
+	artifactPolicyOption := verify.WithArtifact(bytes.NewReader(artifact))
+
+	const goroutines = 50
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			<-start // release all goroutines together to widen the race window
+			// Verification against the synthetic tlog entry is expected to fail;
+			// the test only asserts the concurrent calls don't race on co.
+			_, _ = VerifyNewBundle(context.Background(), co, artifactPolicyOption, bundle)
+		}()
+	}
+	close(start)
+	wg.Wait()
 }
 
 func TestRekorV2Bundle(t *testing.T) {
