@@ -47,8 +47,7 @@ jobs:
 
       - run: make cosign conformance
 
-      - uses: sigstore/sigstore-conformance@e2cc8e51870bb9af4e4ae3342e97cf5f7ea2cdd8 # v0.0.28
+      - uses: sigstore/sigstore-conformance@21533cde107c734ebc153c3e3a24d75fc9811a36 # v0.0.29
         with:
           entrypoint: ${{ github.workspace }}/conformance
           environment: ${{ matrix.environment }}
-          xfail: "test_verify*PATH-message-digest-mismatch_fail]"

@@ -436,7 +436,19 @@ func (m *mockVerifierForBundle) VerifySignature(_, _ io.Reader, _ ...signature.V
 }
 
 func makeTlogEntry(t *testing.T, integratedTime int64) *tlog.Entry {
-	body := []byte(`{}`)
+	body := []byte(`{
+		"kind": "hashedrekord",
+		"apiVersion": "0.0.1",
+		"spec": {
+			"signature": {
+				"content": "MEQCIFrwIdVX8n5RM+Fy9fgCmaBc20jmksfL0XL08y1zx3XpAiB95HkXz37kTUzdykwuNStwCc5B9NKHtioD+3GYMuWU/w==",
+				"publicKey": {"content": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFNHlQQ080MStjeGxEdENBUndTNDNvQU1YVWs3NApyWGZ5eGhKSldJZ05KbTUyTlppZllHaDNnYzNaakJVOVJhRXJLb0NidGVxdW1IWU9CSnN6RmNIUGFBPT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="}
+			},
+			"data": {
+				"hash": {"algorithm": "sha256", "value": "0c0f699f002f4de2ab43b04a0c930ceb57be35d2c81b31648d88b021713e9477"}
+			}
+		}
+	}`)
 	tle := &v1.TransparencyLogEntry{
 		LogIndex: 1,
 		LogId: &protocommon.LogId{

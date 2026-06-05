@@ -76,6 +76,7 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer layer0.Close()
 	bundleBytes, err := io.ReadAll(layer0)
 	if err != nil {
 		return nil, err
