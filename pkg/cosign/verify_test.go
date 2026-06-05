@@ -53,7 +53,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/rekor/mock"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
@@ -763,9 +762,6 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating verifier: %v", err)
 	}
-	payloadSigner := payload.NewSigner(sv)
-	testSigner := tsa.NewSigner(payloadSigner, client)
-
 	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
@@ -777,9 +773,21 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	}
 
 	payload := []byte{1, 2, 3, 4}
-	sig, _, err := testSigner.Sign(context.Background(), bytes.NewReader(payload))
+	sigBytes, err := sv.SignMessage(bytes.NewReader(payload))
 	if err != nil {
-		t.Fatalf("error signing the payload with the tsa client server: %v", err)
+		t.Fatalf("error signing the payload: %v", err)
+	}
+
+	client.Message = sigBytes
+	timestampResponse, err := client.GetTimestampResponse(nil)
+	if err != nil {
+		t.Fatalf("error getting timestamp response: %v", err)
+	}
+
+	b64sig := base64.StdEncoding.EncodeToString(sigBytes)
+	sig, err := static.NewSignature(payload, b64sig, static.WithRFC3161Timestamp(bundle.TimestampToRFC3161Timestamp(timestampResponse)))
+	if err != nil {
+		t.Fatalf("error creating oci signature: %v", err)
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier:                 sv,
@@ -809,9 +817,6 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating verifier: %v", err)
 	}
-	payloadSigner := payload.NewSigner(sv)
-	tsaSigner := tsa.NewSigner(payloadSigner, client)
-
 	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
@@ -823,9 +828,21 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	}
 
 	payload := []byte{1, 2, 3, 4}
-	sig, _, err := tsaSigner.Sign(context.Background(), bytes.NewReader(payload))
+	sigBytes, err := sv.SignMessage(bytes.NewReader(payload))
 	if err != nil {
-		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
+		t.Fatalf("error signing the payload: %v", err)
+	}
+
+	client.Message = sigBytes
+	timestampResponse, err := client.GetTimestampResponse(nil)
+	if err != nil {
+		t.Fatalf("error getting timestamp response: %v", err)
+	}
+
+	b64sig := base64.StdEncoding.EncodeToString(sigBytes)
+	sig, err := static.NewSignature(payload, b64sig, static.WithRFC3161Timestamp(bundle.TimestampToRFC3161Timestamp(timestampResponse)))
+	if err != nil {
+		t.Fatalf("error creating oci signature: %v", err)
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier:                 sv,
