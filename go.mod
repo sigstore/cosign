@@ -294,3 +294,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/sigstore/sigstore-go => github.com/yangkenneth/sigstore-go v0.0.0-20260603051341-948bf6af8ad7
