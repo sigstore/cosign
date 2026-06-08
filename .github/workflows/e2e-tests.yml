@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -100,7 +100,7 @@ jobs:
       SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -116,7 +116,7 @@ jobs:
           check-latest: true
           cache: false
 
-      - uses: imjasonh/setup-crane@6da1ae018866400525525ce74ff892880c099987 # v0.5
+      - uses: imjasonh/setup-crane@59c71e96a00b28651f10369ba3359a6d730740a0 # v0.6
 
       - name: Install cluster + sigstore
         uses: sigstore/scaffolding/actions/setup@main
@@ -136,7 +136,7 @@ jobs:
       SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
 
@@ -150,7 +150,7 @@ jobs:
         cache: false
 
     - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@c69a264ec2a5934c3186c618f368fc1c86f16cff # v1.6.19
+      uses: chainguard-dev/actions/setup-mirror@3b7bbeebc3a5d2bc37aa008350202651c32a26e1 # v1.6.22
       with:
         mirror: mirror.gcr.io
 
@@ -258,4 +258,4 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@c69a264ec2a5934c3186c618f368fc1c86f16cff # v1.6.19
+      uses: chainguard-dev/actions/kind-diag@3b7bbeebc3a5d2bc37aa008350202651c32a26e1 # v1.6.22
