@@ -692,8 +692,8 @@ github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gt
 github.com/thales-e-security/pool v0.0.2/go.mod h1:qtpMm2+thHtqhLzTwgDBj/OuNnMpupY8mv0Phz0gjhU=
 github.com/theupdateframework/go-tuf v0.7.0 h1:CqbQFrWo1ae3/I0UCblSbczevCCbS31Qvs5LdxRWqRI=
 github.com/theupdateframework/go-tuf v0.7.0/go.mod h1:uEB7WSY+7ZIugK6R1hiBMBjQftaFzn7ZCDJcp1tCUug=
-github.com/theupdateframework/go-tuf/v2 v2.4.2-0.20260407074541-7e8f69f906ef h1:jJac5InhEfD0Z46/d5RayZjoavf/se7bPZpOgg8GLrM=
-github.com/theupdateframework/go-tuf/v2 v2.4.2-0.20260407074541-7e8f69f906ef/go.mod h1:cLUSJ2cgR194lNWfp+TJT4P8PX7qGleCXdudqlCMtOE=
+github.com/theupdateframework/go-tuf/v2 v2.4.2 h1:w7976/W8uTwlsegP5nRymlpjPgrwSh+AXUf85is6nJk=
+github.com/theupdateframework/go-tuf/v2 v2.4.2/go.mod h1:JqBrIUnNLAaNq/8GmBcEMFWfAFBbqp/MkJEJseXKbks=
 github.com/tink-crypto/tink-go-awskms/v3 v3.0.0 h1:XSohRhCkXAVI0iaCnWB/GS05TEmpnKurQmzaY1jzt3Y=
 github.com/tink-crypto/tink-go-awskms/v3 v3.0.0/go.mod h1:+7MXsShLzVbSQ6dI0Pe4JuZM52jD1jQ1itAygd/MDsA=
 github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0 h1:3B9i6XBXNTRspfkTC0asN5W0K6GhOSgcujNiECNRNb0=
