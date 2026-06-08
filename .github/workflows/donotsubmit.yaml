@@ -35,9 +35,9 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v2.4.0
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v2.4.0
         with:
           persist-credentials: false
 
       - name: Do Not Submit
-        uses: chainguard-dev/actions/donotsubmit@c69a264ec2a5934c3186c618f368fc1c86f16cff # v1.6.19
+        uses: chainguard-dev/actions/donotsubmit@3b7bbeebc3a5d2bc37aa008350202651c32a26e1 # v1.6.22
