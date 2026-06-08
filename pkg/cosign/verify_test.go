@@ -55,7 +55,6 @@ import (
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/rekor/mock"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -768,7 +767,7 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -823,7 +822,7 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -1774,7 +1773,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -1982,7 +1981,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
