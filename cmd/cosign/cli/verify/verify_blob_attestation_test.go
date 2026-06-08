@@ -30,6 +30,7 @@ import (
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -37,7 +38,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 )
 
 const pubkey = `-----BEGIN PUBLIC KEY-----
@@ -496,9 +496,15 @@ func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
 }
 
 func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) string {
-	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
-	if err != nil {
-		t.Fatal(err)
+	b := &protobundle.Bundle{
+		MediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_PublicKey{
+				PublicKey: &protocommon.PublicKeyIdentifier{
+					Hint: "hint",
+				},
+			},
+		},
 	}
 
 	decodedPayload, err := base64.StdEncoding.DecodeString(payload)
