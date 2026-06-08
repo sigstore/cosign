@@ -22,8 +22,6 @@ import (
 	"github.com/sigstore/rekor/pkg/tle"
 )
 
-const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
-
 func MakeProtobufBundle(hint string, rawCert []byte, rekorEntry *models.LogEntryAnon, timestampBytes []byte) (*protobundle.Bundle, error) {
 	bundle := &protobundle.Bundle{MediaType: BundleV03MediaType}
 
