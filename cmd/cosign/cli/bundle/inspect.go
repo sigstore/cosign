@@ -177,16 +177,6 @@ func (c *InspectCmd) Exec() error {
 	return nil
 }
 
-type pkiStatusInfo struct {
-	Status int
-	Rest   []asn1.RawValue `asn1:"optional"`
-}
-
-type timeStampResp struct {
-	Status         pkiStatusInfo
-	TimeStampToken asn1.RawValue `asn1:"optional"`
-}
-
 type node struct {
 	Label    string
 	Value    string
@@ -537,15 +527,12 @@ func populateTimestampSummary(n *node, tsData *protobundle.TimestampVerification
 	for i, ts := range tsData.GetRfc3161Timestamps() {
 		singleTsNode := n.addChild(fmt.Sprintf("Timestamp [%d]", i), "")
 
-		var resp timeStampResp
-		if _, err := asn1.Unmarshal(ts.SignedTimestamp, &resp); err == nil {
-			if parsedTs, err := timestamp.Parse(resp.TimeStampToken.FullBytes); err == nil {
-				singleTsNode.addChild("Time", parsedTs.Time.Format(time.RFC3339))
-				singleTsNode.addChild("Hash Algorithm", parsedTs.HashAlgorithm.String())
-				singleTsNode.addChild("Message Imprint", fmt.Sprintf("Present (%d bytes)", len(parsedTs.HashedMessage)))
-				singleTsNode.addChild("Serial Number", fmt.Sprintf("%s", parsedTs.SerialNumber))
-				singleTsNode.addChild("Policy", parsedTs.Policy.String())
-			}
+		if parsedTs, err := timestamp.ParseResponse(ts.SignedTimestamp); err == nil {
+			singleTsNode.addChild("Time", parsedTs.Time.Format(time.RFC3339))
+			singleTsNode.addChild("Hash Algorithm", parsedTs.HashAlgorithm.String())
+			singleTsNode.addChild("Message Imprint", fmt.Sprintf("Present (%d bytes)", len(parsedTs.HashedMessage)))
+			singleTsNode.addChild("Serial Number", fmt.Sprintf("%s", parsedTs.SerialNumber))
+			singleTsNode.addChild("Policy", parsedTs.Policy.String())
 		}
 	}
 }
