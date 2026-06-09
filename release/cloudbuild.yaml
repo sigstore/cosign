@@ -42,7 +42,7 @@ steps:
       - '--certificate-oidc-issuer'
       - "https://token.actions.githubusercontent.com"
       - '--certificate-identity'
-      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.25.7-0"
+      - "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.26.3-0"
   # maybe we can build our own image and use that to be more in a safe side
   - name: ghcr.io/gythialy/golang-cross:v1.26.3-0@sha256:9f7a53d7205e2f1f2742d624ff0b6e1531e8c22863dfb24ca966be5efbdee48b
     entrypoint: /bin/sh
