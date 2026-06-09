@@ -122,7 +122,7 @@ type InspectCmd struct {
 
 func (c *InspectCmd) Exec() error {
 	fmt.Fprintln(os.Stderr, "WARNING: This command only inspects the contents of the bundle.")
-	fmt.Fprintln(os.Stderr, "It does not perform cryptographic verification or check against the transparency log.")
+	fmt.Fprintln(os.Stderr, "It does not perform cryptographic verification or verify log inclusion.")
 	fmt.Fprintln(os.Stderr, "")
 
 	tr, err := cosign.TrustedRoot()
