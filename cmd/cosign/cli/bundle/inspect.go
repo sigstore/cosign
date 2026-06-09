@@ -127,7 +127,7 @@ func (c *InspectCmd) Exec() error {
 
 	tr, err := cosign.TrustedRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "WARNING: Could not initialize trusted root: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Local TUF environment not initialized, some details will be omitted: %v\n", err)
 	}
 
 	f, err := os.Open(c.BundlePath)
