@@ -142,9 +142,8 @@ func (c *InspectCmd) Exec() error {
 	}
 
 	var b protobundle.Bundle
-	err = protojson.Unmarshal(data, &b)
-	if err != nil {
-		return fmt.Errorf("unmarshaling bundle JSON: %w", err)
+	if err := protojson.Unmarshal(data, &b); err != nil {
+		return fmt.Errorf("unmarshaling bundle: %w", err)
 	}
 
 	rootNode := &node{}
