@@ -32,7 +32,14 @@ func Env() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
 		Short: "Prints Cosign environment variables",
-		Args:  cobra.NoArgs,
+		Example: `  cosign env
+
+  # show environment variables with descriptions
+  cosign env --show-descriptions
+
+  # show environment variables including sensitive values
+  cosign env --show-descriptions --show-sensitive-values`,
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			envVars := env.EnvironmentVariables()
 			printEnv(envVars, getEnv(), getEnviron(), o.ShowDescriptions, o.ShowSensitiveValues)
