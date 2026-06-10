@@ -49,7 +49,6 @@ jobs:
         with:
           entrypoint: ${{ github.workspace }}/conformance
           environment: ${{ matrix.environment }}
-          xfail: "test_verify*PATH-message-digest-mismatch_fail]"
 
       - name: Create Issue on Failure
         if: failure()
