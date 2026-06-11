@@ -1,6 +1,6 @@
 ## cosign save
 
-Save the container image and associated signatures to disk at the specified directory.
+Save the container image and associated signatures to disk at the specified directory
 
 ### Synopsis
 
@@ -43,5 +43,5 @@ cosign save [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

@@ -1,6 +1,6 @@
 ## cosign attest-blob
 
-Attest the supplied blob.
+Attest the supplied blob
 
 ```
 cosign attest-blob [flags]
@@ -72,5 +72,5 @@ cosign attest-blob [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

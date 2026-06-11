@@ -35,7 +35,7 @@ func SignBlob() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "sign-blob",
-		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout.",
+		Short: "Sign the supplied blob, outputting the base64-encoded signature to stdout",
 		Example: `  cosign sign-blob --key <key path>|<kms uri> <blob>
 
   # sign a blob with a local key pair file

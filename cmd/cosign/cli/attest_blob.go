@@ -29,7 +29,7 @@ func AttestBlob() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "attest-blob",
-		Short: "Attest the supplied blob.",
+		Short: "Attest the supplied blob",
 		Example: `  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
 
   # attach an attestation to a blob with a local key pair file and print the attestation
