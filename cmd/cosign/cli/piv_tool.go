@@ -56,7 +56,15 @@ func pivToolSetManagementKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "set-management-key",
-		Short:            "sets the management key of a hardware token",
+		Short:            "Set the management key of a hardware token",
+		Example: `  # set a new management key interactively (uses defaults if flags omitted)
+  cosign piv-tool set-management-key
+
+  # set a random management key
+  cosign piv-tool set-management-key --random-management-key
+
+  # set a specific new management key
+  cosign piv-tool set-management-key --old-key <old-key> --new-key <new-key>`,
 		Args:             cobra.ExactArgs(0),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,7 +82,12 @@ func pivToolSetPIN() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "set-pin",
-		Short:            "sets the PIN on a hardware token",
+		Short:            "Set the PIN on a hardware token",
+		Example: `  # set a new PIN interactively (uses defaults if flags omitted)
+  cosign piv-tool set-pin
+
+  # set a specific PIN
+  cosign piv-tool set-pin --old-pin <old-pin> --new-pin <new-pin>`,
 		Args:             cobra.ExactArgs(0),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -92,7 +105,12 @@ func pivToolSetPUK() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "set-puk",
-		Short: "sets the PUK on a hardware token",
+		Short: "Set the PUK on a hardware token",
+		Example: `  # set a new PUK interactively (uses defaults if flags omitted)
+  cosign piv-tool set-puk
+
+  # set a specific PUK
+  cosign piv-tool set-puk --old-puk <old-puk> --new-puk <new-puk>`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.SetPukCmd(cmd.Context(), o.OldPUK, o.NewPUK)
@@ -109,7 +127,9 @@ func pivToolUnblock() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "unblock",
-		Short: "unblocks the hardware token, sets a new PIN",
+		Short: "Unblock a hardware token and set a new PIN",
+		Example: `  # unblock the token using the PUK and set a new PIN
+  cosign piv-tool unblock --puk <puk> --new-PIN <new-pin>`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.UnblockCmd(cmd.Context(), o.PUK, o.NewPIN)
@@ -126,7 +146,12 @@ func pivToolAttestation() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "attestation",
-		Short: "attestation contains commands to manage a hardware token",
+		Short: "Manage hardware token attestations",
+		Example: `  # print attestation information as text
+  cosign piv-tool attestation --slot 9c
+
+  # print attestation information as JSON
+  cosign piv-tool attestation --slot 9c --output json`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a, err := pivcli.AttestationCmd(cmd.Context(), o.Slot)
@@ -154,7 +179,12 @@ func pivToolGenerateKey() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "generate-key",
-		Short: "generate-key generates a new signing key on the hardware token",
+		Short: "Generate a new signing key on the hardware token",
+		Example: `  # generate a key with default settings (slot 9c, always-touch policy)
+  cosign piv-tool generate-key
+
+  # generate a key in a specific slot with custom PIN and touch policies
+  cosign piv-tool generate-key --slot 9c --pin-policy once --touch-policy always`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.GenerateKeyCmd(cmd.Context(), o.ManagementKey, o.RandomKey,
@@ -170,7 +200,8 @@ func pivToolGenerateKey() *cobra.Command {
 func pivToolResetKey() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reset",
-		Short: "reset resets the hardware token completely",
+		Short: "Reset the hardware token completely",
+		Example: `  cosign piv-tool reset`,
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pivcli.ResetKeyCmd(cmd.Context())

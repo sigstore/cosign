@@ -1,9 +1,16 @@
 ## cosign piv-tool unblock
 
-unblocks the hardware token, sets a new PIN
+Unblock a hardware token and set a new PIN
 
 ```
 cosign piv-tool unblock [flags]
+```
+
+### Examples
+
+```
+  # unblock the token using the PUK and set a new PIN
+  cosign piv-tool unblock --puk <puk> --new-PIN <new-pin>
 ```
 
 ### Options

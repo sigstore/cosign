@@ -1,9 +1,19 @@
 ## cosign piv-tool set-pin
 
-sets the PIN on a hardware token
+Set the PIN on a hardware token
 
 ```
 cosign piv-tool set-pin [flags]
+```
+
+### Examples
+
+```
+  # set a new PIN interactively (uses defaults if flags omitted)
+  cosign piv-tool set-pin
+
+  # set a specific PIN
+  cosign piv-tool set-pin --old-pin <old-pin> --new-pin <new-pin>
 ```
 
 ### Options
