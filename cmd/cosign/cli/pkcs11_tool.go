@@ -49,8 +49,10 @@ func pkcs11ToolListTokens() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list-tokens",
-		Short: "list-tokens lists all PKCS11 tokens linked to a PKCS11 module",
-		Args:  cobra.ExactArgs(0),
+		Short: "List all PKCS11 tokens linked to a module",
+		Example: `  # list all tokens for a PKCS11 module
+  cosign pkcs11-tool list-tokens --module-path /usr/lib/libp11kit.so`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pkcs11cli.ListTokensCmd(cmd.Context(), o.ModulePath)
 		},
@@ -66,8 +68,10 @@ func PKCS11ToolListKeysUrisOptions() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list-keys-uris",
-		Short: "list-keys-uris lists URIs of all keys in a PKCS11 token",
-		Args:  cobra.ExactArgs(0),
+		Short: "List URIs of all keys in a PKCS11 token",
+		Example: `  # list key URIs in a specific PKCS11 token slot
+  cosign pkcs11-tool list-keys-uris --module-path /usr/lib/libp11kit.so --slot-id 0`,
+		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pkcs11cli.ListKeysUrisCmd(cmd.Context(), o.ModulePath, o.SlotID, o.Pin)
 		},

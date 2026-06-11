@@ -1,9 +1,16 @@
 ## cosign pkcs11-tool list-keys-uris
 
-list-keys-uris lists URIs of all keys in a PKCS11 token
+List URIs of all keys in a PKCS11 token
 
 ```
 cosign pkcs11-tool list-keys-uris [flags]
+```
+
+### Examples
+
+```
+  # list key URIs in a specific PKCS11 token slot
+  cosign pkcs11-tool list-keys-uris --module-path /usr/lib/libp11kit.so --slot-id 0
 ```
 
 ### Options

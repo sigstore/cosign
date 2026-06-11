@@ -1,9 +1,16 @@
 ## cosign pkcs11-tool list-tokens
 
-list-tokens lists all PKCS11 tokens linked to a PKCS11 module
+List all PKCS11 tokens linked to a module
 
 ```
 cosign pkcs11-tool list-tokens [flags]
+```
+
+### Examples
+
+```
+  # list all tokens for a PKCS11 module
+  cosign pkcs11-tool list-tokens --module-path /usr/lib/libp11kit.so
 ```
 
 ### Options
