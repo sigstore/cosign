@@ -6,6 +6,18 @@ Prints Cosign environment variables
 cosign env [flags]
 ```
 
+### Examples
+
+```
+  cosign env
+
+  # show environment variables with descriptions
+  cosign env --show-descriptions
+
+  # show environment variables including sensitive values
+  cosign env --show-descriptions --show-sensitive-values
+```
+
 ### Options
 
 ```
