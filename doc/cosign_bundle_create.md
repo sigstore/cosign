@@ -10,6 +10,16 @@ Create a Sigstore protobuf bundle by supplying signed material
 cosign bundle create [flags]
 ```
 
+### Examples
+
+```
+  # create a bundle from a signature and certificate
+  cosign bundle create --artifact <path> --signature <sig> --certificate <cert> --out bundle.sigstore.json
+
+  # create a bundle from an attestation
+  cosign bundle create --artifact <path> --attestation <att> --out bundle.sigstore.json
+```
+
 ### Options
 
 ```
