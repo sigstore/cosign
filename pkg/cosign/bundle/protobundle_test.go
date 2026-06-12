@@ -28,28 +28,28 @@ func TestMakeProtobufBundle(t *testing.T) {
 	testCases := []struct {
 		name           string
 		hint           string
-		rawCert        []byte
+		rawCertChain   [][]byte
 		rekorEntry     *models.LogEntryAnon
 		timestampBytes []byte
 	}{
 		{
 			name:           "hint with timestamp",
 			hint:           "asdf",
-			rawCert:        []byte{},
+			rawCertChain:   nil,
 			rekorEntry:     nil,
 			timestampBytes: []byte("timestamp"),
 		},
 		{
 			name:           "only cert",
 			hint:           "",
-			rawCert:        []byte("cert stuff"),
+			rawCertChain:   [][]byte{[]byte("cert stuff")},
 			rekorEntry:     nil,
 			timestampBytes: []byte{},
 		},
 		{
 			name:    "cert with rekor entry",
 			hint:    "",
-			rawCert: []byte("cert stuff"),
+			rawCertChain: [][]byte{[]byte("cert stuff")},
 			rekorEntry: &models.LogEntryAnon{
 				Body:           "eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiI2MmQwOGYyOGM2OWNhZGE3YjQyYTQ1Nzk0YjQ3ZWU2YzgxYTdkZmE3MTY4NDZiMzljODhmMGFkMTljMjA2OTk3In19LCJzaWduYXR1cmUiOnsiY29udGVudCI6Ik1FVUNJQm14U0N1TW1HSzhNQWRMd1FWZ21TZjVXKzlkdU5iQXN1cUNQNlNucUxCUkFpRUFvNGtGRVdDTG9HcTVUaysrUEhtTEgrb3N1emVTRjN4OTdBbmVicTRlbVRvPSIsInB1YmxpY0tleSI6eyJjb250ZW50IjoiTFMwdExTMUNSVWRKVGlCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2sxSlNVUk1ha05EUVhKVFowRjNTVUpCWjBsVVRWQkRlVXdyYmxOb2MycHdaa2hZYUZkYVRVWkNUVUZIUlVSQlMwSm5aM0ZvYTJwUFVGRlJSRUY2UVhFS1RWSlZkMFYzV1VSV1VWRkxSWGQ0ZW1GWFpIcGtSemw1V2xNMWExcFlXWGhGVkVGUVFtZE9Wa0pCVFZSRFNFNXdXak5PTUdJelNteE5RalJZUkZSSmVRcE5SRWwzVFdwRmQwNUVXWGhOVm05WVJGUkplVTFFU1hkTmFrVjNUbFJaZUUxR2IzZEZla1ZTVFVFNFIwRXhWVVZEYUUxSll6SnNibU16VW5aamJWVjNDbGRVUVZSQ1oyTnhhR3RxVDFCUlNVSkNaMmR4YUd0cVQxQlJUVUpDZDA1RFFVRlVVMVJ2VEhWS2N5OTFSV05IU2tRME5VWmFiVE5wWmxKTU4yOXVRVWNLWlZaNWJuWkhVbmN6WnpKMU0wbFhTREZuU2tSamNERjRSWFI2UVZCUWJYQmhlVGRtTmxCNE1XeFpNa0ZyWnpsMGEyb3dRa1J2UTNkdk5FbENlbXBEUXdwQlkyOTNSR2RaUkZaU01GQkJVVWd2UWtGUlJFRm5aVUZOUWsxSFFURlZaRXBSVVUxTlFXOUhRME56UjBGUlZVWkNkMDFFVFVGM1IwRXhWV1JGZDBWQ0NpOTNVVU5OUVVGM1NGRlpSRlpTTUU5Q1FsbEZSazlSYTNZNVoyMVpXVFpWU0doQ1pWSnJMMWx4VlVsaU1WRldiMDFDT0VkQk1WVmtTWGRSV1UxQ1lVRUtSa1pxUVVoc0sxSlNZVlp0Y1ZoeVRXdExSMVJKZEVGeGVHTllOazFIVFVkQk1WVmtSVkZTWTAxR2NVZFhSMmd3WkVoQ2VrOXBPSFphTW13d1lVaFdhUXBNYlU1MllsTTVjbGx1VGpCTU0xSnNZMjVLYUZwdE9YbGlVekZ5WkZkS2JHTXpVbWhaTW5OMlRHMWtjR1JIYURGWmFUa3pZak5LY2xwdGVIWmtNMDEyQ21KWFJuQmlhVFUxWWxkNFFXTnRWbTFqZVRsdldsZEdhMk41T1hSWldFNHdXbGhKZDBWbldVdExkMWxDUWtGSFJIWjZRVUpCWjFGRlkwaFdlbUZFUVcwS1FtZHZja0puUlVWQldVOHZUVUZGUmtKQ2FISlpiazR3VEROU2JHTnVTbWhhYlRsNVlsTXhjbVJYU214ak0xSm9XVEp6ZDA1bldVdExkMWxDUWtGSFJBcDJla0ZDUVhkUmIxcHFSVEZPVjFGNVdXMUplRTU2V210TlZFVTFXV3BHYlU5VVNUSk9WRlV6V1hwTk5WbDZTbWxQVkdzMVdtcFNhRnBxWjNkWmVrRTFDa0puYjNKQ1owVkZRVmxQTDAxQlJVSkNRM1J2WkVoU2QyTjZiM1pNTTFKMllUSldkVXh0Um1wa1IyeDJZbTVOZFZveWJEQmhTRlpwWkZoT2JHTnRUbllLWW01U2JHSnVVWFZaTWpsMFRVSTRSME5wYzBkQlVWRkNaemM0ZDBGUldVVkZXRXBzV201TmRtRkhWbWhhU0UxMllsZEdlbVJIVm5sTlEwRkhRMmx6UndwQlVWRkNaemM0ZDBGUlVVVkZhMG94WVZkNGEwbEdVbXhqTTFGblZVaFdhV0pIYkhwaFJFRkxRbWRuY1docmFrOVFVVkZFUVhkT2IwRkVRbXhCYWtWQkNtdDJORTFLYUdGRGFFMUJaMHBWVTNWWll6bFBWRWt3WTB0bU9XTnlObU14Y1RreVYyOXFMM1ZsV0RKRFR6Z3JMMDQyU25SM1FVNTRVSElyTjNWNlpGQUtRV3BDYVhwR2NHZEVMelJzWW5aa1NuRnplWE5HYlVSeU1TdFNNSGhKWjI1S1N5c3JaWGROYmtKaVMxQkVMemd3VTNJelFYTTVMMWxxV1U5M05EVjRkUXA2ZVdzOUNpMHRMUzB0UlU1RUlFTkZVbFJKUmtsRFFWUkZMUzB0TFMwSyJ9fX19",
 				IntegratedTime: conv.Pointer(int64(123)),
@@ -71,14 +71,14 @@ func TestMakeProtobufBundle(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			bundle, err := MakeProtobufBundle(tc.hint, tc.rawCert, tc.rekorEntry, tc.timestampBytes)
+			bundle, err := MakeProtobufBundle(tc.hint, tc.rawCertChain, tc.rekorEntry, tc.timestampBytes)
 			if err != nil {
 				t.Errorf("unexpected err %s", err)
 			}
 			if tc.hint != "" && bundle.VerificationMaterial.GetPublicKey() == nil {
 				t.Errorf("Verification material should be public key")
 			}
-			if len(tc.rawCert) > 0 && bundle.VerificationMaterial.GetCertificate() == nil {
+			if len(tc.rawCertChain) == 1 && bundle.VerificationMaterial.GetCertificate() == nil {
 				t.Errorf("Verification material should be certificate")
 			}
 			if tc.rekorEntry != nil && len(bundle.VerificationMaterial.GetTlogEntries()) == 0 {
@@ -86,6 +86,64 @@ func TestMakeProtobufBundle(t *testing.T) {
 			}
 			if len(tc.timestampBytes) > 0 && bundle.VerificationMaterial.GetTimestampVerificationData() == nil {
 				t.Errorf("Verification material should have timestamp")
+			}
+		})
+	}
+}
+
+func TestMakeProtobufBundle_CertificateChain(t *testing.T) {
+	testCases := []struct {
+		name            string
+		rawCertChain    [][]byte
+		expectMediaType string
+		expectChainLen  int
+	}{
+		{
+			name:            "empty certificate chain",
+			rawCertChain:    [][]byte{},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+			expectChainLen:  0,
+		},
+		{
+			name:            "single certificate uses Certificate",
+			rawCertChain:    [][]byte{[]byte("cert1")},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+			expectChainLen:  0,
+		},
+		{
+			name:            "multiple certificates uses X509CertificateChain",
+			rawCertChain:    [][]byte{[]byte("leaf"), []byte("intermediate"), []byte("root")},
+			expectMediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+			expectChainLen:  3,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			bundle, err := MakeProtobufBundle("", tc.rawCertChain, nil, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			if bundle.MediaType != tc.expectMediaType {
+				t.Errorf("expected media type %q, got %q", tc.expectMediaType, bundle.MediaType)
+			}
+
+			if tc.expectChainLen > 0 {
+				certChain := bundle.VerificationMaterial.GetX509CertificateChain()
+				if certChain == nil {
+					t.Fatal("expected X509CertificateChain, got nil")
+				}
+				if len(certChain.Certificates) != tc.expectChainLen {
+					t.Errorf("expected %d certificates in chain, got %d", tc.expectChainLen, len(certChain.Certificates))
+				}
+			}
+
+			if len(tc.rawCertChain) == 1 {
+				cert := bundle.VerificationMaterial.GetCertificate()
+				if cert == nil {
+					t.Fatal("expected single Certificate, got nil")
+				}
 			}
 		})
 	}

@@ -32,7 +32,9 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/cue"
 	"github.com/sigstore/cosign/v3/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/policy"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -106,6 +108,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	if c.AllowHTTPRegistry || c.AllowInsecure {
 		c.NameOptions = append(c.NameOptions, name.Insecure)
 	}
+	if c.AllowCertificateChain {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithBundleOptions(sgbundle.AllowCertificateChain()))
+	}
 
 	co := &cosign.CheckOpts{
 		RegistryClientOpts:           ociremoteOpts,
@@ -121,6 +126,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
