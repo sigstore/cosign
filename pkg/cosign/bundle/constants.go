@@ -1,4 +1,4 @@
-// Copyright 2021 The Sigstore Authors.
+// Copyright 2026 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cosign
+package bundle
 
-import (
-	"context"
-	"crypto"
-	"io"
-
-	"github.com/sigstore/cosign/v3/pkg/oci"
-)
-
-// DSSEAttestor creates attestations in the form of `oci.Signature`s
-type DSSEAttestor interface {
-	// Attest creates an attestation, in the form of an `oci.Signature`, from the given payload.
-	// The signature and payload are stored as a DSSE envelope in `osi.Signature.Payload()`
-	DSSEAttest(ctx context.Context, payload io.Reader) (oci.Signature, crypto.PublicKey, error)
-}
+const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"

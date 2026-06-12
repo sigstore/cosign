@@ -43,6 +43,7 @@ import (
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -53,9 +54,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/payload"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/rekor/mock"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -763,23 +762,32 @@ func TestVerifyImageSignatureWithSigVerifierAndTSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating verifier: %v", err)
 	}
-	payloadSigner := payload.NewSigner(sv)
-	testSigner := tsa.NewSigner(payloadSigner, client)
-
 	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
 
 	payload := []byte{1, 2, 3, 4}
-	sig, _, err := testSigner.Sign(context.Background(), bytes.NewReader(payload))
+	sigBytes, err := sv.SignMessage(bytes.NewReader(payload))
 	if err != nil {
-		t.Fatalf("error signing the payload with the tsa client server: %v", err)
+		t.Fatalf("error signing the payload: %v", err)
+	}
+
+	client.Message = sigBytes
+	timestampResponse, err := client.GetTimestampResponse(nil)
+	if err != nil {
+		t.Fatalf("error getting timestamp response: %v", err)
+	}
+
+	b64sig := base64.StdEncoding.EncodeToString(sigBytes)
+	sig, err := static.NewSignature(payload, b64sig, static.WithRFC3161Timestamp(bundle.TimestampToRFC3161Timestamp(timestampResponse)))
+	if err != nil {
+		t.Fatalf("error creating oci signature: %v", err)
 	}
 	if bundleVerified, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier:                 sv,
@@ -809,23 +817,32 @@ func TestVerifyImageSignatureWithSigVerifierAndRekorTSA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating verifier: %v", err)
 	}
-	payloadSigner := payload.NewSigner(sv)
-	tsaSigner := tsa.NewSigner(payloadSigner, client)
-
 	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
 
 	payload := []byte{1, 2, 3, 4}
-	sig, _, err := tsaSigner.Sign(context.Background(), bytes.NewReader(payload))
+	sigBytes, err := sv.SignMessage(bytes.NewReader(payload))
 	if err != nil {
-		t.Fatalf("error signing the payload with the rekor and tsa clients: %v", err)
+		t.Fatalf("error signing the payload: %v", err)
+	}
+
+	client.Message = sigBytes
+	timestampResponse, err := client.GetTimestampResponse(nil)
+	if err != nil {
+		t.Fatalf("error getting timestamp response: %v", err)
+	}
+
+	b64sig := base64.StdEncoding.EncodeToString(sigBytes)
+	sig, err := static.NewSignature(payload, b64sig, static.WithRFC3161Timestamp(bundle.TimestampToRFC3161Timestamp(timestampResponse)))
+	if err != nil {
+		t.Fatalf("error creating oci signature: %v", err)
 	}
 	if _, err := VerifyImageSignature(context.TODO(), sig, v1.Hash{}, &CheckOpts{
 		SigVerifier:                 sv,
@@ -1745,7 +1762,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	tsBytes, err := getTimestampedSignature(signature, client)
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -1756,7 +1773,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -1780,7 +1797,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 
 	// success, signing over payload
-	tsBytes, err = tsa.GetTimestampedSignature(payload, client)
+	tsBytes, err = getTimestampedSignature(payload, client)
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -1813,7 +1830,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 
 	// failure with mismatched signature
-	tsBytes, err = tsa.GetTimestampedSignature(signature, client)
+	tsBytes, err = getTimestampedSignature(signature, client)
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -1953,7 +1970,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tsBytes, err := tsa.GetTimestampedSignature(payload, client)
+	tsBytes, err := getTimestampedSignature(payload, client)
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -1964,7 +1981,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)
 	}
 
-	leaves, intermediates, roots, err := tsa.SplitPEMCertificateChain(certChainPEM)
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
 	if err != nil {
 		t.Fatal("error splitting response into certificate chain")
 	}
@@ -2562,4 +2579,16 @@ func TestGetLocalBundles_InvalidPath(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, hash)
 	assert.Nil(t, bundles)
+}
+
+func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]byte, error) {
+	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating timestamp request: %w", err)
+	}
+
+	return tsaClient.GetTimestampResponse(requestBytes)
 }

@@ -876,9 +876,15 @@ func makeLocalBundleWithoutRekorBundle(t *testing.T, sig []byte, svBytes []byte)
 }
 
 func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
-	b, err := bundle.MakeProtobufBundle("hint", []byte{}, nil, []byte{})
-	if err != nil {
-		t.Fatal(err)
+	b := &protobundle.Bundle{
+		MediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_PublicKey{
+				PublicKey: &protocommon.PublicKeyIdentifier{
+					Hint: "hint",
+				},
+			},
+		},
 	}
 
 	b.Content = &protobundle.Bundle_MessageSignature{

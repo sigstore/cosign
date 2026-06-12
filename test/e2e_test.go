@@ -46,6 +46,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitorus/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -72,7 +73,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -2667,7 +2667,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
+	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -3108,7 +3108,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
+	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
 	if err != nil {
 		t.Fatalf("unexpected error creating timestamp: %v", err)
 	}
@@ -5300,4 +5300,16 @@ func TestSignVerifyDetachedKeyless(t *testing.T) {
 		},
 	}
 	must(cmdWithChain.Exec(ctx, []string{imgName}), t)
+}
+
+func getTimestampedSignature(sigBytes []byte, tsaClient client.TimestampAuthorityClient) ([]byte, error) {
+	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating timestamp request: %w", err)
+	}
+
+	return tsaClient.GetTimestampResponse(requestBytes)
 }

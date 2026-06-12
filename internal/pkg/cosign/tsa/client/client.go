@@ -164,14 +164,3 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 func NewTSAClient(url string) *TimestampAuthorityClientImpl {
 	return &TimestampAuthorityClientImpl{URL: url, Timeout: defaultTimeout}
 }
-
-func NewTSAClientMTLS(url, cacert, cert, key, serverName string) *TimestampAuthorityClientImpl {
-	return &TimestampAuthorityClientImpl{
-		URL:        url,
-		CACert:     cacert,
-		Cert:       cert,
-		Key:        key,
-		ServerName: serverName,
-		Timeout:    defaultTimeout,
-	}
-}
