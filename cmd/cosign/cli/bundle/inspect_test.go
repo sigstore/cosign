@@ -17,6 +17,7 @@ package bundle
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +38,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa"
+	"github.com/digitorus/timestamp"
 	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v3/internal/test"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -644,7 +645,7 @@ func TestPopulateTimestampSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tsBytes, err := tsa.GetTimestampedSignature(signature, client)
+	tsBytes, err := getTimestampedSignature(signature, client)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -925,4 +926,16 @@ func TestPopulateTlogEntrySummary_Inclusion(t *testing.T) {
 			t.Errorf("unexpected Witnesses children: %v", witnessesNode.Children)
 		}
 	})
+}
+
+func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]byte, error) {
+	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
+		Hash:         crypto.SHA256,
+		Certificates: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating timestamp request: %w", err)
+	}
+
+	return tsaClient.GetTimestampResponse(requestBytes)
 }
