@@ -1,6 +1,6 @@
 ## cosign initialize
 
-Initializes SigStore root to retrieve trusted certificate and key targets for verification.
+Initializes SigStore root to retrieve trusted certificate and key targets for verification
 
 ### Synopsis
 
@@ -63,5 +63,5 @@ cosign initialize --mirror <url> --root <url> --root-checksum <sha256>
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

@@ -31,7 +31,7 @@ func Sign() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "sign",
-		Short: "Sign the supplied container image.",
+		Short: "Sign the supplied container image",
 		Long: `Sign the supplied container image.
 
 Make sure to sign the image by its digest (@sha256:...) rather than by tag

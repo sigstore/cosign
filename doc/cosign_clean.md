@@ -1,6 +1,6 @@
 ## cosign clean
 
-Remove all signatures from an image.
+Remove all signatures from an image
 
 ```
 cosign clean [flags]
@@ -40,5 +40,5 @@ cosign clean [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

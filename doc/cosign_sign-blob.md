@@ -1,6 +1,6 @@
 ## cosign sign-blob
 
-Sign the supplied blob, outputting the base64-encoded signature to stdout.
+Sign the supplied blob, outputting the base64-encoded signature to stdout
 
 ```
 cosign sign-blob [flags]
@@ -68,5 +68,5 @@ cosign sign-blob [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

@@ -37,7 +37,7 @@ func Clean() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "clean",
-		Short:            "Remove all signatures from an image.",
+		Short:            "Remove all signatures from an image",
 		Example:          "  cosign clean <IMAGE>",
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,

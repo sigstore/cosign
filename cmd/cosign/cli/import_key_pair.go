@@ -27,7 +27,7 @@ func ImportKeyPair() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "import-key-pair",
-		Short: "Imports a PEM-encoded RSA or EC private key.",
+		Short: "Imports a PEM-encoded RSA or EC private key",
 		Long:  "Imports a PEM-encoded RSA or EC private key for signing.",
 		Example: `  cosign import-key-pair  --key openssl.key --output-key-prefix my-key
 

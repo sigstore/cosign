@@ -1,6 +1,6 @@
 ## cosign import-key-pair
 
-Imports a PEM-encoded RSA or EC private key.
+Imports a PEM-encoded RSA or EC private key
 
 ### Synopsis
 
@@ -45,5 +45,5 @@ CAVEATS:
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

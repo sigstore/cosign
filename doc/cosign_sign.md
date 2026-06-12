@@ -1,6 +1,6 @@
 ## cosign sign
 
-Sign the supplied container image.
+Sign the supplied container image
 
 ### Synopsis
 
@@ -118,5 +118,5 @@ cosign sign [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

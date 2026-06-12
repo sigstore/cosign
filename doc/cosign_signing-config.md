@@ -22,6 +22,6 @@ Tool for interacting with a Sigstore protobuf signing config
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 * [cosign signing-config create](cosign_signing-config_create.md)	 - Create a Sigstore protobuf signing config
 

@@ -1,6 +1,6 @@
 ## cosign attest
 
-Attest the supplied container image.
+Attest the supplied container image
 
 ```
 cosign attest [flags]
@@ -96,5 +96,5 @@ cosign attest [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

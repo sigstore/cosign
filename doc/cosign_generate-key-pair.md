@@ -1,6 +1,6 @@
 ## cosign generate-key-pair
 
-Generates a key-pair.
+Generates a key-pair
 
 ### Synopsis
 
@@ -74,5 +74,5 @@ CAVEATS:
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

@@ -58,7 +58,7 @@ func New() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:               "cosign",
-		Short:             "A tool for Container Signing, Verification and Storage in an OCI registry.",
+		Short:             "A tool for Container Signing, Verification and Storage in an OCI registry",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true, // Don't show usage on errors
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
