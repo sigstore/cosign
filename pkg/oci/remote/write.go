@@ -320,12 +320,7 @@ func writeEmptyConfigLayer(o *options) (v1.Hash, int64, error) {
 func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annotations map[string]string, opts ...Option) error {
 	o := makeOptions(d.Repository, opts...)
 
-	signTarget := d.String()
-	ref, err := name.ParseReference(signTarget, o.NameOpts...)
-	if err != nil {
-		return err
-	}
-	desc, err := remoteHead(ref, o.ROpt...)
+	subject, err := subjectDescriptor(d, o)
 	if err != nil {
 		return err
 	}
@@ -381,12 +376,8 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			Digest:       configDigest,
 			Size:         configSize,
 		},
-		Layers: layerDescriptors,
-		Subject: &v1.Descriptor{
-			MediaType: desc.MediaType,
-			Digest:    desc.Digest,
-			Size:      desc.Size,
-		},
+		Layers:      layerDescriptors,
+		Subject:     subject,
 		Annotations: annotations,
 	}, artifactType}
 
@@ -400,6 +391,37 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 	}
 
 	return nil
+}
+
+// subjectDescriptor returns the descriptor to embed as the referrer's subject.
+// A descriptor provided via WithSubjectDescriptor is used verbatim, allowing
+// referrers whose subject manifest is not present in the registry; otherwise
+// the subject is resolved with a HEAD request.
+func subjectDescriptor(d name.Digest, o *options) (*v1.Descriptor, error) {
+	if subject := o.SubjectDescriptor; subject != nil {
+		dig, err := v1.NewHash(d.DigestStr())
+		if err != nil {
+			return nil, err
+		}
+		if subject.Digest != dig {
+			return nil, fmt.Errorf("subject descriptor digest %q does not match %q", subject.Digest, d.String())
+		}
+		return subject, nil
+	}
+
+	ref, err := name.ParseReference(d.String(), o.NameOpts...)
+	if err != nil {
+		return nil, err
+	}
+	desc, err := remoteHead(ref, o.ROpt...)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.Descriptor{
+		MediaType: desc.MediaType,
+		Digest:    desc.Digest,
+		Size:      desc.Size,
+	}, nil
 }
 
 func WriteAttestationNewBundleFormat(d name.Digest, bundleBytes []byte, predicateType string, opts ...Option) error {

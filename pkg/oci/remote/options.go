@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 )
@@ -42,6 +43,7 @@ type options struct {
 	SBOMSuffix        string
 	TagPrefix         string
 	TargetRepository  name.Repository
+	SubjectDescriptor *v1.Descriptor
 	ROpt              []remote.Option
 	NameOpts          []name.Option
 	OriginalOptions   []Option
@@ -126,6 +128,18 @@ func WithMoreRemoteOptions(opts ...remote.Option) Option {
 func WithTargetRepository(repo name.Repository) Option {
 	return func(o *options) {
 		o.TargetRepository = repo
+	}
+}
+
+// WithSubjectDescriptor is a functional option for providing the subject
+// descriptor to embed when writing an OCI referrer, instead of resolving it
+// via a HEAD request against the subject reference. This permits writing
+// referrers whose subject manifest is not present in the registry. The
+// descriptor is used verbatim; the caller is responsible for providing a
+// valid descriptor whose digest matches the subject reference.
+func WithSubjectDescriptor(desc *v1.Descriptor) Option {
+	return func(o *options) {
+		o.SubjectDescriptor = desc
 	}
 }
 
