@@ -200,7 +200,7 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots
 }
 
 // PrintVerificationHeader prints boilerplate information after successful verification.
-func PrintVerificationHeader(ctx context.Context, imgRef string, co *cosign.CheckOpts, bundleVerified, fulcioVerified bool) {
+func PrintVerificationHeader(ctx context.Context, imgRef string, co *cosign.CheckOpts, bundleVerified, fulcioVerified, certVerified bool) {
 	ui.Infof(ctx, "\nVerification for %s --", imgRef)
 	ui.Infof(ctx, "The following checks were performed on each of these signatures:")
 	if co.ClaimVerifier != nil {
@@ -217,6 +217,12 @@ func PrintVerificationHeader(ctx context.Context, imgRef string, co *cosign.Chec
 	}
 	if co.SigVerifier != nil {
 		ui.Infof(ctx, "  - The signatures were verified against the specified public key")
+	}
+	if certVerified {
+		ui.Infof(ctx, "  - The signing certificate was verified using trusted certificate authority certificates")
+	}
+	if co.UseSignedTimestamps {
+		ui.Infof(ctx, "  - The RFC3161 timestamp was verified using trusted timestamp authority certificates")
 	}
 	if fulcioVerified {
 		ui.Infof(ctx, "  - The code-signing certificate was verified using trusted certificate authority certificates")
