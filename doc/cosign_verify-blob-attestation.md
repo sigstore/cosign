@@ -37,6 +37,10 @@ cosign verify-blob-attestation [flags]
   # Verify a blob attestation with Hashicorp Vault
   cosign verify-blob-attestation --bundle artifact.sigstore.json --key hashivault://[KEY] <blob>
 
+  # Verify a bundle attestation by matching the in-toto subject digest instead of reading the blob.
+  # When the subject uses an alternative digest algorithm, pass it explicitly with --digestAlg.
+  cosign verify-blob-attestation --bundle <bundle path> --key cosign.pub --digest <hex digest> --digestAlg sha512
+
 
 ```
 
