@@ -1,9 +1,19 @@
 ## cosign piv-tool attestation
 
-attestation contains commands to manage a hardware token
+Manage hardware token attestations
 
 ```
 cosign piv-tool attestation [flags]
+```
+
+### Examples
+
+```
+  # print attestation information as text
+  cosign piv-tool attestation --slot 9c
+
+  # print attestation information as JSON
+  cosign piv-tool attestation --slot 9c --output json
 ```
 
 ### Options
