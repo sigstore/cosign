@@ -21,10 +21,7 @@ compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/cue FuzzVal
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/rego FuzzValidateJSON FuzzValidateJSON_rego
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzImportKeyPairLoadPrivateKey FuzzImportKeyPairLoadPrivateKey
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzSigVerify FuzzSigVerify
-compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/policy FuzzEvaluatePolicyAgainstJSON FuzzEvaluatePolicyAgainstJSON
 
-zip -j $OUT/FuzzEvaluatePolicyAgainstJSON_seed_corpus.zip test/fuzz/seeds/FuzzEvaluatePolicyAgainstJSON_seed*
-zip -j $OUT/FuzzEvaluatePolicyAgainstJSON_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
 zip -j $OUT/FuzzValidateJSON_cue_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
 zip -j $OUT/FuzzValidateJSON_rego_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
 zip -j $OUT/FuzzGenerateStatement_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
