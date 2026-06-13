@@ -79,7 +79,12 @@ func (ga *githubActions) Provide(ctx context.Context, audience string) (string, 
 			// DefaultClient will fail because it will just use HTTP2 again.
 			// I don't know why go doesn't do this for us.
 			if strings.Contains(err.Error(), "HTTP_1_1_REQUIRED") {
-				http1transport := http.DefaultTransport.(*http.Transport).Clone()
+				var http1transport *http.Transport
+				if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+					http1transport = dt.Clone()
+				} else {
+					http1transport = &http.Transport{}
+				}
 				http1transport.ForceAttemptHTTP2 = false
 
 				client = &http.Client{
