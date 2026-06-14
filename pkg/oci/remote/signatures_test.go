@@ -17,7 +17,9 @@ package remote
 
 import (
 	"errors"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,7 +27,50 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
+
+// oversizeLayer reports a huge Size() but its Uncompressed() must never be
+// reached once Bundle() enforces the size cap.
+type oversizeLayer struct {
+	size int64
+}
+
+func (l *oversizeLayer) Digest() (v1.Hash, error) { return v1.Hash{}, nil }
+func (l *oversizeLayer) DiffID() (v1.Hash, error) { return v1.Hash{}, nil }
+func (l *oversizeLayer) Size() (int64, error)     { return l.size, nil }
+func (l *oversizeLayer) MediaType() (types.MediaType, error) {
+	return "application/vnd.dev.sigstore.bundle+json", nil
+}
+func (l *oversizeLayer) Compressed() (io.ReadCloser, error) {
+	return nil, errors.New("Compressed should not be called")
+}
+func (l *oversizeLayer) Uncompressed() (io.ReadCloser, error) {
+	return nil, errors.New("Uncompressed should not be called once size is capped")
+}
+
+func TestBundleRejectsOversizeLayer(t *testing.T) {
+	ri := remote.Image
+	t.Cleanup(func() {
+		remoteImage = ri
+	})
+
+	remoteImage = func(_ name.Reference, _ ...remote.Option) (v1.Image, error) {
+		return &fake.FakeImage{
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&oversizeLayer{size: 200 * 1024 * 1024}}, nil
+			},
+		}, nil
+	}
+
+	_, err := Bundle(name.MustParseReference("gcr.io/distroless/static:sha256-deadbeef.sig"))
+	if err == nil {
+		t.Fatal("Bundle() = nil, wanted size limit error")
+	}
+	if !strings.Contains(err.Error(), "exceeded the limit") {
+		t.Fatalf("Bundle() = %v, wanted size limit error", err)
+	}
+}
 
 func TestSignaturesErrors(t *testing.T) {
 	ri := remote.Image
