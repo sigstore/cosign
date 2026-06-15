@@ -4082,6 +4082,57 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 	must(download.SignatureCmd(ctx, regOpts, img2Name, os.Stdout), t)
 }
 
+func TestBundleLayerSizeCap(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+
+	imgName := path.Join(repo, "bundle-size-cap")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ctx := context.Background()
+	td := t.TempDir()
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{KeyRef: privKeyPath, PassFunc: passFunc}
+	so := options.SignOptions{
+		NewBundleFormat: true,
+		Upload:          true,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	ref, err := name.ParseReference(imgName)
+	must(err, t)
+	digest, err := ociremote.ResolveDigest(ref)
+	must(err, t)
+	index, err := ociremote.Referrers(digest, "")
+	must(err, t)
+
+	// Find the sigstore bundle referrer; under the default cap it reads back fine.
+	var bundleRef name.Reference
+	for _, m := range index.Manifests {
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, m.Digest.String()))
+		must(err, t)
+		if _, err := ociremote.Bundle(st); err == nil {
+			bundleRef = st
+			break
+		}
+	}
+	if bundleRef == nil {
+		t.Fatal("no sigstore bundle referrer found")
+	}
+
+	// Drop the cap below the bundle layer size; Bundle() must reject the layer
+	// before reading it into memory.
+	t.Setenv(env.VariableMaxAttachmentSize.String(), "1")
+	_, err = ociremote.Bundle(bundleRef)
+	if err == nil {
+		t.Fatal("Bundle() = nil, wanted size limit error")
+	}
+	if !strings.Contains(err.Error(), "exceeded the limit") {
+		t.Fatalf("Bundle() = %v, wanted size limit error", err)
+	}
+}
+
 func TestAttachSBOM(t *testing.T) {
 	td := t.TempDir()
 	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
