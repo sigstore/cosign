@@ -33,6 +33,11 @@ type RootOptions struct {
 	OutputFile string
 	Verbose    bool
 	Timeout    time.Duration
+
+	TracingEnabled  bool
+	TracingEndpoint string
+	TracingInsecure bool
+	TracingStdout   bool
 }
 
 // DefaultTimeout specifies the default timeout for commands.
@@ -51,6 +56,15 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.PersistentFlags().DurationVarP(&o.Timeout, "timeout", "t", DefaultTimeout,
 		"timeout for commands")
+
+	cmd.PersistentFlags().BoolVar(&o.TracingEnabled, "tracing-enabled", false,
+		"enable OpenTelemetry tracing")
+	cmd.PersistentFlags().StringVar(&o.TracingEndpoint, "tracing-endpoint", "",
+		"OTLP gRPC collector endpoint (e.g. host:4317)")
+	cmd.PersistentFlags().BoolVar(&o.TracingInsecure, "tracing-insecure", true,
+		"use insecure gRPC connection for tracing")
+	cmd.PersistentFlags().BoolVar(&o.TracingStdout, "tracing-stdout", false,
+		"export traces to stdout instead of OTLP")
 }
 
 func BindViper(cmd *cobra.Command, args []string) {

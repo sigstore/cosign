@@ -25,11 +25,27 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
+	httptransport "github.com/go-openapi/runtime/client"
+	itracing "github.com/sigstore/cosign/v3/internal/tracing"
+	rekorclient "github.com/sigstore/rekor/pkg/client"
+	"reflect"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/encoding/protojson"
 )
+
+type tracingRekorTransport struct {
+	base     http.RoundTripper
+	traceCtx context.Context
+}
+
+func (t *tracingRekorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.WithContext(trace.ContextWithSpan(req.Context(), trace.SpanFromContext(t.traceCtx)))
+	return t.base.RoundTrip(req)
+}
 
 type SignOptions struct {
 	TSAClientTransport  http.RoundTripper
@@ -124,6 +140,23 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 				Timeout: 90 * time.Second,
 				Retries: 1,
 				Version: rekorSvc.MajorAPIVersion,
+			}
+			if itracing.ActiveCtx != nil {
+				rc, rcErr := rekorclient.GetRekorClient(rekorSvc.URL, rekorclient.WithRetryCount(1))
+				if rcErr == nil {
+					if rt, ok := rc.Transport.(*httptransport.Runtime); ok {
+						rv := reflect.ValueOf(rt).Elem()
+						clientField := rv.FieldByName("client")
+						if clientField.IsValid() && !clientField.IsNil() {
+							httpClient := (*http.Client)(clientField.UnsafePointer())
+							httpClient.Transport = &tracingRekorTransport{
+								base:     otelhttp.NewTransport(httpClient.Transport),
+								traceCtx: itracing.ActiveCtx,
+							}
+						}
+					}
+					rekorOpts.Client = rc.Entries
+				}
 			}
 			bundleOpts.TransparencyLogs = append(bundleOpts.TransparencyLogs, sign.NewRekor(rekorOpts))
 		}

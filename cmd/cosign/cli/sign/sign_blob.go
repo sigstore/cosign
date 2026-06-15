@@ -37,6 +37,8 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
+	itracing "github.com/sigstore/cosign/v3/internal/tracing"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -54,6 +56,10 @@ func getPayload(ctx context.Context, payloadPath string, hashFunction crypto.Has
 
 // nolint
 func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, payloadPath, certPath, certChainPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool) ([]byte, error) {
+	ctx, span := otel.Tracer("cosign").Start(ctx, "sign-blob")
+	defer span.End()
+	itracing.ActiveCtx = ctx
+
 	var payload internal.HashReader
 
 	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
