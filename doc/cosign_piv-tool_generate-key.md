@@ -1,9 +1,19 @@
 ## cosign piv-tool generate-key
 
-generate-key generates a new signing key on the hardware token
+Generate a new signing key on the hardware token
 
 ```
 cosign piv-tool generate-key [flags]
+```
+
+### Examples
+
+```
+  # generate a key with default settings (slot 9c, always-touch policy)
+  cosign piv-tool generate-key
+
+  # generate a key in a specific slot with custom PIN and touch policies
+  cosign piv-tool generate-key --slot 9c --pin-policy once --touch-policy always
 ```
 
 ### Options
