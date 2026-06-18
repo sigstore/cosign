@@ -11,8 +11,8 @@ cosign attest-blob [flags]
 ```
   cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
 
-  # attach an attestation to a blob with a local key pair file and print the attestation
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --output-attestation <path> <BLOB>
+  # attach an attestation to a blob with a local key pair file and write the bundle to a file
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <path> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Azure Key Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <BLOB>
@@ -46,7 +46,6 @@ cosign attest-blob [flags]
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-provider string             Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --output-attestation string        write the attestation to FILE
       --predicate string                 path to the predicate file.
       --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --sk                               whether to use a hardware security key
