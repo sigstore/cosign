@@ -40,6 +40,22 @@ func TestAnnotationOptions_AnnotationsMap(t *testing.T) {
 			},
 		},
 	}, {
+		name:        "value containing equals sign",
+		annotations: []string{"key=a=b"},
+		want: signature.AnnotationsMap{
+			Annotations: map[string]interface{}{
+				"key": "a=b",
+			},
+		},
+	}, {
+		name:        "base64 value with padding",
+		annotations: []string{"sig=aGVsbG8="},
+		want: signature.AnnotationsMap{
+			Annotations: map[string]interface{}{
+				"sig": "aGVsbG8=",
+			},
+		},
+	}, {
 		name:        "invalid key",
 		annotations: []string{"key value"},
 		wantErr:     true,
