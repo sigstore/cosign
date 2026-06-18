@@ -90,6 +90,7 @@ func (o *AttestBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.OutputAttestation, "output-attestation", "",
 		"write the attestation to FILE")
 	// _ = cmd.MarkFlagFilename("output-attestation") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("output-attestation", "please use --bundle to provide the output bundle location, which will include the attestation")
 
 	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
 		"write the certificate to FILE")
