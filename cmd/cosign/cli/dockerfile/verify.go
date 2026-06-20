@@ -93,9 +93,12 @@ func (fc *finderCache) getImagesFromDockerfile(ctx context.Context, dockerfile i
 		lineUpper := strings.ToUpper(line)
 		switch {
 		case strings.HasPrefix(lineUpper, "FROM"):
-			switch image := fc.getImageFromLine(line); image {
-			case "scratch":
+			image := fc.getImageFromLine(line)
+			switch {
+			case image == "scratch":
 				ui.Infof(ctx, "- scratch image ignored")
+			case fc.isStage(image):
+				ui.Infof(ctx, "- stage reference ignored: %s", image)
 			default:
 				images = append(images, image)
 			}

@@ -118,6 +118,13 @@ COPY --from=prepare /app /app`,
 			expected: []string{"gcr.io/someorg/coolimage", "gcr.io/someorg/someimage"},
 		},
 		{
+			name: "from-references-previous-stage",
+			fileContents: `FROM gcr.io/someorg/baseimage AS base_image
+			RUN customize
+			FROM base_image`,
+			expected: []string{"gcr.io/someorg/baseimage"},
+		},
+		{
 			name: "gauntlet",
 			fileContents: `FROM gcr.io/${TEST_IMAGE_REPO_PATH}/one AS one
 RUN script1
