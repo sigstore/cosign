@@ -154,7 +154,12 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 
 	tlsConfig, err := o.getTLSConfig()
 	if err == nil {
-		tr := http.DefaultTransport.(*http.Transport).Clone()
+		var tr *http.Transport
+		if dt, ok := http.DefaultTransport.(*http.Transport); ok {
+			tr = dt.Clone()
+		} else {
+			tr = &http.Transport{}
+		}
 		tr.TLSClientConfig = tlsConfig
 		opts = append(opts, remote.WithTransport(tr))
 	}
