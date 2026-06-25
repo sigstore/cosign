@@ -23,7 +23,7 @@ type Interface interface {
 }
 
 var bundleExts = []string{
-	"bundle",
+	"sigstore.json", "bundle",
 }
 var certificateExts = []string{
 	"cert",
