@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -49,6 +50,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	// Try bundles first
 	newBundles, _, err := cosign.GetBundles(ctx, ref, ociremoteOpts)
 	if err == nil && len(newBundles) > 0 {
+		var found bool
 		for _, eachBundle := range newBundles {
 			if predicateType != "" {
 				envelope, err := eachBundle.Envelope()
@@ -71,6 +73,10 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 			if err != nil {
 				return err
 			}
+			found = true
+		}
+		if predicateType != "" && !found {
+			return fmt.Errorf("no attestations with predicate type '%s' found", predicateType)
 		}
 		return nil
 	}
