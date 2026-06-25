@@ -80,10 +80,6 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
-			}
-
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
 				return err
@@ -100,34 +96,21 @@ against the transparency log.`,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
-				Attachment:                   o.Attachment,
 				Annotations:                  annotations,
 				HashAlgorithm:                hashAlgorithm,
-				SignatureRef:                 o.SignatureRef,
-				PayloadRef:                   o.PayloadRef,
 				LocalImage:                   o.LocalImage,
-				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				NewBundleFormat:              o.CommonVerifyOptions.NewBundleFormat,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
@@ -141,7 +124,7 @@ against the transparency log.`,
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
 
-			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
+			if o.CommonVerifyOptions.IgnoreTlog {
 				ui.Warnf(ctx, ignoreTLogMessage, "signature")
 			}
 
@@ -202,10 +185,6 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
-			}
-
 			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
 			if err != nil {
 				return err
@@ -216,28 +195,20 @@ against the transparency log.`,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				KeyRef:                       o.Key,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
 				PredicateType:                o.Predicate.Type,
 				Policies:                     o.Policies,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
-				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				HashAlgorithm:                hashAlgorithm,
@@ -251,7 +222,7 @@ against the transparency log.`,
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
 
-			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
+			if o.CommonVerifyOptions.IgnoreTlog {
 				ui.Warnf(ctx, ignoreTLogMessage, "attestation")
 			}
 
@@ -309,41 +280,26 @@ The blob may be specified as a path to a file or - for stdin.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
-			}
-
 			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
 			if err != nil {
 				return err
 			}
 
 			ko := options.KeyOpts{
-				KeyRef:               o.Key,
-				Sk:                   o.SecurityKey.Use,
-				Slot:                 o.SecurityKey.Slot,
-				RekorURL:             o.Rekor.URL,
-				BundlePath:           o.BundlePath,
-				RFC3161TimestampPath: o.RFC3161TimestampPath,
-				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
-				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
+				KeyRef:     o.Key,
+				Sk:         o.SecurityKey.Use,
+				Slot:       o.SecurityKey.Slot,
+				BundlePath: o.BundlePath,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CARoots:                      o.CertVerify.CARoots,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				SigRef:                       o.Signature,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
-				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
@@ -353,7 +309,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
 
-			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
+			if o.CommonVerifyOptions.IgnoreTlog {
 				ui.Warnf(ctx, ignoreTLogMessage, "blob")
 			}
 
@@ -401,43 +357,28 @@ The blob may be specified as a path to a file.`,
 		Args:             cobra.MaximumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
-			}
-
 			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
 			if err != nil {
 				return err
 			}
 
 			ko := options.KeyOpts{
-				KeyRef:               o.Key,
-				Sk:                   o.SecurityKey.Use,
-				Slot:                 o.SecurityKey.Slot,
-				RekorURL:             o.Rekor.URL,
-				BundlePath:           o.BundlePath,
-				RFC3161TimestampPath: o.RFC3161TimestampPath,
-				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
-				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
+				KeyRef:     o.Key,
+				Sk:         o.SecurityKey.Use,
+				Slot:       o.SecurityKey.Slot,
+				BundlePath: o.BundlePath,
 			}
 			v := verify.VerifyBlobAttestationCommand{
 				KeyOpts:                      ko,
 				PredicateType:                o.Type,
 				CheckClaims:                  o.CheckClaims,
-				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CARoots:                      o.CertVerify.CARoots,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
-				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
@@ -457,7 +398,7 @@ The blob may be specified as a path to a file.`,
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
 			defer cancel()
 
-			if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
+			if o.CommonVerifyOptions.IgnoreTlog {
 				ui.Warnf(ctx, ignoreTLogMessage, "blob attestation")
 			}
 
