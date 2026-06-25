@@ -23,7 +23,6 @@ import (
 
 // CertVerifyOptions is the wrapper for certificate verification.
 type CertVerifyOptions struct {
-	Cert                         string
 	CertIdentity                 string
 	CertIdentityRegexp           string
 	CertOidcIssuer               string
@@ -33,10 +32,6 @@ type CertVerifyOptions struct {
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	CAIntermediates              string
-	CARoots                      string
-	CertChain                    string
-	SCT                          string
 	IgnoreSCT                    bool
 }
 
@@ -44,11 +39,6 @@ var _ Interface = (*RekorOptions)(nil)
 
 // AddFlags implements Interface
 func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Cert, "certificate", "",
-		"path to the public certificate. The certificate will be verified against the Fulcio roots if the --certificate-chain option is not passed.")
-	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("certificate", "please use --bundle with --trusted-root to provide the public certificate")
-
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
 
@@ -78,34 +68,6 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.CertGithubWorkflowRef, "certificate-github-workflow-ref", "",
 		"contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.")
 	// -- Cert extensions end --
-	cmd.Flags().StringVar(&o.CAIntermediates, "ca-intermediates", "",
-		"path to a file of intermediate CA certificates in PEM format which will be needed "+
-			"when building the certificate chains for the signing certificate. "+
-			"The flag is optional and must be used together with --ca-roots, conflicts with "+
-			"--certificate-chain.")
-	_ = cmd.MarkFlagFilename("ca-intermediates", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("ca-intermediates", "please use --trusted-root to provide CA certificates")
-	cmd.Flags().StringVar(&o.CARoots, "ca-roots", "",
-		"path to a bundle file of CA certificates in PEM format which will be needed "+
-			"when building the certificate chains for the signing certificate. Conflicts with --certificate-chain.")
-	_ = cmd.MarkFlagFilename("ca-roots", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("ca-roots", "please use --trusted-root to provide CA certificates")
-
-	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
-		"path to a list of CA certificates in PEM format which will be needed "+
-			"when building the certificate chain for the signing certificate. "+
-			"Must start with the parent intermediate CA certificate of the "+
-			"signing certificate and end with the root certificate. Conflicts with --ca-roots and --ca-intermediates.")
-	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
-	cmd.MarkFlagsMutuallyExclusive("ca-roots", "certificate-chain")
-	cmd.MarkFlagsMutuallyExclusive("ca-intermediates", "certificate-chain")
-	_ = cmd.Flags().MarkDeprecated("certificate-chain", "please use --trusted-root to provide the certificate chain")
-
-	cmd.Flags().StringVar(&o.SCT, "sct", "",
-		"path to a detached Signed Certificate Timestamp, formatted as a RFC6962 AddChainResponse struct. "+
-			"If a certificate contains an SCT, verification will check both the detached and embedded SCTs.")
-	// _ = cmd.MarkFlagFilename("sct") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("sct", "a Signed Certificate Timestamp is now provided via a Sigstore bundle")
 
 	cmd.Flags().BoolVar(&o.IgnoreSCT, "insecure-ignore-sct", false,
 		"when set, verification will not check that a certificate contains an embedded SCT, a proof of "+

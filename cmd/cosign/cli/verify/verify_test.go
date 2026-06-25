@@ -37,10 +37,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -83,43 +81,6 @@ func getTestCerts(t *testing.T) *certData {
 	cd.SubCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.SubCert.Raw})
 	cd.LeafCertPEM = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cd.LeafCert.Raw})
 	return cd
-}
-
-func makeCertChainFile(t *testing.T, rootCert, subCert, leafCert []byte) string {
-	t.Helper()
-	f, err := os.CreateTemp("", "certchain")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	_, err = f.Write(append(append(rootCert, subCert...), leafCert...))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return f.Name()
-}
-
-func makeRootsIntermediatesFiles(t *testing.T, roots, intermediates []byte) (string, string) {
-	t.Helper()
-	rootF, err := os.CreateTemp("", "roots")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rootF.Close()
-	_, err = rootF.Write(roots)
-	if err != nil {
-		t.Fatal(err)
-	}
-	intermediateF, err := os.CreateTemp("", "intermediates")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer intermediateF.Close()
-	_, err = intermediateF.Write(intermediates)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return rootF.Name(), intermediateF.Name()
 }
 
 func TestPrintVerification(t *testing.T) {
@@ -242,7 +203,6 @@ func appendSlices(slices [][]byte) []byte {
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: "issuer",
 		},
@@ -257,7 +217,6 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentity: "identity",
 		},
@@ -318,88 +277,6 @@ func TestVerifyMutuallyExclusiveFlags(t *testing.T) {
 	}
 }
 
-func TestLoadCertsKeylessVerification(t *testing.T) {
-	certs := getTestCerts(t)
-	certChainFile := makeCertChainFile(t, certs.RootCertPEM, certs.SubCertPEM, certs.LeafCertPEM)
-	rootsFile, intermediatesFile := makeRootsIntermediatesFiles(t, certs.RootCertPEM, certs.SubCertPEM)
-	tests := []struct {
-		name             string
-		certChain        string
-		caRoots          string
-		caIntermediates  string
-		co               *cosign.CheckOpts
-		sigstoreRootFile string
-		wantErr          bool
-	}{
-		{
-			name:    "default fulcio",
-			wantErr: false,
-		},
-		{
-			name:             "non-existent SIGSTORE_ROOT_FILE",
-			sigstoreRootFile: "tesdata/nosuch-asdfjkl.pem",
-			wantErr:          true,
-		},
-		{
-			name:      "good certchain",
-			certChain: certChainFile,
-			wantErr:   false,
-		},
-		{
-			name:      "bad certchain",
-			certChain: "testdata/nosuch-certchain-file.pem",
-			wantErr:   true,
-		},
-		{
-			name:    "roots",
-			caRoots: rootsFile,
-			wantErr: false,
-		},
-		{
-			name:    "bad roots",
-			caRoots: "testdata/nosuch-roots-file.pem",
-			wantErr: true,
-		},
-		{
-			name:            "roots and intermediate",
-			caRoots:         rootsFile,
-			caIntermediates: intermediatesFile,
-			wantErr:         false,
-		},
-		{
-			name:            "bad roots good intermediate",
-			caRoots:         "testdata/nosuch-roots-file.pem",
-			caIntermediates: intermediatesFile,
-			wantErr:         true,
-		},
-		{
-			name:            "good roots bad intermediate",
-			caRoots:         rootsFile,
-			caIntermediates: "testdata/nosuch-intermediates-file.pem",
-			wantErr:         true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.sigstoreRootFile != "" {
-				os.Setenv("SIGSTORE_ROOT_FILE", tt.sigstoreRootFile)
-			} else {
-				t.Setenv("SIGSTORE_ROOT_FILE", "")
-			}
-			fulcioroots.ReInit()
-			if tt.co == nil {
-				tt.co = &cosign.CheckOpts{}
-			}
-
-			err := loadCertsKeylessVerification(tt.certChain, tt.caRoots, tt.caIntermediates, tt.co)
-			if err == nil && tt.wantErr {
-				t.Fatalf("expected error but got none")
-			} else if err != nil && !tt.wantErr {
-				t.Fatalf("unexpected error: %v", err)
-			}
-		})
-	}
-}
 func TestTransformOutputSuccess(t *testing.T) {
 	// Build minimal in-toto statement
 	stmt := `{
