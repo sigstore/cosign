@@ -210,7 +210,6 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	// Attempt to verify non-existent attestation
 	atts, bundleVerified, err := VerifyImageAttestations(context.Background(), ref, &CheckOpts{
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 		Identities: []Identity{
 			{
 				IssuerRegExp:  ".*",
@@ -235,7 +234,6 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	// Verify the attestation
 	atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 		Identities: []Identity{
 			{
 				IssuerRegExp:  ".*",
@@ -250,7 +248,6 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	// Wrong identity should not verify
 	atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 		Identities: []Identity{
 			{
 				IssuerRegExp:  ".*",
@@ -275,7 +272,6 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	// Verify the attestation
 	atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref2, &CheckOpts{
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 		Identities: []Identity{
 			{
 				IssuerRegExp:  ".*",
