@@ -31,7 +31,7 @@ func Attest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attest",
 		Short: "Attest the supplied container image",
-		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
+		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--no-upload=true|false] [--yes] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -61,16 +61,18 @@ func Attest() *cobra.Command {
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
 
   # write attestation to stdout
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
-
-  # attach an attestation to a container image and honor the creation timestamp of the signature
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>`,
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if o.NewBundleFormat && o.NoUpload && o.BundlePath == "" {
-				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			if o.NoUpload && o.BundlePath == "" {
+				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path")
+			}
+			if (o.Key == "" && !o.SecurityKey.Use) || o.IssueCertificate {
+				if !o.UseSigningConfig && o.SigningConfigPath == "" {
+					return fmt.Errorf("keyless or certificate-based attesting requires a signing config (either from TUF via --use-signing-config or explicitly via a file with --signing-config)")
+				}
 			}
 			return nil
 		},
@@ -85,46 +87,35 @@ func Attest() *cobra.Command {
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
-				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
-				RekorURL:                       o.Rekor.URL,
-				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
+				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				OIDCProvider:                   o.OIDC.Provider,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAClientCACert:                o.TSAClientCACert,
 				TSAClientKey:                   o.TSAClientKey,
 				TSAClientCert:                  o.TSAClientCert,
 				TSAServerName:                  o.TSAServerName,
-				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				BundlePath:                     o.BundlePath,
-				NewBundleFormat:                o.NewBundleFormat,
 			}
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
-				o.NewBundleFormat, "", o.Key, o.IssueCertificate,
-				"", "", "", "", "", ""); err != nil {
+				o.TrustedRootPath, o.Key); err != nil {
 				return err
 			}
 
 			attestCommand := attest.AttestCommand{
-				KeyOpts:                 ko,
-				RegistryOptions:         o.Registry,
-				CertPath:                o.Cert,
-				CertChainPath:           o.CertChain,
-				NoUpload:                o.NoUpload,
-				PredicatePath:           o.Predicate.Path,
-				PredicateType:           o.Predicate.Type,
-				Replace:                 o.Replace,
-				Timeout:                 ro.Timeout,
-				TlogUpload:              o.TlogUpload,
-				RekorEntryType:          o.RekorEntryType,
-				RecordCreationTimestamp: o.RecordCreationTimestamp,
+				KeyOpts:         ko,
+				RegistryOptions: o.Registry,
+				CertPath:        o.Cert,
+				CertChainPath:   o.CertChain,
+				NoUpload:        o.NoUpload,
+				PredicatePath:   o.Predicate.Path,
+				PredicateType:   o.Predicate.Type,
+				Timeout:         ro.Timeout,
 			}
 
 			for _, img := range args {
