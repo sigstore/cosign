@@ -33,10 +33,7 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
-	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // nolint
@@ -51,14 +48,7 @@ type AttestBlobCommand struct {
 	PredicatePath string
 	PredicateType string
 
-	TlogUpload bool
-	Timeout    time.Duration
-
-	OutputSignature   string
-	OutputAttestation string
-	OutputCertificate string
-
-	RekorEntryType string
+	Timeout time.Duration
 }
 
 // nolint
@@ -70,10 +60,6 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	if options.NOf(c.PredicatePath, c.StatementPath) != 1 {
 		return fmt.Errorf("one of --predicate or --statement must be set")
-	}
-
-	if c.RekorEntryType != "dsse" && c.RekorEntryType != "intoto" {
-		return fmt.Errorf("unknown value for rekor-entry-type")
 	}
 
 	if c.Timeout != 0 {
@@ -147,89 +133,22 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 	}
 
 	if c.SigningConfig == nil {
-		var err error
-		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts, c.TlogUpload)
-		if err != nil {
-			return fmt.Errorf("creating signing config: %w", err)
-		}
+		c.SigningConfig = signcommon.NewEmptySigningConfig()
 	}
 
-	bundleBytes, _, pubKeyPem, _, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	_, err = signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, nil, len(c.SigningConfig.RekorLogURLs()) > 0)
+	if err != nil {
+		return fmt.Errorf("should upload to tlog: %w", err)
+	}
+
+	bundleBytes, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	if err != nil {
 		return fmt.Errorf("creating bundle: %w", err)
 	}
-
-	if c.NewBundleFormat {
-		if err := os.WriteFile(c.BundlePath, bundleBytes, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
-		return nil
+	if err := os.WriteFile(c.BundlePath, bundleBytes, 0600); err != nil {
+		return fmt.Errorf("create bundle file: %w", err)
 	}
-
-	var pb protobundle.Bundle
-	if err := protojson.Unmarshal(bundleBytes, &pb); err != nil {
-		return fmt.Errorf("unmarshalling bundle: %w", err)
-	}
-
-	bundleComponents, err := signcommon.ExtractComponentsFromProtoBundle(&pb)
-	if err != nil {
-		return err
-	}
-
-	if c.BundlePath != "" {
-		contents, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, pubKeyPem)
-		if err != nil {
-			return fmt.Errorf("creating legacy bundle: %w", err)
-		}
-
-		if err := os.WriteFile(c.BundlePath, contents, 0600); err != nil {
-			return fmt.Errorf("create bundle file: %w", err)
-		}
-		ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
-	}
-
-	if c.OutputSignature != "" {
-		if err := os.WriteFile(c.OutputSignature, bundleComponents.Signature, 0600); err != nil {
-			return fmt.Errorf("create signature file: %w", err)
-		}
-		fmt.Fprintf(os.Stderr, "Signature written in %s\n", c.OutputSignature)
-	} else {
-		fmt.Fprintln(os.Stdout, string(bundleComponents.Signature))
-	}
-
-	if c.OutputAttestation != "" {
-		if err := os.WriteFile(c.OutputAttestation, payload, 0600); err != nil {
-			return fmt.Errorf("create attestation file: %w", err)
-		}
-		fmt.Fprintf(os.Stderr, "Attestation written in %s\n", c.OutputAttestation)
-	}
-
-	if c.OutputCertificate != "" {
-		if len(bundleComponents.Certificates) == 0 {
-			return fmt.Errorf("no certificate found in bundle")
-		}
-		certPem, _ := signcommon.EncodeCertificatesToPEM(bundleComponents.Certificates)
-		if err := os.WriteFile(c.OutputCertificate, certPem, 0600); err != nil {
-			return fmt.Errorf("create certificate file: %w", err)
-		}
-		fmt.Fprintln(os.Stderr, "Certificate written to file ", c.OutputCertificate)
-	}
-
-	if c.RFC3161TimestampPath != "" {
-		if len(bundleComponents.RFC3161Timestamps) == 0 {
-			return fmt.Errorf("no RFC3161 timestamp found in bundle")
-		}
-		legacyTimestamp := cbundle.TimestampToRFC3161Timestamp(bundleComponents.RFC3161Timestamps[0].GetSignedTimestamp())
-		ts, err := json.Marshal(legacyTimestamp)
-		if err != nil {
-			return fmt.Errorf("marshalling timestamp: %w", err)
-		}
-		if err := os.WriteFile(c.RFC3161TimestampPath, ts, 0600); err != nil {
-			return fmt.Errorf("create timestamp file: %w", err)
-		}
-		fmt.Fprintln(os.Stderr, "Timestamp wrote in the file ", c.RFC3161TimestampPath)
-	}
+	ui.Infof(ctx, "Wrote bundle to file %s", c.BundlePath)
 
 	return nil
 }

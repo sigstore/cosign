@@ -19,9 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -29,6 +27,9 @@ import (
 	"testing"
 
 	"errors"
+
+	"encoding/base64"
+	"encoding/json"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
@@ -169,18 +170,13 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
-					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
-					if tc.newBundle {
-						keyOpts.NewBundleFormat = true
-						keyOpts.BundlePath = filepath.Join(td, "output.bundle")
-					}
+					keyOpts := options.KeyOpts{KeyRef: tc.keyref, BundlePath: filepath.Join(td, "output.bundle")}
 					at := AttestBlobCommand{
-						KeyOpts:        keyOpts,
-						CertPath:       tc.certref,
-						CertChainPath:  tc.certchainref,
-						PredicatePath:  predicatePath,
-						PredicateType:  predicateType,
-						RekorEntryType: "dsse",
+						KeyOpts:       keyOpts,
+						CertPath:      tc.certref,
+						CertChainPath: tc.certchainref,
+						PredicatePath: predicatePath,
+						PredicateType: predicateType,
 					}
 					err := at.Exec(ctx, blob)
 					if err != nil {
@@ -222,24 +218,29 @@ func TestAttestBlob(t *testing.T) {
 
 	for predicateType, predicatePath := range predicates {
 		t.Run(predicateType, func(t *testing.T) {
-			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
+			bundlePath := filepath.Join(td, "bundle.json")
+			keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 			at := AttestBlobCommand{
-				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
-				PredicatePath:   predicatePath,
-				PredicateType:   predicateType,
-				OutputSignature: dssePath,
-				RekorEntryType:  "dsse",
+				KeyOpts:       keyOpts,
+				PredicatePath: predicatePath,
+				PredicateType: predicateType,
 			}
 			err := at.Exec(ctx, blobPath)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// Load the attestation.
-			dsseBytes, _ := os.ReadFile(dssePath)
-			env := &ssldsse.Envelope{}
-			if err := json.Unmarshal(dsseBytes, env); err != nil {
+			// Load the attestation bundle.
+			bundleBytes, _ := os.ReadFile(bundlePath)
+			var bundleJSON struct {
+				DsseEnvelope *ssldsse.Envelope `json:"dsseEnvelope"`
+			}
+			if err := json.Unmarshal(bundleBytes, &bundleJSON); err != nil {
 				t.Fatal(err)
+			}
+			env := bundleJSON.DsseEnvelope
+			if env == nil {
+				t.Fatal("expected dsse envelope in bundle")
 			}
 
 			if len(env.Signatures) != 1 {
@@ -278,38 +279,6 @@ func TestAttestBlob(t *testing.T) {
 	}
 }
 
-func TestBadRekorEntryType(t *testing.T) {
-	ctx := context.Background()
-	td := t.TempDir()
-
-	keys, _ := cosign.GenerateKeyPair(nil)
-	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
-
-	blob := []byte("foo")
-	blobPath := writeFile(t, td, string(blob), "foo.txt")
-
-	predicates := map[string]string{}
-	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
-	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
-
-	for predicateType, predicatePath := range predicates {
-		t.Run(predicateType, func(t *testing.T) {
-			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
-			at := AttestBlobCommand{
-				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
-				PredicatePath:   predicatePath,
-				PredicateType:   predicateType,
-				OutputSignature: dssePath,
-				RekorEntryType:  "badvalue",
-			}
-			err := at.Exec(ctx, blobPath)
-			if err == nil || err.Error() != "unknown value for rekor-entry-type" {
-				t.Fatal("expected an error due to unknown rekor entry type")
-			}
-		})
-	}
-}
-
 func TestStatementPath(t *testing.T) {
 	ctx := context.Background()
 	td := t.TempDir()
@@ -334,10 +303,10 @@ func TestStatementPath(t *testing.T) {
 	}`
 	statementPath := writeFile(t, td, statement, "statement.json")
 
+	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: filepath.Join(td, "bundle.json")}
 	at := AttestBlobCommand{
-		KeyOpts:        options.KeyOpts{KeyRef: keyRef},
-		StatementPath:  statementPath,
-		RekorEntryType: "dsse",
+		KeyOpts:       keyOpts,
+		StatementPath: statementPath,
 	}
 	err := at.Exec(ctx, "")
 	assert.NoError(t, err)
