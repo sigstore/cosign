@@ -59,7 +59,7 @@ func TestSecretsKMS(t *testing.T) {
 	privKey := kms
 
 	// Verify should fail at first
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, false), t)
 
 	rekorURL := os.Getenv(rekorURLVar)
 
@@ -67,32 +67,30 @@ func TestSecretsKMS(t *testing.T) {
 
 	// Now sign and verify with the KMS key
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig,
 		KeyRef:           privKey,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verify(pubKey, imgName, true, nil, false), t)
 
 	// Sign and verify with annotations
-	mustErr(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	mustErr(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, false), t)
 	soAnno := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 		AnnotationOptions: options.AnnotationOptions{
 			Annotations: []string{"foo=bar"},
 		},
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, soAnno, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	must(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, false), t)
 
 	// Store signatures in a different repo
 	t.Setenv("COSIGN_REPOSITORY", path.Join(repo, "subbedrepo"))
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verify(pubKey, imgName, true, nil, false), t)
 	os.Unsetenv("COSIGN_REPOSITORY")
 }
