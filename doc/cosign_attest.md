@@ -9,7 +9,7 @@ cosign attest [flags]
 ### Examples
 
 ```
-  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
+  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--no-upload=true|false] [--yes] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -40,9 +40,6 @@ cosign attest [flags]
 
   # write attestation to stdout
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
-
-  # attach an attestation to a container image and honor the creation timestamp of the signature
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>
 ```
 
 ### Options

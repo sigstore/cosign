@@ -1,6 +1,6 @@
 ## cosign sign-blob
 
-Sign the supplied blob, outputting the base64-encoded signature to stdout
+Sign the supplied blob, outputting the bundle to a file
 
 ```
 cosign sign-blob [flags]
@@ -9,25 +9,25 @@ cosign sign-blob [flags]
 ### Examples
 
 ```
-  cosign sign-blob --key <key path>|<kms uri> <blob>
+  cosign sign-blob --key <key path>|<kms uri> --bundle <bundle.json> <blob>
 
   # sign a blob with a local key pair file
-  cosign sign-blob --key cosign.key <FILE>
+  cosign sign-blob --key cosign.key --bundle <bundle.json> <FILE>
 
   # sign a blob with a key stored in an environment variable
-  cosign sign-blob --key env://[ENV_VAR] <FILE>
+  cosign sign-blob --key env://[ENV_VAR] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Azure Key Vault
-  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
+  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in AWS KMS
-  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
+  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
+  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob --key hashivault://[KEY] <FILE>
+  cosign sign-blob --key hashivault://[KEY] --bundle <bundle.json> <FILE>
 ```
 
 ### Options
