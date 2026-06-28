@@ -7,7 +7,7 @@ Container signatures generated with `cosign` should be verifiable in other tools
 This document is broken up into a few parts:
 * [Properties](#properties) details the individual components that are used to create and verify signatures.
 * [Storage](#storage) details how signatures are stored and discovered in an OCI registry.
-* [Payload](#payload) details the format of to-be-signed payloads.
+* [Payload](#payloads) details the format of to-be-signed payloads.
 * [Signature](#signature) details the signature schemes supported.
 
 ## Properties
