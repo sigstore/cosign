@@ -191,6 +191,14 @@ func Test_ParseOCIReference(t *testing.T) {
 		{"image:bytag", "WARNING: Image reference image:bytag uses a tag, not a digest"},
 		{"image:bytag@sha256:abcdef", ""},
 		{"image:@sha256:abcdef", ""},
+		// cosign-generated discovery tags are derived from a digest, so they
+		// must not trigger the "use a digest" warning (issue #3995).
+		{"image:sha256-" + strings.Repeat("a", 64) + ".sig", ""},
+		{"image:sha256-" + strings.Repeat("a", 64) + ".att", ""},
+		{"image:sha256-" + strings.Repeat("a", 64) + ".sbom", ""},
+		// A tag that merely ends in a cosign suffix but is not digest-derived
+		// should still warn.
+		{"image:latest.att", "WARNING: Image reference image:latest.att uses a tag, not a digest"},
 	}
 	for _, tt := range tests {
 		stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
