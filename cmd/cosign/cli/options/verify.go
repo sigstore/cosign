@@ -16,6 +16,8 @@
 package options
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
@@ -43,6 +45,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
+	_ = cmd.MarkFlagFilename("timestamp-certificate-chain", certificateExts...)
 	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chain")
 
 	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
@@ -62,14 +65,18 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
+	_ = cmd.RegisterFlagCompletionFunc("max-workers", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"Path to a Sigstore TrustedRoot JSON file")
+	_ = cmd.MarkFlagFilename("trusted-root", "json")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 }
+
+var verifyOutputTypes = []string{"json", "text"} // First one is the default
 
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
@@ -117,8 +124,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
 	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments and verify with `--experimental-oci11`")
 
-	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
-		"output format for the signing image information (json|text)")
+	cmd.Flags().StringVarP(&o.Output, "output", "o", verifyOutputTypes[0],
+		"output format for the signing image information ("+strings.Join(verifyOutputTypes, "|")+")")
+	_ = cmd.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(verifyOutputTypes, cobra.ShellCompDirectiveNoFileComp))
 
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
@@ -166,15 +174,18 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
 
 	cmd.Flags().StringSliceVar(&o.Policies, "policy", nil,
 		"specify CUE or Rego files with policies to be used for validation")
+	_ = cmd.MarkFlagFilename("policy", "cue", "rego")
 
-	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
-		"output format for the signing image information (json|text)")
+	cmd.Flags().StringVarP(&o.Output, "output", "o", verifyOutputTypes[0],
+		"output format for the signing image information ("+strings.Join(verifyOutputTypes, "|")+")")
+	_ = cmd.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(verifyOutputTypes, cobra.ShellCompDirectiveNoFileComp))
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
@@ -209,16 +220,20 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")
+	_ = cmd.MarkFlagFilename("signature", signatureExts...)
 	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
+	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
 	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 }
 
@@ -274,24 +289,30 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
 
 	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
 		"path to base64-encoded signature over attestation in DSSE format")
+	_ = cmd.MarkFlagFilename("signature", signatureExts...)
 	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified.")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
+	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
 	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 
 	cmd.Flags().StringVar(&o.Digest, "digest", "",
 		"Digest to use for verifying in-toto subject (instead of providing a blob)")
+	_ = cmd.RegisterFlagCompletionFunc("digest", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.DigestAlg, "digestAlg", "",
 		"Digest algorithm to use for verifying in-toto subject (instead of providing a blob)")
+	_ = cmd.RegisterFlagCompletionFunc("digestAlg", cobra.FixedCompletions([]string{"sha256", "sha384", "sha512"}, cobra.ShellCompDirectiveNoFileComp))
 }
