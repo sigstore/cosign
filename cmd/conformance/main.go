@@ -121,7 +121,6 @@ func main() {
 
 	if bundlePath != nil {
 		args = append(args, "--bundle", *bundlePath)
-		args = append(args, "--new-bundle-format")
 	}
 	if identityToken != nil {
 		args = append(args, "--identity-token", *identityToken)
