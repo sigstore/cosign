@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 
 	"net/http"
 	"time"
@@ -405,13 +406,29 @@ type BundleComponents struct {
 	RFC3161Timestamps []*pb_go_v1.RFC3161SignedTimestamp
 }
 
+// cosignGeneratedTagPattern matches the tags cosign derives from an image
+// digest to store signatures, attestations and SBOMs (for example
+// "sha256-<hex>.att", as produced by `cosign triangulate`).
+var cosignGeneratedTagPattern = regexp.MustCompile(`^[a-z0-9]+-[0-9a-f]+\.(` +
+	ociremote.SignatureTagSuffix + `|` +
+	ociremote.AttestationTagSuffix + `|` +
+	ociremote.SBOMTagSuffix + `)$`)
+
+// isCosignGeneratedTag reports whether tag is one of the discovery tags cosign
+// derives from an image digest (the "sha256-<digest>.sig|.att|.sbom" form).
+// These tags are already pinned to a digest, so the "use a digest" warning is
+// misleading when signing them directly.
+func isCosignGeneratedTag(tag string) bool {
+	return cosignGeneratedTagPattern.MatchString(tag)
+}
+
 // ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
 func ParseOCIReference(ctx context.Context, refStr string, opts ...name.Option) (name.Reference, error) {
 	ref, err := name.ParseReference(refStr, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
-	if _, ok := ref.(name.Digest); !ok {
+	if t, ok := ref.(name.Tag); ok && !isCosignGeneratedTag(t.TagStr()) {
 		ui.Warnf(ctx, ui.TagReferenceMessage, refStr)
 	}
 	return ref, nil
