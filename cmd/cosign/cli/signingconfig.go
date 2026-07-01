@@ -54,6 +54,11 @@ cosign signing-config create \
     --tsa-config="EXACT:1" \
     --out signing-config.json
 
+# Use Sigstore TUF defaults
+cosign signing-config create \
+    --with-default-services \
+    --out sigstore-signing-config.json
+
 # Override OIDC provider from base config
 cosign signing-config create \
     --base-config signing_config.v0.2.json \
