@@ -21,7 +21,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -43,27 +42,20 @@ type VerifyAttestationCommand struct {
 	options.CommonVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
-	CertRef                      string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	CAIntermediates              string
-	CARoots                      string
-	CertChain                    string
 	IgnoreSCT                    bool
-	SCTRef                       string
 	Sk                           bool
 	Slot                         string
 	Output                       string
-	RekorURL                     string
 	PredicateType                string
 	Policies                     []string
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
-	TSACertChainPath             string
 	IgnoreTlog                   bool
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
@@ -119,63 +111,27 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
-		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.NewBundleFormat,
+		UseSignedTimestamps:          c.UseSignedTimestamps,
 	}
-	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
-
-	// Auto-detect bundle format for local images
-	if c.LocalImage {
-		hasBundles, err := cosign.HasLocalAttestationBundles(images[0])
-		if err != nil {
-			return fmt.Errorf("checking local image format: %w", err)
-		}
-		co.NewBundleFormat = hasBundles
-	} else {
-		ref, err := name.ParseReference(images[0], c.NameOptions...)
-		if err == nil && c.NewBundleFormat {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
-			if len(newBundles) == 0 || err != nil {
-				co.NewBundleFormat = false
-			}
-		}
-	}
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.Sk, co)
 
 	if c.CheckClaims {
 		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
+	err = SetTrustedMaterial(c.TrustedRootPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
-	if err = CheckSigstoreBundleUnsupportedOptions(*c, vOfflineKey, co); err != nil {
-		return err
-	}
-
-	err = SetLegacyClientsAndKeys(ctx, c.IgnoreTlog, shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk), keylessVerification(c.KeyRef, c.Sk), c.RekorURL, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, co)
-	if err != nil {
-		return fmt.Errorf("setting up clients and keys: %w", err)
-	}
-
-	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
-	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
-	// after initializing trust material in order to verify certificate chain.
+	// User provides a key. Otherwise, verification requires a Fulcio certificate
+	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
-	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	co.SigVerifier, closeSV, err = LoadVerifierFromKey(ctx, c.KeyRef, c.Slot, c.HashAlgorithm, c.Sk)
 	if err != nil {
 		return fmt.Errorf("loading verifierfrom key opts: %w", err)
 	}
 	defer closeSV()
-
-	if c.CertRef != "" && c.SCTRef != "" {
-		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-		if err != nil {
-			return fmt.Errorf("reading sct from file: %w", err)
-		}
-		co.SCT = sct
-	}
 
 	// NB: There are only 2 kinds of verification right now:
 	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,

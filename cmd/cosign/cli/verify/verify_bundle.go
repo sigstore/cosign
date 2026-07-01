@@ -38,11 +38,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
-func checkNewBundle(bundlePath string) bool {
-	_, err := sgbundle.LoadJSONFromPath(bundlePath)
-	return err == nil
-}
-
 func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, envelope *dsse.Envelope, artifactRef string, cert *x509.Certificate, ignoreTlog bool, sigVerifier signature.Verifier, pkOpts []signature.PublicKeyOption, rekorClient *client.Rekor) (*sgbundle.Bundle, error) {
 	payload, err := payloadBytes(artifactRef)
 	if err != nil {

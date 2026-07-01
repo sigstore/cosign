@@ -28,30 +28,20 @@ import (
 // SignBlobOptions is the top level wrapper for the sign-blob command.
 // The new output-certificate flag is only in use when COSIGN_EXPERIMENTAL is enabled
 type SignBlobOptions struct {
-	Key                  string
-	Cert                 string
-	CertChain            string
-	Base64Output         bool
-	Output               string // deprecated: TODO remove when the output flag is fully deprecated
-	OutputSignature      string // TODO: this should be the root output file arg.
-	OutputCertificate    string
-	SecurityKey          SecurityKeyOptions
-	Fulcio               FulcioOptions
-	Rekor                RekorOptions
-	OIDC                 OIDCOptions
-	Registry             RegistryOptions
-	BundlePath           string
-	NewBundleFormat      bool
-	SkipConfirmation     bool
-	TlogUpload           bool
-	TSAClientCACert      string
-	TSAClientCert        string
-	TSAClientKey         string
-	TSAServerName        string
-	TSAServerURL         string
-	RFC3161TimestampPath string
-	IssueCertificate     bool
-	SigningAlgorithm     string
+	Key              string
+	Cert             string
+	CertChain        string
+	SecurityKey      SecurityKeyOptions
+	Fulcio           FulcioOptions
+	OIDC             OIDCOptions
+	BundlePath       string
+	SkipConfirmation bool
+	TSAClientCACert  string
+	TSAClientCert    string
+	TSAClientKey     string
+	TSAServerName    string
+	IssueCertificate bool
+	SigningAlgorithm string
 
 	UseSigningConfig  bool
 	SigningConfigPath string
@@ -64,7 +54,6 @@ var _ Interface = (*SignBlobOptions)(nil)
 func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
 	o.Fulcio.AddFlags(cmd)
-	o.Rekor.AddFlags(cmd)
 	o.OIDC.AddFlags(cmd)
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
@@ -82,32 +71,9 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 			"signing certificate and end with the root certificate.")
 	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
 
-	cmd.Flags().BoolVar(&o.Base64Output, "b64", true,
-		"whether to base64 encode the output")
-	_ = cmd.Flags().MarkDeprecated("b64", "please use --bundle, which already base64 encodes content as appropriate")
-
-	cmd.Flags().StringVar(&o.OutputSignature, "output-signature", "",
-		"write the signature to FILE")
-	_ = cmd.MarkFlagFilename("output-signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("output-signature", "please use --bundle to provide the output bundle location, which will include the signature")
-
-	// TODO: remove when output flag is fully deprecated
-	cmd.Flags().StringVar(&o.Output, "output", "", "write the signature to FILE")
-	_ = cmd.MarkFlagFilename("output", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("output", "please use --bundle to provide the output bundle location, which will include the signature")
-
-	cmd.Flags().StringVar(&o.OutputCertificate, "output-certificate", "",
-		"write the certificate to FILE")
-	_ = cmd.MarkFlagFilename("output-certificate", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("output-certificate", "please use --bundle to provide the output bundle location, which will include the certificate")
-
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
-
-	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
-		"output bundle in new format that contains all verification material")
-	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format")
@@ -122,10 +88,6 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
 		"skip confirmation prompts for non-destructive operations")
-
-	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
-		"whether or not to upload to the tlog")
-	_ = cmd.Flags().MarkDeprecated("tlog-upload", "prefer using a --signing-config file with no transparency log services")
 
 	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")
@@ -142,16 +104,6 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSAServerName, "timestamp-server-name", "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server")
 	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-name", cobra.NoFileCompletions)
-
-	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
-		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
-	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-url", cobra.NoFileCompletions)
-	_ = cmd.Flags().MarkDeprecated("timestamp-server-url", "please use a signing config to specify a timestamp server url; see `cosign signing-config --help`")
-
-	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
-		"write the RFC3161 timestamp to a file")
-	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
