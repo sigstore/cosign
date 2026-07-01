@@ -27,6 +27,7 @@ type SigningConfigCreateOptions struct {
 	RekorConfig  string
 	Out          string
 
+	BaseConfig          string
 	WithDefaultServices bool
 	NoDefaultFulcio     bool
 	NoDefaultRekor      bool
@@ -38,6 +39,8 @@ type SigningConfigCreateOptions struct {
 var _ Interface = (*SigningConfigCreateOptions)(nil)
 
 func (o *SigningConfigCreateOptions) AddFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&o.BaseConfig, "base-config", "", "path to base signing config file to use as starting point. Service flags will replace services from the base config.")
+
 	cmd.Flags().StringArrayVar(&o.Fulcio, "fulcio", nil,
 		"fulcio service specification, as a comma-separated key-value list.\nRequired keys: url, api-version (integer), start-time, operator. Optional keys: end-time.")
 	cmd.Flags().StringArrayVar(&o.Rekor, "rekor", nil,
@@ -60,4 +63,7 @@ func (o *SigningConfigCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.NoDefaultTSA, "no-default-tsa", false, "removes the default TSA URLs from the signing config.")
 
 	cmd.Flags().StringVar(&o.Out, "out", "", "path to output signing config")
+
+	cmd.MarkFlagsMutuallyExclusive("base-config", "with-default-services")
+	cmd.MarkFlagsMutuallyExclusive("base-config", "with-default-rekor-v2")
 }
