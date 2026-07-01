@@ -228,6 +228,77 @@ func TestCreateCmd(t *testing.T) {
 	}
 	err = signingConfigCreateRekorV2.Exec(ctx)
 	checkErr(t, err)
+
+	// Test base-config with override
+	t.Run("base-config with oidc override", func(t *testing.T) {
+		baseConfigPath := filepath.Join(td, "base-config.json")
+		baseCmd := CreateCmd{
+			FulcioSpecs:       []string{fulcioSpec},
+			RekorSpecs:        []string{rekorSpec},
+			OIDCProviderSpecs: []string{oidcSpec},
+			TSASpecs:          []string{tsaSpec},
+			RekorConfig:       "EXACT:1",
+			TSAConfig:         "ANY",
+			Out:               baseConfigPath,
+		}
+		err := baseCmd.Exec(ctx)
+		checkErr(t, err)
+
+		// Create a new config using base-config and override OIDC
+		customOIDCSpec := fmt.Sprintf("url=https://custom-oidc.example.com,api-version=1,operator=custom-op,start-time=%s", startTime)
+		customConfigPath := filepath.Join(td, "custom-config.json")
+		customCmd := CreateCmd{
+			BaseConfig:        baseConfigPath,
+			OIDCProviderSpecs: []string{customOIDCSpec},
+			Out:               customConfigPath,
+		}
+		err = customCmd.Exec(ctx)
+		checkErr(t, err)
+
+		scBytes, err := os.ReadFile(customConfigPath)
+		checkErr(t, err)
+		var sc prototrustroot.SigningConfig
+		err = protojson.Unmarshal(scBytes, &sc)
+		checkErr(t, err)
+
+		if len(sc.GetCaUrls()) != 1 {
+			t.Fatal("expected 1 fulcio service from base config")
+		}
+		if sc.GetCaUrls()[0].GetOperator() != "fulcio-op" {
+			t.Fatalf("unexpected fulcio operator: %s", sc.GetCaUrls()[0].GetOperator())
+		}
+
+		if len(sc.GetRekorTlogUrls()) != 1 {
+			t.Fatal("expected 1 rekor service from base config")
+		}
+		if sc.GetRekorTlogUrls()[0].GetOperator() != "rekor-op" {
+			t.Fatalf("unexpected rekor operator: %s", sc.GetRekorTlogUrls()[0].GetOperator())
+		}
+
+		if len(sc.GetTsaUrls()) != 1 {
+			t.Fatal("expected 1 tsa service from base config")
+		}
+		if sc.GetTsaUrls()[0].GetOperator() != "tsa-op" {
+			t.Fatalf("unexpected tsa operator: %s", sc.GetTsaUrls()[0].GetOperator())
+		}
+
+		if len(sc.GetOidcUrls()) != 1 {
+			t.Fatalf("expected 1 oidc provider, got %d", len(sc.GetOidcUrls()))
+		}
+		if sc.GetOidcUrls()[0].GetOperator() != "custom-op" {
+			t.Fatalf("expected custom oidc provider, got operator: %s", sc.GetOidcUrls()[0].GetOperator())
+		}
+		if sc.GetOidcUrls()[0].GetUrl() != "https://custom-oidc.example.com" {
+			t.Fatalf("expected custom oidc url, got: %s", sc.GetOidcUrls()[0].GetUrl())
+		}
+
+		if sc.GetRekorTlogConfig().GetSelector() != prototrustroot.ServiceSelector_EXACT {
+			t.Fatal("expected rekor config from base")
+		}
+		if sc.GetTsaConfig().GetSelector() != prototrustroot.ServiceSelector_ANY {
+			t.Fatal("expected tsa config from base")
+		}
+	})
 }
 
 func checkErr(t *testing.T, err error) {
