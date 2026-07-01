@@ -435,10 +435,10 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
 	var err error
 	// If a signing config is used, then service URLs cannot be specified
+	// Exception: --oidc-issuer is allowed to filter the signing config's OIDC providers
 	if (useSigningConfig || signingConfigPath != "") &&
 		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
 			(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
-			(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
 			tsaServerURL != "") {
 		return fmt.Errorf("cannot specify service URLs and use signing config")
 	}
@@ -476,6 +476,26 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
 		}
+	}
+
+	// If --oidc-issuer is specified with signing config, filter the OIDC providers
+	// to only include the specified issuer
+	if (useSigningConfig || signingConfigPath != "") && ko.SigningConfig != nil &&
+		oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL {
+		oidcProviders := ko.SigningConfig.OIDCProviderURLs()
+		var matchedProvider *root.Service
+		for i := range oidcProviders {
+			if oidcProviders[i].URL == oidcIssuer {
+				matchedProvider = &oidcProviders[i]
+				break
+			}
+		}
+		if matchedProvider == nil {
+			return fmt.Errorf("specified OIDC issuer %q not found in signing config's oidcUrls list", oidcIssuer)
+		}
+		// Update signing config to use only the specified OIDC provider
+		ko.SigningConfig = ko.SigningConfig.WithOIDCProviderURLs(*matchedProvider)
+		ui.Infof(ctx, "Using specified OIDC issuer: %s", oidcIssuer)
 	}
 
 	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
