@@ -70,6 +70,29 @@ func TestSetTrustedMaterialLegacyTUFFallback(t *testing.T) {
 	}
 }
 
+func TestPrintVerificationHeaderIncludesCertificateAndTimestampChecks(t *testing.T) {
+	co := &cosign.CheckOpts{
+		ClaimVerifier:       cosign.SimpleClaimVerifier,
+		UseSignedTimestamps: true,
+	}
+
+	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+		PrintVerificationHeader(ctx, "example.com/repo/image:tag", co, false, false, true)
+	})
+
+	for _, want := range []string{
+		"Verification for example.com/repo/image:tag --",
+		"The following checks were performed on each of these signatures:",
+		"  - The cosign claims were validated",
+		"  - The signing certificate was verified using trusted certificate authority certificates",
+		"  - The RFC3161 timestamp was verified using trusted timestamp authority certificates",
+	} {
+		if !strings.Contains(stderr, want) {
+			t.Fatalf("expected header to contain %q, got %q", want, stderr)
+		}
+	}
+}
+
 func setBrokenTrustedRootTUFEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv(env.VariableTUFRootDir.String(), t.TempDir())
