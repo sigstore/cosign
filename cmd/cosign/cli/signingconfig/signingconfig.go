@@ -35,6 +35,7 @@ type CreateCmd struct {
 	TSAConfig         string
 	RekorConfig       string
 	Out               string
+	BaseConfig        string
 
 	WithDefaultServices bool
 	NoDefaultFulcio     bool
@@ -59,6 +60,28 @@ func (c *CreateCmd) Exec(_ context.Context) error {
 	var rekorConfig root.ServiceConfiguration
 	var tsaConfig root.ServiceConfiguration
 	var err error
+
+	if c.BaseConfig != "" {
+		var sc *root.SigningConfig
+		sc, err = root.NewSigningConfigFromPath(c.BaseConfig)
+		if err != nil {
+			return fmt.Errorf("loading base config from %s: %w", c.BaseConfig, err)
+		}
+		if len(c.FulcioSpecs) == 0 && !c.NoDefaultFulcio {
+			fulcioServices = append(fulcioServices, sc.FulcioCertificateAuthorityURLs()...)
+		}
+		if len(c.RekorSpecs) == 0 && !c.NoDefaultRekor {
+			rekorServices = append(rekorServices, sc.RekorLogURLs()...)
+			rekorConfig = sc.RekorLogURLsConfig()
+		}
+		if len(c.OIDCProviderSpecs) == 0 && !c.NoDefaultOIDC {
+			oidcProviders = append(oidcProviders, sc.OIDCProviderURLs()...)
+		}
+		if len(c.TSASpecs) == 0 && !c.NoDefaultTSA {
+			tsaServices = append(tsaServices, sc.TimestampAuthorityURLs()...)
+			tsaConfig = sc.TimestampAuthorityURLsConfig()
+		}
+	}
 
 	if c.WithDefaultServices {
 		var sc *root.SigningConfig
