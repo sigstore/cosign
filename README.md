@@ -520,6 +520,8 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 `cosign` supports using a KMS provider to generate and sign keys.
 Right now cosign supports Hashicorp Vault, AWS KMS, GCP KMS, Azure Key Vault and we are hoping to support more in the future!
 
+Additional KMS providers are available as external plugins, such as [OVHcloud KMS](https://github.com/ovh/sigstore-kms-ovhcloud).
+
 See the [KMS docs](https://docs.sigstore.dev/cosign/key_management/overview/) for more details.
 
 ### OCI Artifacts
