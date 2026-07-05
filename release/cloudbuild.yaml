@@ -90,8 +90,9 @@ steps:
     args:
       - '-c'
       - |
-        echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
-        && make sign-release-images || true
+        gcloud auth configure-docker --quiet \
+        && echo $$GITHUB_TOKEN | docker login ghcr.io -u $$GITHUB_USER --password-stdin \
+        && make sign-release-images
 
   - name: 'ghcr.io/oras-project/oras:v1.3.2@sha256:46c55ba0eac848ade573594ef23fa5b1784227f151dab6eac38de2afd0b9c382'
     env:
@@ -162,4 +163,3 @@ substitutions:
   _KEY_LOCATION: 'global'
   _GITHUB_USER: 'placeholder'
   _GHCR_PREFIX: 'ghcr.io/sigstore/cosign'
-
