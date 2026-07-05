@@ -36,7 +36,7 @@ should include the following:
 - Steps to do whatever other custom configuration the scenario needs
 - A step to run the test with `go test -tags=e2e,<your tag> -v ./test/...`
 
-To run these kinds of tests tests locally, you'll have to [setup
+To run these kinds of tests locally, you'll have to [setup
 scaffolding](https://github.com/sigstore/scaffolding/blob/main/getting-started.md)
 and do the other setup steps manually.
 
