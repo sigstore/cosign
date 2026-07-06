@@ -37,7 +37,7 @@ require (
 	github.com/sigstore/rekor v1.5.3
 	github.com/sigstore/rekor-tiles/v2 v2.3.0
 	github.com/sigstore/sigstore v1.10.8
-	github.com/sigstore/sigstore-go v1.2.1
+	github.com/sigstore/sigstore-go v1.2.2
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.8
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.8
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.8
@@ -294,5 +294,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/sigstore/sigstore-go => github.com/yangkenneth/sigstore-go v0.0.0-20260603051341-948bf6af8ad7
