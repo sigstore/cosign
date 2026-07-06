@@ -136,6 +136,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
 		"payload path or remote URL")
 	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("payload", "payload will always be verified from the bundle in future versions")
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")

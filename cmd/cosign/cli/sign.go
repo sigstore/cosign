@@ -38,7 +38,7 @@ Make sure to sign the image by its digest (@sha256:...) rather than by tag
 (:latest) so that you actually sign what you think you're signing! This prevents
 race conditions or (worse) malicious tampering.
 `,
-		Example: `  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+		Example: `  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
