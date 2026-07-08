@@ -160,3 +160,30 @@ CMD bin`,
 		})
 	}
 }
+
+func TestGetImagesFromDockerfileInvalidFromLines(t *testing.T) {
+	testCases := []struct {
+		name         string
+		fileContents string
+	}{
+		{
+			name: "unresolvable-build-arg",
+			fileContents: `ARG BASE_IMAGE
+FROM ${BASE_IMAGE}`,
+		},
+		{
+			name:         "missing-stage-name-after-as",
+			fileContents: `FROM gcr.io/test/image AS`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := newFinderCache()
+			ctx := context.Background()
+			got, err := fc.getImagesFromDockerfile(ctx, strings.NewReader(tc.fileContents))
+			if err == nil {
+				t.Errorf("getImagesFromDockerfile returned %v, wanted an error", got)
+			}
+		})
+	}
+}
