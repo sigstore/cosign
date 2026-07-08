@@ -95,6 +95,8 @@ func (fc *finderCache) getImagesFromDockerfile(ctx context.Context, dockerfile i
 		case strings.HasPrefix(lineUpper, "FROM"):
 			image := fc.getImageFromLine(line)
 			switch {
+			case image == "":
+				ui.Infof(ctx, "- unresolved image reference ignored")
 			case image == "scratch":
 				ui.Infof(ctx, "- scratch image ignored")
 			case fc.isStage(image):
@@ -137,6 +139,12 @@ func (fc *finderCache) getImageFromLine(line string) string {
 			fields = fields[:i]
 			break
 		}
+	}
+	if len(fields) == 0 {
+		// The image reference expanded to nothing, e.g. `FROM ${BASE}` where
+		// BASE is a build arg with no default. Static analysis cannot resolve
+		// it, so return empty and let the caller skip it rather than panic.
+		return ""
 	}
 	return fields[len(fields)-1] // The image should be the last portion of the line that remains
 }

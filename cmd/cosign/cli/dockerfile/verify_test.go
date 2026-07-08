@@ -100,6 +100,12 @@ FROM ${IMAGE}`,
 			},
 		},
 		{
+			name: "arg-with-no-default-value",
+			fileContents: `ARG COSIGN_TEST_NO_DEFAULT_BASE
+FROM ${COSIGN_TEST_NO_DEFAULT_BASE}`,
+			expected: nil,
+		},
+		{
 			name:         "image-in-copy",
 			fileContents: `COPY --from=gcr.io/someorg/someimage /var/www/html /app`,
 			expected:     []string{"gcr.io/someorg/someimage"},
