@@ -72,7 +72,6 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 				return err
 			}
 		}
-		return nil
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
