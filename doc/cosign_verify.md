@@ -59,6 +59,7 @@ cosign verify [flags]
 ### Options
 
 ```
+      --allow-certificate-chain                         allow X.509 certificate chains in bundle verification material for v0.3+ bundles
       --allow-http-registry                             whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
       --allow-insecure-registry                         whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                             extra key=value pairs to sign

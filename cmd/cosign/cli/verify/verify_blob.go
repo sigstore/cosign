@@ -70,6 +70,7 @@ type VerifyBlobCmd struct {
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	HashAlgorithm                crypto.Hash
+	AllowCertificateChain        bool
 }
 
 // nolint
@@ -114,8 +115,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
+	co.NewBundleFormat = c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath, co.BundleOptions()...)
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
 	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
@@ -138,7 +140,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	if co.NewBundleFormat {
-		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
 		if err != nil {
 			return err
 		}

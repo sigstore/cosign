@@ -38,8 +38,8 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
-func checkNewBundle(bundlePath string) bool {
-	_, err := sgbundle.LoadJSONFromPath(bundlePath)
+func checkNewBundle(bundlePath string, opts ...sgbundle.Option) bool {
+	_, err := sgbundle.LoadJSONFromPath(bundlePath, opts...)
 	return err == nil
 }
 

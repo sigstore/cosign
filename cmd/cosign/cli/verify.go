@@ -349,6 +349,7 @@ The blob may be specified as a path to a file or - for stdin.`,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 				HashAlgorithm:                hashAlgorithm,
+				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
@@ -445,6 +446,7 @@ The blob may be specified as a path to a file.`,
 				Digest:                       o.Digest,
 				DigestAlg:                    o.DigestAlg,
 				HashAlgorithm:                hashAlgorithm,
+				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 			// We only use the blob if we are checking claims.
 			if o.CheckClaims && len(args) == 0 && (o.Digest == "" || o.DigestAlg == "") {
