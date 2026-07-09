@@ -541,3 +541,91 @@ func TestWriteReferrerErrorHandling(t *testing.T) {
 		t.Errorf("Expected error to contain 'remote head failed', got %v", err)
 	}
 }
+
+func TestWriteSignaturesExperimentalOCI(t *testing.T) {
+	// Save original functions
+	origHead := remoteHead
+	origWriteLayer := remoteWriteLayer
+	origPut := remotePut
+	t.Cleanup(func() {
+		remoteHead = origHead
+		remoteWriteLayer = origWriteLayer
+		remotePut = origPut
+	})
+
+	digest := name.MustParseReference("gcr.io/test/image@sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").(name.Digest)
+
+	// Create a test signed entity with signatures
+	i, err := random.Image(300, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(i)
+
+	// Add a signature
+	sig, err := cosignstatic.NewSignature(nil, "test-sig")
+	if err != nil {
+		t.Fatalf("static.NewSignature() = %v", err)
+	}
+	si, err = mutate.AttachSignatureToImage(si, sig)
+	if err != nil {
+		t.Fatalf("AttachSignatureToImage() = %v", err)
+	}
+
+	// Mock remoteHead to return a descriptor
+	remoteHead = func(name.Reference, ...remote.Option) (*v1.Descriptor, error) {
+		return &v1.Descriptor{
+			MediaType: types.DockerManifestSchema2,
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: "abcdef1234567890"},
+			Size:      100,
+		}, nil
+	}
+
+	// Mock remoteWriteLayer to succeed
+	remoteWriteLayer = func(name.Repository, v1.Layer, ...remote.Option) error {
+		return nil
+	}
+
+	// Mock remotePut to capture the manifest
+	var capturedManifest remote.Taggable
+	remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+		capturedManifest = manifest
+		return nil
+	}
+
+	err = WriteSignaturesExperimentalOCI(digest, si)
+	if err != nil {
+		t.Fatalf("WriteSignaturesExperimentalOCI() = %v", err)
+	}
+
+	// Verify that a manifest was uploaded
+	if capturedManifest == nil {
+		t.Fatal("Expected manifest to be uploaded, but none was captured")
+	}
+
+	// Verify it's a referrerManifest (not a taggableManifest)
+	refManifest, ok := capturedManifest.(referrerManifest)
+	if !ok {
+		t.Fatalf("Expected referrerManifest, got %T", capturedManifest)
+	}
+
+	// Verify the top-level artifactType is set to the cosign signature type
+	const wantArtifactType = "application/vnd.dev.cosign.artifact.sig.v1+json"
+	if refManifest.ArtifactType != wantArtifactType {
+		t.Errorf("ArtifactType = %q, want %q", refManifest.ArtifactType, wantArtifactType)
+	}
+
+	// Verify the subject is set
+	if refManifest.Subject == nil {
+		t.Error("Expected Subject to be set")
+	}
+
+	// Verify the manifest JSON serialization includes the top-level artifactType field
+	manifestBytes, err := refManifest.RawManifest()
+	if err != nil {
+		t.Fatalf("RawManifest() = %v", err)
+	}
+	if !strings.Contains(string(manifestBytes), `"artifactType"`) {
+		t.Errorf("Expected manifest JSON to contain artifactType field, got: %s", string(manifestBytes))
+	}
+}
