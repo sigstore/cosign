@@ -3996,7 +3996,9 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 	ctx := context.Background()
 	regOpts := options.RegistryOptions{}
 	attOpts := options.AttestationDownloadOptions{}
-	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
+	out := bytes.Buffer{}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, &out), t)
+	assert.Len(t, out.Bytes(), 0, "expected empty output")
 
 	// Attest first image
 	td := t.TempDir()
@@ -4019,8 +4021,9 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 	must(attestCommand.Exec(ctx, imgName), t)
 
 	// Download should now succeed - redirect stdout to use with attach
-	out := bytes.Buffer{}
+	out = bytes.Buffer{}
 	must(download.AttestationCmd(ctx, regOpts, attOpts, imgName, &out), t)
+	assert.True(t, len(out.Bytes()) > 0)
 
 	// Create a new image to attach to
 	img2Name := path.Join(repo, "attest-new-bundle-2")
@@ -4035,7 +4038,9 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 	must(attach.AttestationCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
 
 	// Download should succeed on second image
-	must(download.AttestationCmd(ctx, regOpts, attOpts, img2Name, os.Stdout), t)
+	out = bytes.Buffer{}
+	must(download.AttestationCmd(ctx, regOpts, attOpts, img2Name, &out), t)
+	assert.True(t, len(out.Bytes()) > 0)
 }
 
 func TestSignDownloadAttachNewBundle(t *testing.T) {
