@@ -109,6 +109,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
 	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("payload", "payload will always be generated automatically in future versions")
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")

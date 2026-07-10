@@ -18,7 +18,7 @@ cosign sign [flags]
 ### Examples
 
 ```
-  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -85,7 +85,6 @@ cosign sign [flags]
       --oidc-disable-ambient-providers                  Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-provider string                            Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                        OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --payload string                                  path to a payload file to use rather than generating one
   -r, --recursive                                       if a multi-arch image is specified, additionally sign each discrete image
       --registry-cacert string                          path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                     path to the X.509 certificate file in PEM format to be used for the connection to the registry
