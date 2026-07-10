@@ -206,10 +206,6 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 		return nil, err
 	}
 
-	if len(attestations) == 0 && predicateType != "" {
-		return nil, fmt.Errorf("no attestations with predicate type '%s' found", predicateType)
-	}
-
 	return attestations, nil
 }
 
