@@ -2260,6 +2260,46 @@ func TestAttestationDownloadWithBadPredicateType(t *testing.T) {
 	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
 }
 
+func TestAttestationDownloadWithBadPredicateTypeNewBundle(t *testing.T) {
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-attest-download-bad-type-new-bundle-e2e")
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	_, privKeyPath, _ := keypair(t, td)
+	ko := options.KeyOpts{
+		KeyRef:          privKeyPath,
+		PassFunc:        passFunc,
+		NewBundleFormat: true,
+	}
+
+	ctx := context.Background()
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	regOpts := options.RegistryOptions{}
+	attestCommand := attest.AttestCommand{
+		KeyOpts:        ko,
+		PredicatePath:  slsaAttestationPath,
+		PredicateType:  "slsaprovenance",
+		Timeout:        30 * time.Second,
+		Replace:        true,
+		RekorEntryType: "dsse",
+	}
+	must(attestCommand.Exec(ctx, imgName), t)
+
+	attOpts := options.AttestationDownloadOptions{
+		PredicateType: "vuln",
+	}
+	mustErr(download.AttestationCmd(ctx, regOpts, attOpts, imgName, os.Stdout), t)
+}
+
 func TestAttestationReplaceCreate(t *testing.T) {
 	repo, stop := reg(t)
 	defer stop()
