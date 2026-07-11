@@ -71,7 +71,6 @@ func TestTSAMTLS(t *testing.T) {
 		Upload:     true,
 		TlogUpload: false,
 		Cert:       pemLeafRef,
-		CertChain:  pemRootRef,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
@@ -329,7 +328,6 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 		Upload:          true,
 		TlogUpload:      false,
 		Cert:            pemLeafRef,
-		CertChain:       pemRootRef,
 		NewBundleFormat: true,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
