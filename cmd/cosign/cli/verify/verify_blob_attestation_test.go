@@ -26,6 +26,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -573,5 +574,23 @@ func TestParseBlobHashAlgorithm(t *testing.T) {
 				t.Errorf("got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestVerifyBlobAttestationSkWithoutIdentities(t *testing.T) {
+	ctx := context.Background()
+	verifyBlobAttestation := VerifyBlobAttestationCommand{
+		KeyOpts: options.KeyOpts{
+			Sk:         true,
+			BundlePath: "bundle.sigstore.json",
+		},
+	}
+
+	err := verifyBlobAttestation.Exec(ctx, "blob")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "opening piv token") {
+		t.Fatalf("expected PIV error, got: %v", err)
 	}
 }

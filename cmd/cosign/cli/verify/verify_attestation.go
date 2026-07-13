@@ -92,7 +92,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	var identities []cosign.Identity
-	if c.KeyRef == "" {
+	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()
 		if err != nil {
 			return err

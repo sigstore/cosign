@@ -748,6 +748,23 @@ func TestVerifyBlobKeyAndCertIdentity(t *testing.T) {
 	}
 }
 
+func TestVerifyBlobSkWithoutIdentities(t *testing.T) {
+	ctx := context.Background()
+	verifyBlob := VerifyBlobCmd{
+		KeyOpts: options.KeyOpts{
+			Sk: true,
+		},
+	}
+
+	err := verifyBlob.Exec(ctx, "blob")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "opening piv token") {
+		t.Fatalf("expected PIV error, got: %v", err)
+	}
+}
+
 func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	pyld, sig, svBytes []byte, expiryValid bool) *models.LogEntry {
 	ctx := context.Background()
