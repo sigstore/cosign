@@ -106,7 +106,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	var identities []cosign.Identity
-	if c.KeyRef == "" {
+	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()
 		if err != nil {
 			return err
