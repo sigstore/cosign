@@ -77,6 +77,11 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotati
 		return err
 	}
 	for _, subj := range st.Subject {
+		// A null entry in the subject array decodes to a nil descriptor on the
+		// legacy encoding/json path, so skip it rather than dereferencing it.
+		if subj == nil {
+			continue
+		}
 		dgst, ok := subj.Digest["sha256"]
 		if !ok {
 			continue

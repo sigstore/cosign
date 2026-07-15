@@ -63,6 +63,11 @@ const (
 	// Start with valid, but change subject.Digest.sha256 to subject.Digest.999
 	validIntotoStatementMissingSubject  = `{"payloadType":"application/vnd.in-toto+json","payload":"ewogICJfdHlwZSI6ICJodHRwczovL2luLXRvdG8uaW8vU3RhdGVtZW50L3YwLjEiLAogICJwcmVkaWNhdGVUeXBlIjogImNvc2lnbi5zaWdzdG9yZS5kZXYvYXR0ZXN0YXRpb24vdjEiLAogICJzdWJqZWN0IjogWwogICAgewogICAgICAibmFtZSI6ICJyZWdpc3RyeS5sb2NhbDo1MDAwL2tuYXRpdmUvZGVtbyIsCiAgICAgICJkaWdlc3QiOiB7CiAgICAgICAgIjk5OSI6ICI2YzZmZDZhNDExNWM2ZTk5OGZmMzU3Y2Q5MTQ2ODA5MzFiYjlhNmMxYTdjZDVmNWNiMmY1ZTFjMDkzMmFiNmVkIgogICAgICB9CiAgICB9CiAgXSwKICAicHJlZGljYXRlIjogewogICAgIkRhdGEiOiAiZm9vYmFyIHRlc3QgYXR0ZXN0YXRpb24iLAogICAgIlRpbWVzdGFtcCI6ICIyMDIyLTA0LTA3VDE5OjIyOjI1WiIKICB9Cn0K","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
 	validIntotoStatementStringPredicate = `{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3NwZHguZGV2L0RvY3VtZW50Iiwic3ViamVjdCI6W3sibmFtZSI6ImxvY2FsaG9zdDo1MDAwL3dvbGZpLWJhc2U0IiwiZGlnZXN0Ijp7InNoYTI1NiI6Ijk5MjVkMzAxNzc4ODU1OGZhOGYyN2U4YmIxNjBiNzkxZTU2MjAyYjYwYzkxZmJjYzVjODY3ZGUzMTc1OTg2YzgifX1dLCJwcmVkaWNhdGUiOiJ7XCJzcGR4VmVyc2lvblwiOlwiU1BEWC0yLjJcIixcImRhdGFMaWNlbnNlXCI6XCJDQzAtMS4wXCIsXCJTUERYSURcIjpcIlNQRFhSZWYtRE9DVU1FTlRcIixcIm5hbWVcIjpcIlNCT00tU1BEWC0zNGYxYTdmNS0wM2ZmLTQyNzctOTAyMS04YzA0Zjg3Nzc4MDNcIixcImRvY3VtZW50TmFtZXNwYWNlXCI6XCJodHRwczovL3NwZHgub3JnL3NwZHhkb2NzL2s4cy1yZWxlbmctYm9tLTE2ZjRlMjg4LTZiZGYtNGI4OS1hNzlhLTlmZmQ1NmFkMzNlMFwiLFwiY3JlYXRpb25JbmZvXCI6e1wibGljZW5zZUxpc3RWZXJzaW9uXCI6XCJcIixcImNyZWF0b3JzXCI6W1wiT3JnYW5pemF0aW9uOiBLdWJlcm5ldGVzIFJlbGVhc2UgRW5naW5lZXJpbmdcIixcIlRvb2w6IHNpZ3MuazhzLmlvL2JvbS9wa2cvc3BkeFwiXSxcImNyZWF0ZWRcIjpcIjIwMjItMDYtMDdUMjI6MTQ6NTZaXCIsXCJjb21tZW50XCI6XCJcIn0sXCJwYWNrYWdlc1wiOltdfVxuIn0=","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
+	// A statement whose subject array holds a null entry. The string predicate
+	// forces the legacy encoding/json path in Statement.UnmarshalJSON, which
+	// decodes the null into a nil *ResourceDescriptor:
+	// {"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://spdx.dev/Document","subject":[null],"predicate":"x"}
+	intotoStatementNullSubject = `{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3NwZHguZGV2L0RvY3VtZW50Iiwic3ViamVjdCI6W251bGxdLCJwcmVkaWNhdGUiOiJ4In0=","signatures":[{"keyid":"","sig":"MEUCIQC/slGQVpRKgw4Jo8tcbgo85WNG/FOJfxcvQFvTEnG9swIgP4LeOmID+biUNwLLeylBQpAEgeV6GVcEpyG6r8LVnfY="}]}`
 )
 
 var validDigest = v1.Hash{Algorithm: "sha256", Hex: "6c6fd6a4115c6e998ff357cd914680931bb9a6c1a7cd5f5cb2f5e1c0932ab6ed"}
@@ -82,6 +87,7 @@ func Test_IntotoSubjectClaimVerifier(t *testing.T) {
 		{payload: validIntotoStatementMissingSubject, digest: validDigest, shouldFail: true},
 		{payload: validIntotoStatement, digest: validDigest, shouldFail: false},
 		{payload: validIntotoStatementStringPredicate, digest: validDigestStringPredicate, shouldFail: false},
+		{payload: intotoStatementNullSubject, digest: validDigest, shouldFail: true},
 	}
 	for _, tc := range tests {
 		ociSig, err := static.NewSignature([]byte(tc.payload), "")
