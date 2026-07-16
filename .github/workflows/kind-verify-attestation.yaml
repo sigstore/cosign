@@ -94,7 +94,7 @@ jobs:
           fmt.Println("hello world")
         }
         EOF
-        demoimage=`ko publish -B example.com/demo`
+        demoimage=$(ko publish --insecure-registry -B example.com/demo)
         echo "demoimage=$demoimage" >> $GITHUB_ENV
         echo Created image $demoimage
         popd

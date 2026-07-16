@@ -193,22 +193,15 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	artifactType := ociexperimental.ArtifactType("sig")
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc
-	b, err = json.Marshal(&m)
-	if err != nil {
-		return err
-	}
-	digest, _, err := v1.SHA256(bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	targetRef, err := name.ParseReference(fmt.Sprintf("%s/%s@%s", d.RegistryStr(), d.RepositoryStr(), digest.String()))
+	rm := referrerManifest{m, artifactType}
+	targetRef, err := rm.targetRef(d.Repository)
 	if err != nil {
 		return err
 	}
 	// TODO: use ui.Infof
 	fmt.Fprintf(os.Stderr, "Uploading signature for [%s] to [%s] with config.mediaType [%s] layers[0].mediaType [%s].\n",
 		d.String(), targetRef.String(), artifactType, ctypes.SimpleSigningMediaType)
-	return remotePut(targetRef, &taggableManifest{raw: b, mediaType: m.MediaType}, o.ROpt...)
+	return remotePut(targetRef, rm, o.ROpt...)
 }
 
 type taggableManifest struct {
