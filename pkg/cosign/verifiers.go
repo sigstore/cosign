@@ -77,6 +77,9 @@ func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotati
 		return err
 	}
 	for _, subj := range st.Subject {
+		if subj == nil {
+			return errors.New("invalid in-toto statement: null subject entry")
+		}
 		dgst, ok := subj.Digest["sha256"]
 		if !ok {
 			continue
