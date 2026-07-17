@@ -69,6 +69,9 @@ func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.
 		return nil, fmt.Errorf("pem to public key: %w", err)
 	}
 
+	if hashAlgorithm == 0 {
+		return signature.LoadDefaultVerifier(pubKey)
+	}
 	return signature.LoadVerifier(pubKey, hashAlgorithm)
 }
 
@@ -92,6 +95,9 @@ func LoadPublicKeyRaw(raw []byte, hashAlgorithm crypto.Hash) (signature.Verifier
 	pub, err := cryptoutils.UnmarshalPEMToPublicKey(raw)
 	if err != nil {
 		return nil, err
+	}
+	if hashAlgorithm == 0 {
+		return signature.LoadDefaultVerifier(pub)
 	}
 	return signature.LoadVerifier(pub, hashAlgorithm)
 }
@@ -169,7 +175,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 }
 
 func PublicKeyFromKeyRef(ctx context.Context, keyRef string) (signature.Verifier, error) {
-	return PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, crypto.SHA256)
+	return PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, 0)
 }
 
 func PublicKeyFromKeyRefWithHashAlgo(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (signature.Verifier, error) {
