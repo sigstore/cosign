@@ -154,15 +154,15 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 	if err != nil {
 		return nil, fmt.Errorf("fetching attestations: %w", err)
 	}
+	attestations := make([]AttestationPayload, 0, len(l))
 	if len(l) == 0 {
-		return nil, errors.New("found no attestations")
+		return attestations, nil
 	}
 	if len(l) > maxAllowedSigsOrAtts {
 		errMsg := fmt.Sprintf("maximum number of attestations on an image is %d, found %d", maxAllowedSigsOrAtts, len(l))
 		return nil, errors.New(errMsg)
 	}
 
-	attestations := make([]AttestationPayload, 0, len(l))
 	var attMu sync.Mutex
 
 	var g errgroup.Group

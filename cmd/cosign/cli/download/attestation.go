@@ -46,6 +46,31 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 		}
 	}
 
+	// Try bundles first
+	newBundles, _, err := cosign.GetBundles(ctx, ref, &cosign.CheckOpts{RegistryClientOpts: ociremoteOpts})
+	if err == nil && len(newBundles) > 0 {
+		for _, eachBundle := range newBundles {
+			if predicateType != "" {
+				envelope, err := eachBundle.Envelope()
+				if err != nil || envelope == nil {
+					continue
+				}
+				statement, err := envelope.Statement()
+				if err != nil || statement == nil {
+					continue
+				}
+				if statement.PredicateType != predicateType {
+					continue
+				}
+			}
+			b, err := json.Marshal(eachBundle)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(b))
+		}
+	}
+
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
 	var entityNotFoundError *ociremote.EntityNotFoundError
 	if err != nil {
