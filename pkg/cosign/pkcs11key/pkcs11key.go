@@ -39,6 +39,12 @@ import (
 	"golang.org/x/term"
 )
 
+var (
+	ContextNotInitialized error = errors.New("context not initialized")
+	SignerNotSet          error = errors.New("signer not set")
+	CertNotSet            error = errors.New("certificate not set")
+)
+
 type Key struct {
 	ctx    *crypto11.Context
 	signer crypto.Signer
@@ -171,7 +177,7 @@ func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key,
 	// key pair is found, so we must check explicitly to avoid handing back
 	// a Key with a nil signer, which would later panic on use.
 	if signer == nil {
-		return nil, errSignerNotFound(config.KeyID, config.KeyLabel)
+		return nil, fmt.Errorf("%w: no key pair found for id=%q label=%q in slot/token", SignerNotSet, config.KeyID, config.KeyLabel)
 	}
 
 	// Key's corresponding cert might not exist,
