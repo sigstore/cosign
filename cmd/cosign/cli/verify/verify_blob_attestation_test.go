@@ -69,62 +69,67 @@ func TestVerifyBlobAttestation(t *testing.T) {
 	hugeBlobPath := writeBlobFile(t, td, hugeBlobContents, "huge-blob")
 	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
 
+	bundleSLSAProvenance := makeBundleFromDSSE(t, blobSLSAProvenanceSignature)
+	bundleEmptySubject := makeBundleFromDSSE(t, dssePredicateEmptySubject)
+	bundleMissingSha256 := makeBundleFromDSSE(t, dssePredicateMissingSha256)
+	bundleMultipleSubjects := makeBundleFromDSSE(t, dssePredicateMultipleSubjects)
+	bundleMultipleSubjectsInvalid := makeBundleFromDSSE(t, dssePredicateMultipleSubjectsInvalid)
+
 	tests := []struct {
 		description   string
 		blobPath      string
 		digest        string
 		bundlePath    string
-		signature     string
 		predicateType string
 		env           map[string]string
 		shouldErr     bool
 	}{
 		{
 			description:   "verify a slsaprovenance predicate",
+			bundlePath:    bundleSLSAProvenance,
 			predicateType: "slsaprovenance",
 			blobPath:      blobPath,
-			signature:     blobSLSAProvenanceSignature,
 		}, {
 			description:   "fail with incorrect predicate",
-			signature:     blobSLSAProvenanceSignature,
+			bundlePath:    bundleSLSAProvenance,
 			blobPath:      blobPath,
 			predicateType: "custom",
 			shouldErr:     true,
 		}, {
 			description: "fail with incorrect blob",
-			signature:   blobSLSAProvenanceSignature,
+			bundlePath:  bundleSLSAProvenance,
 			blobPath:    anotherBlobPath,
 			shouldErr:   true,
 		}, {
 			description: "dsse envelope predicate has no subject",
-			signature:   dssePredicateEmptySubject,
+			bundlePath:  bundleEmptySubject,
 			blobPath:    blobPath,
 			shouldErr:   true,
 		}, {
 			description: "dsse envelope predicate missing sha256 digest",
-			signature:   dssePredicateMissingSha256,
+			bundlePath:  bundleMissingSha256,
 			blobPath:    blobPath,
 			shouldErr:   true,
 		}, {
 			description:   "dsse envelope has multiple subjects, one is valid",
+			bundlePath:    bundleMultipleSubjects,
 			predicateType: "slsaprovenance",
-			signature:     dssePredicateMultipleSubjects,
 			blobPath:      blobPath,
 		}, {
 			description:   "dsse envelope has multiple subjects, one is valid, but we are looking for different predicatetype",
+			bundlePath:    bundleMultipleSubjects,
 			predicateType: "notreallyslsaprovenance",
-			signature:     dssePredicateMultipleSubjects,
 			blobPath:      blobPath,
 			shouldErr:     true,
 		}, {
 			description:   "dsse envelope has multiple subjects, none has correct sha256 digest",
+			bundlePath:    bundleMultipleSubjectsInvalid,
 			predicateType: "slsaprovenance",
-			signature:     dssePredicateMultipleSubjectsInvalid,
 			blobPath:      blobPath,
 			shouldErr:     true,
 		}, {
 			description: "override file size limit",
-			signature:   blobSLSAProvenanceSignature,
+			bundlePath:  bundleSLSAProvenance,
 			blobPath:    hugeBlobPath,
 			env:         map[string]string{"COSIGN_MAX_ATTACHMENT_SIZE": "128"},
 			shouldErr:   true,
@@ -142,10 +147,10 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			shouldErr:  true,
 		}, {
 			description:   "verify with digest instead of blob",
+			bundlePath:    bundleSLSAProvenance,
 			predicateType: "slsaprovenance",
 			blobPath:      "",
 			digest:        blobSha256,
-			signature:     blobSLSAProvenanceSignature,
 		},
 	}
 
@@ -154,15 +159,9 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			for k, v := range test.env {
 				t.Setenv(k, v)
 			}
-			decodedSig, err := base64.StdEncoding.DecodeString(test.signature)
-			if err != nil {
-				t.Fatal(err)
-			}
-			sigRef := writeBlobFile(t, td, string(decodedSig), "signature")
 
 			cmd := VerifyBlobAttestationCommand{
 				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
-				SignaturePath: sigRef,
 				IgnoreTlog:    true,
 				CheckClaims:   true,
 				PredicateType: test.predicateType,
@@ -173,10 +172,9 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			}
 			if test.bundlePath != "" {
 				cmd.BundlePath = test.bundlePath
-				cmd.NewBundleFormat = true
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
 			}
-			err = cmd.Exec(ctx, test.blobPath)
+			err := cmd.Exec(ctx, test.blobPath)
 
 			if (err != nil) != test.shouldErr {
 				t.Fatalf("verifyBlobAttestation()= %s, expected shouldErr=%t ", err, test.shouldErr)
@@ -194,22 +192,23 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 	anotherBlobPath := writeBlobFile(t, td, anotherBlobContents, "other-blob")
 	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
 
+	bundleSLSAProvenance := makeBundleFromDSSE(t, blobSLSAProvenanceSignature)
+
 	tests := []struct {
 		description string
 		blobPath    string
-		signature   string
 		bundlePath  string
 	}{
 		{
 			description: "verify a predicate",
+			bundlePath:  bundleSLSAProvenance,
 			blobPath:    blobPath,
-			signature:   blobSLSAProvenanceSignature,
 		}, {
 			description: "verify a predicate no path",
-			signature:   blobSLSAProvenanceSignature,
+			bundlePath:  bundleSLSAProvenance,
 		}, {
 			description: "verify a predicate with another blob path",
-			signature:   blobSLSAProvenanceSignature,
+			bundlePath:  bundleSLSAProvenance,
 			// This works because we're not checking the claims. It doesn't matter what we put in here - it should pass so long as the DSSE signagure can be verified.
 			blobPath: anotherBlobPath,
 		}, {
@@ -219,29 +218,21 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 			blobPath:   anotherBlobPath,
 		}, {
 			description: "verify a predicate with /dev/null",
-			signature:   blobSLSAProvenanceSignature,
+			bundlePath:  bundleSLSAProvenance,
 			blobPath:    "/dev/null",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			decodedSig, err := base64.StdEncoding.DecodeString(test.signature)
-			if err != nil {
-				t.Fatal(err)
-			}
-			sigRef := writeBlobFile(t, td, string(decodedSig), "signature")
-
 			cmd := VerifyBlobAttestationCommand{
 				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
-				SignaturePath: sigRef,
 				IgnoreTlog:    true,
 				CheckClaims:   false,
 				PredicateType: "slsaprovenance",
 			}
 			if test.bundlePath != "" {
 				cmd.BundlePath = test.bundlePath
-				cmd.NewBundleFormat = true
 				cmd.TrustedRootPath = writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}")
 			}
 			if err := cmd.Exec(ctx, test.blobPath); err != nil {
@@ -415,83 +406,35 @@ func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to setup envelope: %v", err)
 			}
+			var envJSON struct {
+				PayloadType string `json:"payloadType"`
+				Payload     string `json:"payload"`
+				Signatures  []struct {
+					Sig string `json:"sig"`
+				} `json:"signatures"`
+			}
+			if err := json.Unmarshal([]byte(sigStr), &envJSON); err != nil {
+				t.Fatalf("failed to unmarshal dsse envelope: %v", err)
+			}
+			if len(envJSON.Signatures) == 0 {
+				t.Fatalf("no signatures in dsse envelope")
+			}
+			bundlePath := makeLocalAttestNewBundle(t, envJSON.Payload, envJSON.PayloadType, envJSON.Signatures[0].Sig)
 
-			t.Run("Standalone Signature", func(t *testing.T) {
-				sigRef := writeBlobFile(t, td, sigStr, "signature")
+			cmd := VerifyBlobAttestationCommand{
+				KeyOpts:         options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath},
+				IgnoreTlog:      true,
+				CheckClaims:     false,
+				PredicateType:   tc.predicateType,
+				TrustedRootPath: writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}"),
+			}
 
-				cmd := VerifyBlobAttestationCommand{
-					KeyOpts:       options.KeyOpts{KeyRef: keyRef},
-					SignaturePath: sigRef,
-					IgnoreTlog:    true,
-					CheckClaims:   false,
-					PredicateType: tc.predicateType,
-				}
-
-				err = cmd.Exec(ctx, blobPath)
-				if err == nil {
-					t.Fatalf("[%s Standalone] FAIL: swallowed error, returned Verified OK", tc.description)
-				} else {
-					t.Logf("[%s Standalone] PASS: returned error: %v", tc.description, err)
-				}
-			})
-
-			t.Run("Old Bundle Format", func(t *testing.T) {
-				bundleData := map[string]interface{}{
-					"base64Signature": base64.StdEncoding.EncodeToString([]byte(sigStr)),
-					"cert":            string(pubKeyBytes),
-				}
-				bundleBytes, err := json.Marshal(bundleData)
-				if err != nil {
-					t.Fatalf("failed to marshal old bundle: %v", err)
-				}
-				bundleRef := writeBlobFile(t, td, string(bundleBytes), "bundle.json")
-
-				cmd := VerifyBlobAttestationCommand{
-					KeyOpts:       options.KeyOpts{KeyRef: keyRef, BundlePath: bundleRef},
-					IgnoreTlog:    true,
-					CheckClaims:   false,
-					PredicateType: tc.predicateType,
-				}
-
-				err = cmd.Exec(ctx, blobPath)
-				if err == nil {
-					t.Fatalf("[%s Old Bundle] FAIL: swallowed error, returned Verified OK", tc.description)
-				} else {
-					t.Logf("[%s Old Bundle] PASS: returned error: %v", tc.description, err)
-				}
-			})
-
-			t.Run("New Bundle Format", func(t *testing.T) {
-				var envJSON struct {
-					PayloadType string `json:"payloadType"`
-					Payload     string `json:"payload"`
-					Signatures  []struct {
-						Sig string `json:"sig"`
-					} `json:"signatures"`
-				}
-				if err := json.Unmarshal([]byte(sigStr), &envJSON); err != nil {
-					t.Fatalf("failed to unmarshal dsse envelope: %v", err)
-				}
-				if len(envJSON.Signatures) == 0 {
-					t.Fatalf("no signatures in dsse envelope")
-				}
-				bundlePath := makeLocalAttestNewBundle(t, envJSON.Payload, envJSON.PayloadType, envJSON.Signatures[0].Sig)
-
-				cmd := VerifyBlobAttestationCommand{
-					KeyOpts:         options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath, NewBundleFormat: true},
-					IgnoreTlog:      true,
-					CheckClaims:     false,
-					PredicateType:   tc.predicateType,
-					TrustedRootPath: writeTrustedRootFile(t, td, "{\"mediaType\":\"application/vnd.dev.sigstore.trustedroot+json;version=0.1\"}"),
-				}
-
-				err = cmd.Exec(ctx, blobPath)
-				if err == nil {
-					t.Fatalf("[%s New Bundle] FAIL: swallowed error, returned Verified OK", tc.description)
-				} else {
-					t.Logf("[%s New Bundle] PASS: returned error: %v", tc.description, err)
-				}
-			})
+			err = cmd.Exec(ctx, blobPath)
+			if err == nil {
+				t.Fatalf("[%s] FAIL: swallowed error, returned Verified OK", tc.description)
+			} else {
+				t.Logf("[%s] PASS: returned error: %v", tc.description, err)
+			}
 		})
 	}
 }
@@ -593,4 +536,25 @@ func TestVerifyBlobAttestationSkWithoutIdentities(t *testing.T) {
 	if !strings.Contains(err.Error(), "opening piv token") {
 		t.Fatalf("expected PIV error, got: %v", err)
 	}
+}
+
+func makeBundleFromDSSE(t *testing.T, dsseBase64 string) string {
+	decodedDSSE, err := base64.StdEncoding.DecodeString(dsseBase64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var envJSON struct {
+		PayloadType string `json:"payloadType"`
+		Payload     string `json:"payload"`
+		Signatures  []struct {
+			Sig string `json:"sig"`
+		} `json:"signatures"`
+	}
+	if err := json.Unmarshal(decodedDSSE, &envJSON); err != nil {
+		t.Fatal(err)
+	}
+	if len(envJSON.Signatures) == 0 {
+		t.Fatal("no signatures in dsse envelope")
+	}
+	return makeLocalAttestNewBundle(t, envJSON.Payload, envJSON.PayloadType, envJSON.Signatures[0].Sig)
 }

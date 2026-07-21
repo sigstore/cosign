@@ -20,7 +20,6 @@ package test
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -37,8 +36,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -52,22 +54,70 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
-const (
-	rekorURL   = "http://127.0.0.1:3000"
-	rekorV2URL = "http://127.0.0.1:3003"
-	fulcioURL  = "http://127.0.0.1:5555"
-	tsaURL     = "http://127.0.0.1:3004"
+var (
+	rekorURL   = getEnvWithFallback("REKOR_URL", "http://127.0.0.1:3000")
+	rekorV2URL = getEnvWithFallback("REKOR_V2_URL", "http://127.0.0.1:3003")
+	fulcioURL  = getEnvWithFallback("FULCIO_URL", "http://127.0.0.1:5555")
+	tsaURL     = getEnvWithFallback("TSA_URL", "http://127.0.0.1:3004")
 	certID     = "foo@bar.com"
 )
+
+func getEnvWithFallback(key, fallback string) string {
+	if val := os.Getenv(key); val != "" { //nolint:forbidigo
+		return val
+	}
+	return fallback
+}
+
+var (
+	testTrustedRootPath     string
+	testTrustedRootPathOnce sync.Once
+)
+
+func getTestTrustedRootPath() string {
+	testTrustedRootPathOnce.Do(func() {
+		td, err := os.MkdirTemp("", "cosign-e2e-trustedroot")
+		if err != nil {
+			panic(fmt.Errorf("creating temp dir for trusted root: %w", err))
+		}
+		rekorPath := filepath.Join(td, "rekor.pub")
+		rekorFP, err := os.Create(rekorPath)
+		if err != nil {
+			panic(err)
+		}
+		defer rekorFP.Close()
+		if err := downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP); err != nil {
+			panic(err)
+		}
+		outPath := filepath.Join(td, "trusted-root.json")
+		cmd := &trustedroot.CreateCmd{
+			Out:          outPath,
+			RekorKeyPath: []string{rekorPath},
+		}
+		if err := cmd.Exec(context.Background()); err != nil {
+			panic(err)
+		}
+		testTrustedRootPath = outPath
+	})
+	return testTrustedRootPath
+}
+
+func initVerifyCmd(cmd *cliverify.VerifyCommand) {
+	if !cmd.IgnoreTlog && cmd.TrustedRootPath == "" {
+		cmd.TrustedRootPath = getTestTrustedRootPath()
+	}
+}
 
 var keyPass = []byte("hello")
 
@@ -75,184 +125,97 @@ var passFunc = func(_ bool) ([]byte, error) {
 	return keyPass, nil
 }
 
-var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		IgnoreTlog:    skipTlogVerify,
+		KeyRef:      keyRef,
+		CheckClaims: checkClaims,
+		Annotations: sigs.AnnotationsMap{Annotations: annotations},
+		MaxWorkers:  10,
+		IgnoreTlog:  skipTlogVerify,
 	}
 
 	args := []string{imageRef}
 
+	initVerifyCmd(&cmd)
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyCertChain = func(keyRef, certChain, certFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		IgnoreTlog:    skipTlogVerify,
-		CertVerifyOptions: options.CertVerifyOptions{
-			Cert:      certFile,
-			CertChain: certChain,
-		},
+		KeyRef:      keyRef,
+		CheckClaims: checkClaims,
+		Annotations: sigs.AnnotationsMap{Annotations: annotations},
+		IgnoreTlog:  skipTlogVerify,
+		MaxWorkers:  10,
 	}
 
 	args := []string{imageRef}
 
+	initVerifyCmd(&cmd)
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyCertBundle = func(keyRef, caCertFile, caIntermediateCertFile, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		IgnoreTlog:    skipTlogVerify,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CAIntermediates: caIntermediateCertFile,
-			CARoots:         caCertFile,
-		},
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyTSA = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment, tsaCertChain string, skipTlogVerify bool) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:           keyRef,
-		RekorURL:         rekorURL,
-		CheckClaims:      checkClaims,
-		Annotations:      sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:       attachment,
-		HashAlgorithm:    crypto.SHA256,
-		TSACertChainPath: tsaCertChain,
-		IgnoreTlog:       skipTlogVerify,
-		MaxWorkers:       10,
-	}
-
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyKeylessTSA = func(imageRef, tsaCertChain, certChain string, skipSCT, skipTlogVerify bool) error { //nolint: unused
+var verifyKeylessTSA = func(imageRef, _ string, skipSCT, skipTlogVerify bool) error { //nolint: unused
 	cmd := cliverify.VerifyCommand{
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
-		CertChain:        certChain,
-		RekorURL:         rekorURL,
-		HashAlgorithm:    crypto.SHA256,
-		TSACertChainPath: tsaCertChain,
-		IgnoreSCT:        skipSCT,
-		IgnoreTlog:       skipTlogVerify,
-		MaxWorkers:       10,
+		IgnoreSCT:  skipSCT,
+		IgnoreTlog: skipTlogVerify,
+		MaxWorkers: 10,
 	}
 
 	args := []string{imageRef}
 
+	initVerifyCmd(&cmd)
 	return cmd.Exec(context.Background(), args)
 }
 
-var verifyKeylessTSAWithCARoots = func(imageRef string,
-	caroots string, // filename of a PEM file with CA Roots certificates
-	intermediates string, // empty or filename of a PEM file with Intermediate certificates
-	certFile string, // filename of a PEM file with the codesigning certificate
-	tsaCertChain string,
-	skipSCT bool,
-	skipTlogVerify bool) error {
+var verifyWithTrustedRoot = func(imageRef, trustedRootPath string) error {
 	cmd := cliverify.VerifyCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			TrustedRootPath: trustedRootPath,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
-		CertRef:          certFile,
-		CARoots:          caroots,
-		CAIntermediates:  intermediates,
-		RekorURL:         rekorURL,
-		HashAlgorithm:    crypto.SHA256,
-		TSACertChainPath: tsaCertChain,
-		IgnoreSCT:        skipSCT,
-		IgnoreTlog:       skipTlogVerify,
-		MaxWorkers:       10,
+		IgnoreSCT:  true,
+		MaxWorkers: 10,
 	}
-	args := []string{imageRef}
-
-	return cmd.Exec(context.Background(), args)
+	initVerifyCmd(&cmd)
+	return cmd.Exec(context.Background(), []string{imageRef})
 }
 
-var verifyBlobKeylessWithCARoots = func(blobRef string,
-	sig string,
-	caroots string, // filename of a PEM file with CA Roots certificates
-	intermediates string, // empty or filename of a PEM file with Intermediate certificates
-	certFile string, // filename of a PEM file with the codesigning certificate
-	skipSCT bool,
-	skipTlogVerify bool) error {
+var verifyBlobWithTrustedRoot = func(blobRef, bundlePath, trustedRootPath string) error {
 	cmd := cliverify.VerifyBlobCmd{
+		KeyOpts: options.KeyOpts{
+			BundlePath: bundlePath,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
-		SigRef:          sig,
-		CertRef:         certFile,
-		CARoots:         caroots,
-		CAIntermediates: intermediates,
-		IgnoreSCT:       skipSCT,
-		IgnoreTlog:      skipTlogVerify,
+		TrustedRootPath: trustedRootPath,
+		IgnoreSCT:       true,
 	}
 	return cmd.Exec(context.Background(), blobRef)
 }
 
 // Used to verify local images stored on disk
-var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
+var verifyLocal = func(keyRef, path string, checkClaims bool, annotations map[string]interface{}) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		LocalImage:    true,
-		MaxWorkers:    10,
+		KeyRef:      keyRef,
+		CheckClaims: checkClaims,
+		Annotations: sigs.AnnotationsMap{Annotations: annotations},
+		LocalImage:  true,
+		MaxWorkers:  10,
 	}
 
 	args := []string{path}
 
-	return cmd.Exec(context.Background(), args)
-}
-
-var verifyOffline = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string) error {
-	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		RekorURL:      "notreal",
-		Offline:       true,
-		CheckClaims:   checkClaims,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		Attachment:    attachment,
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-	}
-
-	args := []string{imageRef}
-
+	initVerifyCmd(&cmd)
 	return cmd.Exec(context.Background(), args)
 }
 
@@ -527,7 +490,7 @@ func setLocalEnv(t *testing.T, dir string) error {
 
 // copyFile copies a file from a source to a destination.
 func copyFile(src, dst string) error {
-	f, err := os.Open(src)
+	f, err := os.Open(src) //nolint: gosec // test helper
 	if err != nil {
 		return fmt.Errorf("error opening source file: %w", err)
 	}
@@ -800,4 +763,45 @@ func generateCertificateBundle(genIntermediate bool) (
 	}
 
 	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certBundleBuf, nil
+}
+
+var rekorSigningConfig = func() *root.SigningConfig {
+	sc := signcommon.NewEmptySigningConfig()
+	sc.WithRekorLogURLs(root.Service{
+		URL:                 rekorURL,
+		MajorAPIVersion:     1,
+		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
+	})
+	sc.WithFulcioCertificateAuthorityURLs(root.Service{
+		URL:                 fulcioURL,
+		MajorAPIVersion:     1,
+		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
+	})
+	return sc
+}()
+
+func fetchReferrerBundle(t *testing.T, ref name.Digest, remoteOpts ...ociremote.Option) []byte {
+	idx, err := ociremote.Referrers(ref, "application/vnd.dev.sigstore.bundle.v0.3+json", remoteOpts...)
+	must(err, t)
+	if len(idx.Manifests) != 1 {
+		t.Fatalf("expected one referrer, got %d", len(idx.Manifests))
+	}
+
+	refDigest := ref.Context().Digest(idx.Manifests[0].Digest.String())
+	img, err := ociremote.SignedImage(refDigest, remoteOpts...)
+	must(err, t)
+
+	layers, err := img.Layers()
+	must(err, t)
+	if len(layers) != 1 {
+		t.Fatalf("expected one layer in referrer, got %d", len(layers))
+	}
+
+	rc, err := layers[0].Uncompressed()
+	must(err, t)
+	defer rc.Close()
+
+	bundleBytes, err := io.ReadAll(rc)
+	must(err, t)
+	return bundleBytes
 }

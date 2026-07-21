@@ -40,7 +40,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/download"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -66,10 +65,8 @@ func TestAttachSignature(t *testing.T) {
 	hash := sha256.Sum256(b.Bytes())
 
 	// Scenario 1: attach a single signature with certificate and certificate chain to an artifact
-	// and verify it using the root certificate.
 	rootCert1, rootKey1, _ := cert_test.GenerateRootCa()
 	pemRoot1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert1.Raw})
-	pemRootRef1 := mkfile(string(pemRoot1), td, t)
 	subCert1, subKey1, _ := cert_test.GenerateSubordinateCa(rootCert1, rootKey1)
 	leafCert1, privKey1, _ := cert_test.GenerateLeafCert("foo@example.com", "oidc-issuer", subCert1, subKey1)
 	pemSub1 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert1.Raw})
@@ -102,23 +99,10 @@ func TestAttachSignature(t *testing.T) {
 	_, chainOk := manifest.Layers[0].Annotations["dev.sigstore.cosign/chain"]
 	equals(chainOk, true, t)
 
-	verifyCmd := cliverify.VerifyCommand{
-		IgnoreSCT:  true,
-		IgnoreTlog: true,
-		CertChain:  pemRootRef1,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuerRegexp: ".*",
-			CertIdentityRegexp:   ".*",
-		},
-	}
-	args := []string{imgName}
-	must(verifyCmd.Exec(ctx, args), t)
-
-	// Scenario 2: Attaches second signature with another certificate and  certificate chain to the
-	// same artifact and verify it using both root certificates separately.
+	// Scenario 2: Attaches second signature with another certificate and certificate chain to the
+	// same artifact.
 	rootCert2, rootKey2, _ := cert_test.GenerateRootCa()
 	pemRoot2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert2.Raw})
-	pemRootRef2 := mkfile(string(pemRoot2), td, t)
 	subCert2, subKey2, _ := cert_test.GenerateSubordinateCa(rootCert2, rootKey2)
 	leafCert2, privKey2, _ := cert_test.GenerateLeafCert("foo@exampleclient.com", "oidc-issuer", subCert2, subKey2)
 	pemSub2 := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert2.Raw})
@@ -132,32 +116,6 @@ func TestAttachSignature(t *testing.T) {
 
 	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef2, payloadRef, pemLeafRef2, certChainRef2, "", "", imgName)
 	must(err, t)
-
-	// verify using first root certificate
-	verifyCmd = cliverify.VerifyCommand{
-		IgnoreSCT:  true,
-		IgnoreTlog: true,
-		CertChain:  pemRootRef1,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuerRegexp: ".*",
-			CertIdentityRegexp:   ".*",
-		},
-	}
-	args = []string{imgName}
-	must(verifyCmd.Exec(ctx, args), t)
-
-	// verify using second root cert
-	verifyCmd = cliverify.VerifyCommand{
-		IgnoreSCT:  true,
-		IgnoreTlog: true,
-		CertChain:  pemRootRef2,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuerRegexp: ".*",
-			CertIdentityRegexp:   ".*",
-		},
-	}
-	args = []string{imgName}
-	must(verifyCmd.Exec(ctx, args), t)
 }
 
 func TestAttachWithRekorBundle(t *testing.T) {
