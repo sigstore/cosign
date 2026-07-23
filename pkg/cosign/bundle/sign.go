@@ -15,6 +15,7 @@
 package bundle
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"encoding/pem"
@@ -189,11 +190,22 @@ func (c *localCertChainProvider) GetCertificateChain(_ context.Context, _ sign.K
 	leaf := leafCerts[0]
 	derChain := [][]byte{leaf.Raw}
 	for _, cert := range chainCerts {
-		if !cert.Equal(leaf) {
-			derChain = append(derChain, cert.Raw)
+		if cert.Equal(leaf) {
+			continue
 		}
+		if isSelfSigned(cert) {
+			continue
+		}
+		derChain = append(derChain, cert.Raw)
 	}
 	return derChain, nil
+}
+
+func isSelfSigned(cert *x509.Certificate) bool {
+	if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {
+		return false
+	}
+	return cert.CheckSignatureFrom(cert) == nil
 }
 
 type cachingCertProvider struct {

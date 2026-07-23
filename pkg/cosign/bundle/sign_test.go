@@ -63,22 +63,22 @@ func TestLocalCertChainProvider_GetCertificateChain(t *testing.T) {
 		wantError bool
 	}{
 		{
-			name:    "leaf with root-only chain",
+			name:    "leaf with root-only chain drops the self-signed root",
 			cert:    leafPEM,
 			chain:   rootPEM,
-			wantDER: [][]byte{leafCert.Raw, rootCert.Raw},
+			wantDER: [][]byte{leafCert.Raw},
 		},
 		{
-			name:    "leaf with sub and root chain",
+			name:    "leaf with sub and root chain drops the self-signed root",
 			cert:    leafPEM,
 			chain:   subAndRootPEM,
-			wantDER: [][]byte{leafCert.Raw, subCert.Raw, rootCert.Raw},
+			wantDER: [][]byte{leafCert.Raw, subCert.Raw},
 		},
 		{
-			name:    "leaf already present in chain is deduped",
+			name:    "leaf already present in chain is deduped and root is dropped",
 			cert:    leafPEM,
 			chain:   leafSubAndRootPEM,
-			wantDER: [][]byte{leafCert.Raw, subCert.Raw, rootCert.Raw},
+			wantDER: [][]byte{leafCert.Raw, subCert.Raw},
 		},
 		{
 			name:      "invalid leaf PEM",
