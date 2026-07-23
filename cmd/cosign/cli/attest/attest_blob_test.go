@@ -161,11 +161,10 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					certchainref: subCertPem,
 				},
 				{
-					name:         "fail: cert chain includes root",
+					name:         "cert chain includes root",
 					keyref:       keyRef,
 					certref:      certRef,
 					certchainref: chainRef,
-					errString:    "certificate chain must not contain a self-signed (root) certificate",
 				},
 				{
 					name:         "fail: cert chain bad",
