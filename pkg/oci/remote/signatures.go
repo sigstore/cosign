@@ -25,6 +25,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	payloadsize "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/empty"
 	"github.com/sigstore/cosign/v3/pkg/oci/internal/signature"
@@ -73,6 +74,13 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	}
 	if !strings.HasPrefix(string(mediaType), "application/vnd.dev.sigstore.bundle") {
 		return nil, errors.New("expected bundle layer")
+	}
+	size, err := layers[0].Size()
+	if err != nil {
+		return nil, err
+	}
+	if err := payloadsize.CheckSize(uint64(size)); err != nil {
+		return nil, err
 	}
 	layer0, err := layers[0].Uncompressed()
 	if err != nil {
