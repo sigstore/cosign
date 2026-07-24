@@ -1204,6 +1204,253 @@ func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
 	must(cmd.Exec(ctx, args), t)
 }
 
+func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+
+	leafCertPath, signChainPath, caChainPath, leafKeyPath := signingCertChain(t)
+
+	trustedRoot := prepareTrustedRootWithSelfSignedCertificate(t, caChainPath, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+
+	ko := options.KeyOpts{
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+		KeyRef:           leafKeyPath,
+		PassFunc:         passFunc,
+		TrustedMaterial:  trustedMaterial,
+		SigningConfig:    signingConfig,
+	}
+	certVerify := options.CertVerifyOptions{
+		CertOidcIssuerRegexp: ".*",
+		CertIdentity:         "foo@bar.com",
+	}
+
+	const predicateType = "slsaprovenance"
+	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
+	must(os.WriteFile(predicatePath, []byte(predicate), 0o644), t)
+
+	repo, stop := reg(t)
+	defer stop()
+
+	tests := []struct {
+		name        string
+		attestation bool
+		allowChain  bool
+		wantErr     bool
+	}{
+		{"signature without chain flag fails", false, false, true},
+		{"signature with chain flag succeeds", false, true, false},
+		{"attestation without chain flag fails", true, false, true},
+		{"attestation with chain flag succeeds", true, true, false},
+	}
+
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			imgName := path.Join(repo, fmt.Sprintf("cosign-e2e-cert-chain-%d", i))
+			_, _, cleanup := mkimage(t, imgName)
+			defer cleanup()
+
+			var verifyErr error
+			if tc.attestation {
+				attestCmd := attest.AttestCommand{
+					KeyOpts:        ko,
+					CertPath:       leafCertPath,
+					CertChainPath:  signChainPath,
+					PredicatePath:  predicatePath,
+					PredicateType:  predicateType,
+					Timeout:        30 * time.Second,
+					RekorEntryType: "dsse",
+					TlogUpload:     false,
+				}
+				must(attestCmd.Exec(ctx, imgName), t)
+
+				verifyErr = (&cliverify.VerifyAttestationCommand{
+					CertVerifyOptions: certVerify,
+					CommonVerifyOptions: options.CommonVerifyOptions{
+						NewBundleFormat:       true,
+						AllowCertificateChain: tc.allowChain,
+					},
+					IgnoreSCT:     true,
+					PredicateType: predicateType,
+					CheckClaims:   true,
+				}).Exec(ctx, []string{imgName})
+			} else {
+				so := options.SignOptions{
+					Upload:          true,
+					NewBundleFormat: true,
+					Key:             leafKeyPath,
+					Cert:            leafCertPath,
+					CertChain:       signChainPath,
+					TlogUpload:      false,
+				}
+				must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+				verifyErr = (&cliverify.VerifyCommand{
+					CertVerifyOptions:     certVerify,
+					NewBundleFormat:       true,
+					IgnoreSCT:             true,
+					AllowCertificateChain: tc.allowChain,
+				}).Exec(ctx, []string{imgName})
+			}
+
+			if tc.wantErr {
+				mustErr(verifyErr, t)
+			} else {
+				must(verifyErr, t)
+			}
+		})
+	}
+}
+
+func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	tufMirror := t.TempDir()
+	tufServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(tufMirror)).ServeHTTP(w, r)
+	}))
+	mirror := tufServer.URL
+
+	leafCertPath, signChainPath, caChainPath, leafKeyPath := signingCertChain(t)
+
+	trustedRoot := prepareTrustedRootWithSelfSignedCertificate(t, caChainPath, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
+
+	_, err := newTUF(tufMirror, []targetInfo{
+		{
+			name:   "trusted_root.json",
+			source: trustedRoot,
+		},
+		{
+			name:   "signing_config.v0.2.json",
+			source: signingConfigStr,
+		},
+	})
+	must(err, t)
+
+	ctx := context.Background()
+
+	rootPath := filepath.Join(tufMirror, "1.root.json")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	signingConfig, err := cosign.SigningConfig()
+	must(err, t)
+
+	certVerify := options.CertVerifyOptions{
+		CertOidcIssuerRegexp: ".*",
+		CertIdentity:         "foo@bar.com",
+	}
+
+	blob := "someblob"
+	blobDir := t.TempDir()
+	bp := filepath.Join(blobDir, blob)
+	must(os.WriteFile(bp, []byte(blob), 0o644), t)
+
+	statement := `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"someblob","digest":{"alg":"7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3"}}],"predicateType":"something","predicate":{}}`
+	statementPath := filepath.Join(t.TempDir(), "statement")
+	must(os.WriteFile(statementPath, []byte(statement), 0o644), t)
+
+	ko := options.KeyOpts{
+		NewBundleFormat:  true,
+		SkipConfirmation: true,
+		KeyRef:           leafKeyPath,
+		PassFunc:         passFunc,
+		TrustedMaterial:  trustedMaterial,
+		SigningConfig:    signingConfig,
+	}
+
+	tests := []struct {
+		name        string
+		attestation bool
+		allowChain  bool
+		wantErr     bool
+	}{
+		{"signature without chain flag fails", false, false, true},
+		{"signature with chain flag succeeds", false, true, false},
+		{"attestation without chain flag fails", true, false, true},
+		{"attestation with chain flag succeeds", true, true, false},
+	}
+
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bundlePath := filepath.Join(t.TempDir(), fmt.Sprintf("bundle-%d.json", i))
+			ko := ko
+			ko.BundlePath = bundlePath
+
+			var verifyErr error
+			if tc.attestation {
+				attestBlobCmd := attest.AttestBlobCommand{
+					KeyOpts:        ko,
+					CertPath:       leafCertPath,
+					CertChainPath:  signChainPath,
+					RekorEntryType: "dsse",
+					StatementPath:  statementPath,
+					TlogUpload:     false,
+				}
+				must(attestBlobCmd.Exec(ctx, bp), t)
+
+				verifyErr = (&cliverify.VerifyBlobAttestationCommand{
+					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
+					CertVerifyOptions:     certVerify,
+					IgnoreSCT:             true,
+					CheckClaims:           true,
+					PredicateType:         "something",
+					Digest:                "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
+					DigestAlg:             "alg",
+					AllowCertificateChain: tc.allowChain,
+				}).Exec(ctx, "")
+			} else {
+				_, err = sign.SignBlobCmd(ctx, ro, ko, bp, leafCertPath, signChainPath, true, "", "", false)
+				must(err, t)
+
+				verifyErr = (&cliverify.VerifyBlobCmd{
+					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
+					CertVerifyOptions:     certVerify,
+					IgnoreSCT:             true,
+					AllowCertificateChain: tc.allowChain,
+				}).Exec(ctx, bp)
+			}
+
+			if tc.wantErr {
+				mustErr(verifyErr, t)
+			} else {
+				must(verifyErr, t)
+			}
+		})
+	}
+}
+
 func TestSignRekorV2NoTSA(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -5249,6 +5496,76 @@ func selfSignedCertificate() (*x509.Certificate, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 	return cert, priv, nil
+}
+
+func signingCertChain(t *testing.T) (leafCertPath, signChainPath, caChainPath, leafKeyPath string) {
+	t.Helper()
+	dir := t.TempDir()
+
+	caTemplate := func(serial int64, cn string) *x509.Certificate {
+		return &x509.Certificate{
+			SerialNumber:          big.NewInt(serial),
+			Subject:               pkix.Name{CommonName: cn, Organization: []string{"dev"}},
+			NotBefore:             time.Now().Add(-1 * time.Minute),
+			NotAfter:              time.Now().Add(24 * time.Hour),
+			KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+		}
+	}
+
+	newCert := func(tmpl, parent *x509.Certificate, parentKey *ecdsa.PrivateKey) (*x509.Certificate, *ecdsa.PrivateKey) {
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		must(err, t)
+		if parent == nil {
+			parent, parentKey = tmpl, key
+		}
+		der, err := x509.CreateCertificate(rand.Reader, tmpl, parent, &key.PublicKey, parentKey)
+		must(err, t)
+		cert, err := x509.ParseCertificate(der)
+		must(err, t)
+		return cert, key
+	}
+
+	writePEM := func(name string, blocks ...*pem.Block) string {
+		var buf bytes.Buffer
+		for _, b := range blocks {
+			must(pem.Encode(&buf, b), t)
+		}
+		p := filepath.Join(dir, name)
+		must(os.WriteFile(p, buf.Bytes(), 0o600), t)
+		return p
+	}
+
+	rootCert, rootKey := newCert(caTemplate(1, "root.ca"), nil, nil)
+	interCert, interKey := newCert(caTemplate(2, "intermediate.ca"), rootCert, rootKey)
+	leafCert, leafKey := newCert(&x509.Certificate{
+		SerialNumber:   big.NewInt(3),
+		Subject:        pkix.Name{CommonName: "leaf.signer", Organization: []string{"dev"}},
+		EmailAddresses: []string{"foo@bar.com"},
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		NotAfter:       time.Now().Add(24 * time.Hour),
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+	}, interCert, interKey)
+
+	leafCertPath = writePEM("leaf.pem", &pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	signChainPath = writePEM("sign-chain.pem",
+		&pem.Block{Type: "CERTIFICATE", Bytes: interCert.Raw})
+	caChainPath = writePEM("ca-chain.pem",
+		&pem.Block{Type: "CERTIFICATE", Bytes: interCert.Raw},
+		&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+
+	privDER, err := x509.MarshalECPrivateKey(leafKey)
+	must(err, t)
+	rawKeyPath := writePEM("leaf.key", &pem.Block{Type: "EC PRIVATE KEY", Bytes: privDER})
+
+	keys, err := cosign.ImportKeyPair(rawKeyPath, passFunc)
+	must(err, t)
+	leafKeyPath = filepath.Join(dir, "import-leaf.key")
+	must(os.WriteFile(leafKeyPath, keys.PrivateBytes, 0o600), t)
+
+	return leafCertPath, signChainPath, caChainPath, leafKeyPath
 }
 
 func TestSignVerifyDetachedKeyless(t *testing.T) {

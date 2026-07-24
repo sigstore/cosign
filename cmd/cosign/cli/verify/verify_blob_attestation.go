@@ -77,6 +77,8 @@ type VerifyBlobAttestationCommand struct {
 	Digest        string
 	DigestAlg     string
 	HashAlgorithm crypto.Hash
+
+	AllowCertificateChain bool
 }
 
 // Exec runs the verification command
@@ -124,8 +126,9 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.NewBundleFormat && checkNewBundle(c.BundlePath),
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
+	co.NewBundleFormat = c.NewBundleFormat && checkNewBundle(c.BundlePath, co.BundleOptions()...)
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
 	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
@@ -206,7 +209,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 
 	if co.NewBundleFormat {
-		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
 		if err != nil {
 			return err
 		}

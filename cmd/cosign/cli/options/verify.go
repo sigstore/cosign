@@ -35,6 +35,7 @@ type CommonVerifyOptions struct {
 	UseSignedTimestamps   bool
 	NewBundleFormat       bool
 	TrustedRootPath       string
+	AllowCertificateChain bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -74,6 +75,9 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
+
+	cmd.Flags().BoolVar(&o.AllowCertificateChain, "allow-certificate-chain", false,
+		"allow X.509 certificate chains in bundle verification material for v0.3+ bundles")
 }
 
 var verifyOutputTypes = []string{"json", "text"} // First one is the default

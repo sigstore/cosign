@@ -266,7 +266,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		}
 	}
 
-	keypair, certBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
+	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
 	if err != nil {
 		return fmt.Errorf("getting keypair and token: %w", err)
 	}
@@ -304,7 +304,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			Data: payload,
 		}
 
-		bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, ko.SigningConfig, ko.TrustedMaterial, cbundleOpts)
+		bundleBytes, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, ko.SigningConfig, ko.TrustedMaterial, cbundleOpts)
 		if err != nil {
 			return fmt.Errorf("signing bundle: %w", err)
 		}

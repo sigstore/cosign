@@ -76,6 +76,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/sigstore/sigstore/pkg/tuf"
 	tsaverification "github.com/sigstore/timestamp-authority/v2/pkg/verification"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // Identity specifies an issuer/subject to verify a signature against.
@@ -176,6 +177,19 @@ type CheckOpts struct {
 
 	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
 	NewBundleFormat bool
+
+	// AllowCertificateChain permits bundles with version >= v0.3 to contain
+	// X.509 certificate chains in the verification material.
+	AllowCertificateChain bool
+}
+
+// BundleOptions returns sigstore-go bundle options based on CheckOpts.
+func (co *CheckOpts) BundleOptions() []sgbundle.Option {
+	var opts []sgbundle.Option
+	if co.AllowCertificateChain {
+		opts = append(opts, sgbundle.AllowCertificateChain())
+	}
+	return opts
 }
 
 type verifyTrustedMaterial struct {
@@ -1782,7 +1796,7 @@ func HasLocalAttestationBundles(path string) (bool, error) {
 
 // GetLocalBundles retrieves v3 sigstore bundles from a local OCI layout.
 // Returns bundles, target image hash, and error. Invalid bundles are logged and skipped.
-func GetLocalBundles(path string) ([]*sgbundle.Bundle, *v1.Hash, error) {
+func GetLocalBundles(path string, bundleOpts ...sgbundle.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	descriptors, hash, err := getLocalBundleDescriptors(path)
 	if err != nil {
 		return nil, nil, err
@@ -1796,9 +1810,14 @@ func GetLocalBundles(path string) ([]*sgbundle.Bundle, *v1.Hash, error) {
 			continue
 		}
 
-		bundle := &sgbundle.Bundle{}
-		if err := bundle.UnmarshalJSON(bundleBytes); err != nil {
+		pb := &protobundle.Bundle{}
+		if err := protojson.Unmarshal(bundleBytes, pb); err != nil {
 			ui.Warnf(context.Background(), "Failed to unmarshal bundle %s: %v", descriptor.digest.Hex, err)
+			continue
+		}
+		bundle, err := sgbundle.NewBundle(pb, bundleOpts...)
+		if err != nil {
+			ui.Warnf(context.Background(), "Failed to create bundle %s: %v", descriptor.digest.Hex, err)
 			continue
 		}
 
@@ -1993,7 +2012,7 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 
 // verifyLocalImageAttestationsSigstoreBundle verifies attestations from local sigstore bundles
 func verifyLocalImageAttestationsSigstoreBundle(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
-	bundles, hash, err := GetLocalBundles(path)
+	bundles, hash, err := GetLocalBundles(path, co.BundleOptions()...)
 	if err != nil {
 		return nil, false, err
 	}

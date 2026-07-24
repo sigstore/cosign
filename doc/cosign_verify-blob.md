@@ -53,6 +53,7 @@ cosign verify-blob [flags]
 ### Options
 
 ```
+      --allow-certificate-chain                         allow X.509 certificate chains in bundle verification material for v0.3+ bundles
       --bundle string                                   path to bundle FILE
       --certificate-github-workflow-name string         contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string          contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
