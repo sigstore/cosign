@@ -17,7 +17,6 @@ package bundle
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +28,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -39,7 +37,6 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
-	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v3/internal/test"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -631,24 +628,7 @@ func TestPopulateContentSummary(t *testing.T) {
 }
 
 func TestPopulateTimestampSummary(t *testing.T) {
-	payload := []byte{1, 2, 3, 4}
-	h := sha256.Sum256(payload)
-
-	ecdsaPriv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	signature, err := ecdsaPriv.Sign(rand.Reader, h[:], crypto.SHA256)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	client, err := tsaMock.NewTSAClient(tsaMock.TSAClientOptions{Time: time.Now()})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tsBytes, err := getTimestampedSignature(signature, client)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tsBytes := generateTestTimestampResponse(t)
 
 	n := &node{}
 	tsData := &protobundle.TimestampVerificationData{
@@ -928,14 +908,44 @@ func TestPopulateTlogEntrySummary_Inclusion(t *testing.T) {
 	})
 }
 
-func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]byte, error) {
-	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-	})
+func generateTestTimestampResponse(t *testing.T) []byte {
+	t.Helper()
+
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, fmt.Errorf("error creating timestamp request: %w", err)
+		t.Fatal(err)
 	}
 
-	return tsaClient.GetTimestampResponse(requestBytes)
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "Test TSA"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tsStruct := timestamp.Timestamp{
+		HashAlgorithm:     crypto.SHA256,
+		HashedMessage:     []byte("01234567890123456789012345678901"),
+		SerialNumber:      big.NewInt(100),
+		Policy:            asn1.ObjectIdentifier{1, 2, 3, 4},
+		Time:              time.Now(),
+		AddTSACertificate: true,
+	}
+
+	tsResponse, err := tsStruct.CreateResponseWithOpts(cert, priv, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return tsResponse
 }
