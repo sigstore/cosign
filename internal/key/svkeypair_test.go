@@ -38,9 +38,10 @@ import (
 
 // mockSignerVerifier is a mock implementation of signature.SignerVerifier for testing.
 type mockSignerVerifier struct {
-	pubKey    crypto.PublicKey
-	pubKeyErr error
-	signErr   error
+	pubKey     crypto.PublicKey
+	pubKeyErr  error
+	signErr    error
+	signerOpts crypto.SignerOpts
 }
 
 func (m *mockSignerVerifier) PublicKey(_ ...signature.PublicKeyOption) (crypto.PublicKey, error) {
@@ -50,10 +51,15 @@ func (m *mockSignerVerifier) PublicKey(_ ...signature.PublicKeyOption) (crypto.P
 	return m.pubKey, nil
 }
 
-func (m *mockSignerVerifier) SignMessage(_ io.Reader, _ ...signature.SignOption) ([]byte, error) {
+func (m *mockSignerVerifier) SignMessage(_ io.Reader, opts ...signature.SignOption) ([]byte, error) {
 	if m.signErr != nil {
 		return nil, m.signErr
 	}
+	var signerOpts crypto.SignerOpts
+	for _, opt := range opts {
+		opt.ApplyCryptoSignerOpts(&signerOpts)
+	}
+	m.signerOpts = signerOpts
 	return []byte("mock-signature"), nil
 }
 
@@ -220,6 +226,9 @@ func TestKMSKeypair_ECDSA_Methods(t *testing.T) {
 		if !bytes.Equal(digest, expectedDigest) {
 			t.Errorf("expected digest %x, got %x", expectedDigest, digest)
 		}
+		if sv.signerOpts == nil || sv.signerOpts.HashFunc() != crypto.SHA256 {
+			t.Errorf("expected underlying signer to be given crypto.SHA256 opts, got %v", sv.signerOpts)
+		}
 	})
 
 	t.Run("SignData with error", func(t *testing.T) {
@@ -239,6 +248,35 @@ func TestKMSKeypair_ECDSA_Methods(t *testing.T) {
 			t.Errorf("expected error 'signing failed', got '%s'", err.Error())
 		}
 	})
+}
+
+// TestKMSKeypair_ECDSA_P521_SignData exercises the P-521 case reported in
+// https://github.com/sigstore/cosign/issues/5018, where a SHA-512 digest was
+// signed against a signer configured for SHA-256, producing a digest/hash
+// length mismatch for KMS providers (e.g. HashiCorp Vault) that validate the
+// crypto.SignerOpts passed alongside the digest.
+func TestKMSKeypair_ECDSA_P521_SignData(t *testing.T) {
+	ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ecdsa key: %v", err)
+	}
+	sv := &mockSignerVerifier{pubKey: &ecdsaPriv.PublicKey}
+	kp, err := NewSignerVerifierKeypair(sv, nil)
+	if err != nil {
+		t.Fatalf("failed to create KMSKeypair: %v", err)
+	}
+
+	data := []byte("some data to sign")
+	_, digest, err := kp.SignData(context.Background(), data)
+	if err != nil {
+		t.Fatalf("SignData returned an error: %v", err)
+	}
+	if len(digest) != crypto.SHA512.Size() {
+		t.Errorf("expected a SHA-512 digest of length %d, got %d", crypto.SHA512.Size(), len(digest))
+	}
+	if sv.signerOpts == nil || sv.signerOpts.HashFunc() != crypto.SHA512 {
+		t.Errorf("expected underlying signer to be given crypto.SHA512 opts matching the digest, got %v", sv.signerOpts)
+	}
 }
 
 func TestKMSKeypair_ED25519_Methods(t *testing.T) {
