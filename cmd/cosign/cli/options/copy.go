@@ -45,4 +45,5 @@ func (o *CopyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.Platform, "platform", "",
 		"only copy container image and its signatures for a specific platform image")
+	_ = cmd.RegisterFlagCompletionFunc("platform", cobra.NoFileCompletions)
 }
