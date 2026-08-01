@@ -211,8 +211,8 @@ func WriteAttestations(repo name.Repository, se oci.SignedEntity, opts ...Option
 	return remoteWrite(tag, atts, o.ROpt...)
 }
 
-// WriteSignaturesExperimentalOCI publishes the signatures attached to the given entity
-// into the provided repository (using OCI 1.1 methods).
+// WriteSignaturesExperimentalOCI reads the subject from the supplied digest and publishes
+// the attached signatures to the configured target repository using OCI 1.1 methods.
 func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...Option) error {
 	o := makeOptions(d.Repository, opts...)
 	signTarget := d.String()
@@ -235,7 +235,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	for _, v := range s {
-		if err := remoteWriteLayer(d.Repository, v, o.ROpt...); err != nil {
+		if err := remoteWriteLayer(o.TargetRepository, v, o.ROpt...); err != nil {
 			return err
 		}
 	}
@@ -250,7 +250,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	configLayer := static.NewLayer(configBytes, configDesc.MediaType)
-	if err := remoteWriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
+	if err := remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...); err != nil {
 		return err
 	}
 
@@ -268,7 +268,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc
 	rm := referrerManifest{m, artifactType}
-	targetRef, err := rm.targetRef(d.Repository, opts...)
+	targetRef, err := rm.targetRef(o.TargetRepository, opts...)
 	if err != nil {
 		return err
 	}
