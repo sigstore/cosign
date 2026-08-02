@@ -104,7 +104,9 @@ func LoadFileOrURLWithChecksum(fileRef string, checksum string) ([]byte, error) 
 
 	checksumAlgo.Write(fileContent)
 	computedChecksum := hex.EncodeToString(checksumAlgo.Sum(nil))
-	if computedChecksum != checksumValue {
+	// Hex is case-insensitive and checksums are commonly published in upper case,
+	// so compare without regard to case rather than rejecting a correct digest.
+	if !strings.EqualFold(computedChecksum, checksumValue) {
 		return nil, fmt.Errorf("incorrect checksum for file %s: expected %s but got %s", fileRef, checksumValue, computedChecksum)
 	}
 
