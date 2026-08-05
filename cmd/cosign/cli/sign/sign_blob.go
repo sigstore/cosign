@@ -147,11 +147,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if ko.BundlePath != "" {
-		pubKeyPem, err := keypair.GetPublicKeyPem()
-		if err != nil {
-			return nil, fmt.Errorf("getting public key pem: %w", err)
-		}
-		contents, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, pubKeyPem)
+		contents, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents)
 		if err != nil {
 			return nil, fmt.Errorf("creating legacy bundle: %w", err)
 		}

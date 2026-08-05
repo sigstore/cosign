@@ -362,10 +362,10 @@ type CommonBundleOpts struct {
 }
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
-func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, string, pb_go_v1.HashAlgorithm, error) {
+func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, pb_go_v1.HashAlgorithm, error) {
 	keypair, certBytes, chainBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
+		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
 	}
 	if closer, ok := keypair.(interface{ Close() }); ok {
 		defer closer.Close()
@@ -380,22 +380,17 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
 		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
 		if err != nil {
-			return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
+			return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
+		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
 	}
 
-	pubKeyPem, err := keypair.GetPublicKeyPem()
-	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting public key pem: %w", err)
-	}
-
-	return bundle, keypair.GetPublicKey(), pubKeyPem, keypair.GetHashAlgorithm(), nil
+	return bundle, keypair.GetPublicKey(), keypair.GetHashAlgorithm(), nil
 }
 
 type BundleComponents struct {
@@ -586,7 +581,7 @@ func RekorBundleFromProtoTlogEntry(entry *protorekor.TransparencyLogEntry) *cbun
 }
 
 // NewLegacyBundleFromProtoBundleComponents creates a legacy bundle from a protobuf bundle.
-func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents, pubKeyPem string) ([]byte, error) {
+func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, error) {
 	signedPayload := cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(bc.Signature),
 	}
@@ -594,8 +589,6 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents, pubKeyPem st
 	if len(bc.Certificates) > 0 {
 		certPem, _ := EncodeCertificatesToPEM(bc.Certificates)
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
-	} else if pubKeyPem != "" {
-		signedPayload.Cert = base64.StdEncoding.EncodeToString([]byte(pubKeyPem))
 	}
 
 	if len(bc.RekorEntries) > 0 {

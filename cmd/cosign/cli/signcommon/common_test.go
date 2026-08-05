@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"os"
 	"reflect"
@@ -28,6 +29,7 @@ import (
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -202,4 +204,34 @@ func Test_ParseOCIReference(t *testing.T) {
 			assert.Empty(t, stderr, "expected no warning")
 		}
 	}
+}
+
+func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
+	t.Run("without certificates leaves cert field empty", func(t *testing.T) {
+		bc := &BundleComponents{
+			Signature: []byte("signature"),
+		}
+		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
+		assert.NoError(t, err)
+
+		var payload cosign.LocalSignedPayload
+		err = json.Unmarshal(bundleBytes, &payload)
+		assert.NoError(t, err)
+		assert.Empty(t, payload.Cert, "expected empty cert field when BundleComponents has no certificates")
+	})
+
+	t.Run("with certificates populates cert field", func(t *testing.T) {
+		rootCert, _, _ := test.GenerateRootCa()
+		bc := &BundleComponents{
+			Signature:    []byte("signature"),
+			Certificates: []*pb_go_v1.X509Certificate{{RawBytes: rootCert.Raw}},
+		}
+		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
+		assert.NoError(t, err)
+
+		var payload cosign.LocalSignedPayload
+		err = json.Unmarshal(bundleBytes, &payload)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, payload.Cert, "expected non-empty cert field when BundleComponents has certificates")
+	})
 }

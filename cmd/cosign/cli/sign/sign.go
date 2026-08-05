@@ -208,7 +208,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		}
 	}
 
-	bundleBytes, _, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
 	if err != nil {
 		return err
 	}
@@ -467,8 +467,6 @@ func fetchLocalSignedPayload(sig oci.Signature) (*cosign.LocalSignedPayload, err
 	}
 	if sigCert != nil {
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(sigCert.Raw)
-	} else {
-		signedPayload.Cert = ""
 	}
 
 	signedPayload.Bundle, err = sig.Bundle()
