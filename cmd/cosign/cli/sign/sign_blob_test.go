@@ -15,6 +15,7 @@
 package sign
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,4 +60,44 @@ func writeFile(t *testing.T, td string, blob string, name string) string {
 		t.Fatal(err)
 	}
 	return blobPath
+}
+
+func TestSignBlobCmd_LegacyBundleNoCert(t *testing.T) {
+	td := t.TempDir()
+	bundlePath := filepath.Join(td, "legacy-bundle.json")
+
+	keys, _ := cosign.GenerateKeyPair(nil)
+	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+
+	rootOpts := &options.RootOptions{}
+	keyOpts := options.KeyOpts{
+		KeyRef:          keyRef,
+		BundlePath:      bundlePath,
+		NewBundleFormat: false,
+	}
+
+	_, err := SignBlobCmd(rootOpts, keyOpts, blobPath, true, "", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	bundleBytes, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to read written bundle file: %v", err)
+	}
+
+	var payload cosign.LocalSignedPayload
+	if err := json.Unmarshal(bundleBytes, &payload); err != nil {
+		t.Fatalf("failed to unmarshal legacy bundle: %v", err)
+	}
+
+	if payload.Cert != "" {
+		t.Fatalf("expected empty cert field in legacy bundle when signing with a key without certificate, got: %q", payload.Cert)
+	}
+	if payload.Base64Signature == "" {
+		t.Fatal("expected non-empty Base64Signature in legacy bundle")
+	}
 }
