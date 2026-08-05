@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -465,4 +466,63 @@ func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) st
 		t.Fatal(err)
 	}
 	return bundlePath
+}
+
+func TestVerifyBlobAttestationLegacyBundlePublicKey(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	blobPath := writeBlobFile(t, td, blobContents, "blob")
+	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
+
+	t.Run("legacy bundle with public key in cert field fails", func(t *testing.T) {
+		bundleData := map[string]any{
+			"base64Signature": blobSLSAProvenanceSignature,
+			"cert":            pubkey,
+		}
+		bundleBytes, err := json.Marshal(bundleData)
+		if err != nil {
+			t.Fatalf("failed to marshal old bundle: %v", err)
+		}
+		bundleRef := writeBlobFile(t, td, string(bundleBytes), "bundle.json")
+
+		cmd := VerifyBlobAttestationCommand{
+			KeyOpts:       options.KeyOpts{KeyRef: keyRef, BundlePath: bundleRef},
+			IgnoreTlog:    true,
+			CheckClaims:   true,
+			PredicateType: "slsaprovenance",
+		}
+
+		err = cmd.Exec(ctx, blobPath)
+		if err == nil {
+			t.Fatal("expected error when bundle cert field contains a public key, got nil")
+		}
+		if !strings.Contains(err.Error(), "loading verifier certificate from bundle") {
+			t.Fatalf("expected error containing 'loading verifier certificate from bundle', got: %v", err)
+		}
+	})
+
+	t.Run("legacy bundle with empty cert field succeeds when key is provided via KeyRef", func(t *testing.T) {
+		bundleData := map[string]any{
+			"base64Signature": blobSLSAProvenanceSignature,
+			"cert":            "",
+		}
+		bundleBytes, err := json.Marshal(bundleData)
+		if err != nil {
+			t.Fatalf("failed to marshal old bundle: %v", err)
+		}
+		bundleRef := writeBlobFile(t, td, string(bundleBytes), "bundle.json")
+
+		cmd := VerifyBlobAttestationCommand{
+			KeyOpts:       options.KeyOpts{KeyRef: keyRef, BundlePath: bundleRef},
+			IgnoreTlog:    true,
+			CheckClaims:   true,
+			PredicateType: "slsaprovenance",
+		}
+
+		err = cmd.Exec(ctx, blobPath)
+		if err != nil {
+			t.Fatalf("expected success when bundle cert field is empty and key provided via KeyRef, got: %v", err)
+		}
+	})
 }

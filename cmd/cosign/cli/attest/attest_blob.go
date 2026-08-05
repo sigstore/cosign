@@ -329,7 +329,9 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 			}
 		} else {
 			signedPayload.Base64Signature = base64.StdEncoding.EncodeToString(sig)
-			signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
+			if certs, err := cryptoutils.UnmarshalCertificatesFromPEM(signer); err == nil && len(certs) == 1 {
+				signedPayload.Cert = base64.StdEncoding.EncodeToString(signer)
+			}
 
 			contents, err = json.Marshal(signedPayload)
 			if err != nil {

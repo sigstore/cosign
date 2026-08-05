@@ -341,3 +341,41 @@ func TestStatementPath(t *testing.T) {
 	err := at.Exec(ctx, "")
 	assert.NoError(t, err)
 }
+
+func TestAttestBlobCmd_LegacyBundleNoCert(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+	bundlePath := filepath.Join(td, "legacy-bundle.json")
+
+	keys, _ := cosign.GenerateKeyPair(nil)
+	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
+
+	blob := []byte("foo")
+	blobPath := writeFile(t, td, string(blob), "foo.txt")
+	predicatePath := makeSLSA02PredicateFile(t, td)
+
+	at := AttestBlobCommand{
+		KeyOpts: options.KeyOpts{
+			KeyRef:          keyRef,
+			BundlePath:      bundlePath,
+			NewBundleFormat: false,
+		},
+		PredicatePath:  predicatePath,
+		PredicateType:  "slsaprovenance02",
+		RekorEntryType: "dsse",
+		TlogUpload:     false,
+	}
+
+	err := at.Exec(ctx, blobPath)
+	assert.NoError(t, err)
+
+	bundleBytes, err := os.ReadFile(bundlePath)
+	assert.NoError(t, err)
+
+	var payload cosign.LocalSignedPayload
+	err = json.Unmarshal(bundleBytes, &payload)
+	assert.NoError(t, err)
+
+	assert.Empty(t, payload.Cert, "expected empty cert field in legacy bundle when signing with a key without certificate")
+	assert.NotEmpty(t, payload.Base64Signature, "expected non-empty Base64Signature in legacy bundle")
+}
