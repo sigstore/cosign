@@ -15,6 +15,7 @@
 package blob
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
@@ -103,9 +104,13 @@ func LoadFileOrURLWithChecksum(fileRef string, checksum string) ([]byte, error) 
 	}
 
 	checksumAlgo.Write(fileContent)
-	computedChecksum := hex.EncodeToString(checksumAlgo.Sum(nil))
-	if computedChecksum != checksumValue {
-		return nil, fmt.Errorf("incorrect checksum for file %s: expected %s but got %s", fileRef, checksumValue, computedChecksum)
+	computedChecksum := checksumAlgo.Sum(nil)
+	// Compare the digests rather than their hex spellings: hex is case-insensitive
+	// and checksums are frequently published in upper case, which a plain string
+	// comparison would reject. A value that is not valid hex cannot match either.
+	expectedChecksum, err := hex.DecodeString(checksumValue)
+	if err != nil || !bytes.Equal(computedChecksum, expectedChecksum) {
+		return nil, fmt.Errorf("incorrect checksum for file %s: expected %s but got %s", fileRef, checksumValue, hex.EncodeToString(computedChecksum))
 	}
 
 	return fileContent, nil
