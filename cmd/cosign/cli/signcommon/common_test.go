@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -204,6 +205,21 @@ func Test_ParseOCIReference(t *testing.T) {
 			assert.Empty(t, stderr, "expected no warning")
 		}
 	}
+}
+
+func TestShouldUploadToTlog_CustomRekorURLSkipsPublicInstanceStatement(t *testing.T) {
+	ko := options.KeyOpts{
+		RekorURL:         "http://localhost:3000",
+		SkipConfirmation: true,
+	}
+	var upload bool
+	var err error
+	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+		upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+	})
+	assert.NoError(t, err)
+	assert.True(t, upload)
+	assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy when uploading to a custom Rekor URL")
 }
 
 func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {

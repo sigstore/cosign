@@ -119,7 +119,9 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
 	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
 	var statementErr error
-	if upload {
+	// Only warn about the public good instance's data retention policy when
+	// actually uploading to it; a custom --rekor-url points elsewhere.
+	if upload && (ko.RekorURL == "" || ko.RekorURL == options.DefaultRekorURL) {
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
 			ui.Infof(ctx, privacy.StatementConfirmation)
