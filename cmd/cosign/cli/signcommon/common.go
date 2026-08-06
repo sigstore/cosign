@@ -25,7 +25,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"net/http"
 	"time"
@@ -121,7 +123,7 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	var statementErr error
 	// Only warn about the public good instance's data retention policy when
 	// actually uploading to it; a custom --rekor-url points elsewhere.
-	if upload && (ko.RekorURL == "" || ko.RekorURL == options.DefaultRekorURL) {
+	if upload && isPublicGoodRekorURL(ko.RekorURL) {
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
 			ui.Infof(ctx, privacy.StatementConfirmation)
@@ -133,6 +135,33 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		})
 	}
 	return upload, statementErr
+}
+
+// publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
+// as part of the sigstore public good instance (production and staging). A literal
+// comparison against options.DefaultRekorURL is not sufficient because the public
+// good instance is served from multiple region- and year-specific hostnames.
+var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
+
+// isPublicGoodRekorURL reports whether rekorURL points at the sigstore public good
+// instance (production or staging), which is the only case where the data-retention
+// privacy statement applies. An empty rekorURL is treated as the default public
+// instance.
+func isPublicGoodRekorURL(rekorURL string) bool {
+	if rekorURL == "" {
+		return true
+	}
+	parsed, err := url.Parse(rekorURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, suffix := range publicGoodRekorHostSuffixes {
+		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {

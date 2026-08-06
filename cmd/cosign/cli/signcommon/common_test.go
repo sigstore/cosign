@@ -222,6 +222,45 @@ func TestShouldUploadToTlog_CustomRekorURLSkipsPublicInstanceStatement(t *testin
 	assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy when uploading to a custom Rekor URL")
 }
 
+func TestShouldUploadToTlog_RegionSpecificPublicGoodRekorURLShowsPublicInstanceStatement(t *testing.T) {
+	ko := options.KeyOpts{
+		RekorURL:         "https://rekor.us-central1.sigstore.dev",
+		SkipConfirmation: true,
+	}
+	var upload bool
+	var err error
+	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+		upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+	})
+	assert.NoError(t, err)
+	assert.True(t, upload)
+	assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy for a region-specific sigstore.dev Rekor URL")
+}
+
+func TestIsPublicGoodRekorURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		rekorURL string
+		want     bool
+	}{
+		{"empty defaults to public good", "", true},
+		{"default production URL", options.DefaultRekorURL, true},
+		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
+		{"staging URL", "https://rekor.sigstage.dev", true},
+		{"region-specific staging URL", "https://rekor.us-central1.sigstage.dev", true},
+		{"custom self-hosted URL", "http://localhost:3000", false},
+		{"uppercase hostname is still public good", "https://REKOR.SIGSTORE.DEV", true},
+		{"lookalike domain is not public good", "https://sigstore.dev.evil.example.com", false},
+		{"lookalike suffix without dot boundary is not public good", "https://notsigstore.dev", false},
+		{"unparseable URL", "://bad-url", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isPublicGoodRekorURL(tt.rekorURL))
+		})
+	}
+}
+
 func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
 	t.Run("without certificates leaves cert field empty", func(t *testing.T) {
 		bc := &BundleComponents{
