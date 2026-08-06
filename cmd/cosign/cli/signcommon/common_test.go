@@ -207,34 +207,35 @@ func Test_ParseOCIReference(t *testing.T) {
 	}
 }
 
-func TestShouldUploadToTlog_CustomRekorURLSkipsPublicInstanceStatement(t *testing.T) {
-	ko := options.KeyOpts{
-		RekorURL:         "http://localhost:3000",
-		SkipConfirmation: true,
+func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+	tests := []struct {
+		name        string
+		rekorURL    string
+		wantWarning bool
+	}{
+		{"custom Rekor URL skips public instance statement", "http://localhost:3000", false},
+		{"region-specific public good URL shows public instance statement", "https://rekor.us-central1.sigstore.dev", true},
 	}
-	var upload bool
-	var err error
-	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-		upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
-	})
-	assert.NoError(t, err)
-	assert.True(t, upload)
-	assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy when uploading to a custom Rekor URL")
-}
-
-func TestShouldUploadToTlog_RegionSpecificPublicGoodRekorURLShowsPublicInstanceStatement(t *testing.T) {
-	ko := options.KeyOpts{
-		RekorURL:         "https://rekor.us-central1.sigstore.dev",
-		SkipConfirmation: true,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ko := options.KeyOpts{
+				RekorURL:         tt.rekorURL,
+				SkipConfirmation: true,
+			}
+			var upload bool
+			var err error
+			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+			})
+			assert.NoError(t, err)
+			assert.True(t, upload)
+			if tt.wantWarning {
+				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
+			} else {
+				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
+			}
+		})
 	}
-	var upload bool
-	var err error
-	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-		upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
-	})
-	assert.NoError(t, err)
-	assert.True(t, upload)
-	assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy for a region-specific sigstore.dev Rekor URL")
 }
 
 func TestIsPublicGoodRekorURL(t *testing.T) {
