@@ -89,6 +89,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
+	tsatimestamp "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
 	"google.golang.org/protobuf/encoding/protojson"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
@@ -2749,7 +2750,7 @@ func TestAttestationRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -2826,7 +2827,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -2939,7 +2940,7 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -3243,7 +3244,7 @@ func TestRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -3297,7 +3298,7 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -3380,7 +3381,7 @@ func TestAttachWithRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := tsclient.Timestamp.GetTimestampCertChain(nil)
+	chain, err := tsclient.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}
@@ -3913,7 +3914,7 @@ func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
 		t.Error(err)
 	}
 
-	chain, err := client.Timestamp.GetTimestampCertChain(nil)
+	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	if err != nil {
 		t.Fatalf("unexpected error getting timestamp chain: %v", err)
 	}

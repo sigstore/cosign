@@ -34,6 +34,7 @@ import (
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	tsaclient "github.com/sigstore/timestamp-authority/v2/pkg/client"
+	tsatimestamp "github.com/sigstore/timestamp-authority/v2/pkg/generated/client/timestamp"
 	tsaserver "github.com/sigstore/timestamp-authority/v2/pkg/server"
 	"github.com/spf13/viper"
 
@@ -413,7 +414,7 @@ func setUpTSAServerWithTLS(t *testing.T, td, timestampCACert, timestampServerKey
 	tsaServer := httptest.NewServer(tsaAPIServer.GetHandler())
 	tsaClient, err := tsaclient.GetTimestampClient(tsaServer.URL)
 	must(err, t)
-	tsaChain, err := tsaClient.Timestamp.GetTimestampCertChain(nil)
+	tsaChain, err := tsaClient.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
 	must(err, t)
 	timestampServerURL := tsaServer.URL + "/api/v1/timestamp"
 	timestampChainFile := mkfile(tsaChain.Payload, td, t)
