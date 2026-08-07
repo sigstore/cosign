@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -203,6 +204,61 @@ func Test_ParseOCIReference(t *testing.T) {
 		} else {
 			assert.Empty(t, stderr, "expected no warning")
 		}
+	}
+}
+
+func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+	tests := []struct {
+		name        string
+		rekorURL    string
+		wantWarning bool
+	}{
+		{"custom Rekor URL skips public instance statement", "http://localhost:3000", false},
+		{"region-specific public good URL shows public instance statement", "https://rekor.us-central1.sigstore.dev", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ko := options.KeyOpts{
+				RekorURL:         tt.rekorURL,
+				SkipConfirmation: true,
+			}
+			var upload bool
+			var err error
+			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+			})
+			assert.NoError(t, err)
+			assert.True(t, upload)
+			if tt.wantWarning {
+				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
+			} else {
+				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
+			}
+		})
+	}
+}
+
+func TestIsPublicGoodRekorURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		rekorURL string
+		want     bool
+	}{
+		{"empty is not public good", "", false},
+		{"default production URL", options.DefaultRekorURL, true},
+		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
+		{"staging URL", "https://rekor.sigstage.dev", true},
+		{"region-specific staging URL", "https://rekor.us-central1.sigstage.dev", true},
+		{"custom self-hosted URL", "http://localhost:3000", false},
+		{"uppercase hostname is still public good", "https://REKOR.SIGSTORE.DEV", true},
+		{"lookalike domain is not public good", "https://sigstore.dev.evil.example.com", false},
+		{"lookalike suffix without dot boundary is not public good", "https://notsigstore.dev", false},
+		{"unparseable URL", "://bad-url", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isPublicGoodRekorURL(tt.rekorURL))
+		})
 	}
 }
 
