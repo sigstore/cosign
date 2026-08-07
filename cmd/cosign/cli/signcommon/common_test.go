@@ -244,7 +244,7 @@ func TestIsPublicGoodRekorURL(t *testing.T) {
 		rekorURL string
 		want     bool
 	}{
-		{"empty defaults to public good", "", true},
+		{"empty is not public good", "", false},
 		{"default production URL", options.DefaultRekorURL, true},
 		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
 		{"staging URL", "https://rekor.sigstage.dev", true},

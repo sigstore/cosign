@@ -145,11 +145,11 @@ var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
 
 // isPublicGoodRekorURL reports whether rekorURL points at the sigstore public good
 // instance (production or staging), which is the only case where the data-retention
-// privacy statement applies. An empty rekorURL is treated as the default public
-// instance.
+// privacy statement applies. An empty rekorURL means no Rekor service is configured
+// for upload (see NewSigningConfigFromKeyOpts), so it is not treated as public good.
 func isPublicGoodRekorURL(rekorURL string) bool {
 	if rekorURL == "" {
-		return true
+		return false
 	}
 	parsed, err := url.Parse(rekorURL)
 	if err != nil || parsed.Hostname() == "" {
