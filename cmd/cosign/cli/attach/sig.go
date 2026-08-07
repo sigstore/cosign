@@ -55,7 +55,7 @@ func SignatureCmd(ctx context.Context, regOpts options.RegistryOptions, sigRef, 
 
 	var payload []byte
 	if payloadRef == "" {
-		payload, err = cosign.ObsoletePayload(ctx, digest)
+		payload, err = cosign.ObsoletePayload(ctx, digest, nil)
 	} else {
 		payload, err = os.ReadFile(filepath.Clean(payloadRef))
 	}
