@@ -32,10 +32,26 @@ func TestObsoletePayload(t *testing.T) {
 	require.NoError(t, err)
 	var res []byte
 	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-		r, err := ObsoletePayload(ctx, digestedImg)
+		r, err := ObsoletePayload(ctx, digestedImg, nil)
 		require.NoError(t, err)
 		res = r
 	})
 	assert.Contains(t, stderr, "obsolete implied signature payload")
 	assert.Equal(t, []byte(`{"critical":{"identity":{"docker-reference":"index.docker.io/namespace/image"},"image":{"docker-manifest-digest":"sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec"},"type":"cosign container image signature"},"optional":null}`), res)
+}
+
+func TestObsoletePayloadWithAnnotations(t *testing.T) {
+	// The implied payload must include annotations passed by the caller so it matches
+	// the payload generated when signing with annotations (cmd/cosign/cli/generate).
+	digestedImg, err := name.NewDigest("docker.io/namespace/image@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec")
+	require.NoError(t, err)
+	annotations := map[string]interface{}{"appname": "myapp"}
+	var res []byte
+	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+		r, err := ObsoletePayload(ctx, digestedImg, annotations)
+		require.NoError(t, err)
+		res = r
+	})
+	assert.Contains(t, stderr, "obsolete implied signature payload")
+	assert.Equal(t, []byte(`{"critical":{"identity":{"docker-reference":"index.docker.io/namespace/image"},"image":{"docker-manifest-digest":"sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec"},"type":"cosign container image signature"},"optional":{"appname":"myapp"}}`), res)
 }

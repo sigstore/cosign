@@ -1040,7 +1040,7 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		if err != nil {
 			return nil, err
 		}
-		payload, err = ObsoletePayload(ctx, digest)
+		payload, err = ObsoletePayload(ctx, digest, co.Annotations)
 		if err != nil {
 			return nil, err
 		}
