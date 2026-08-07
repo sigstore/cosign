@@ -66,6 +66,13 @@ cosign sign [flags]
   cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
+**Signing config vs bundle format:** `--signing-config` (and `--use-signing-config`) selects Sigstore
+service URLs via a protobuf signing config and is intended for the **new bundle format**.
+If you need the older signature/bundle layout (for example a registry verifier that does not yet
+support the new format), prefer `--tlog-upload=false` (or equivalent) with key-based signing
+instead of inventing an empty signing-config. Using `--signing-config` without the new bundle
+format will fail by design — the flags are coupled.
+
 ### Options
 
 ```
