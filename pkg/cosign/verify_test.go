@@ -1364,6 +1364,60 @@ func TestValidateAndUnpackCertInvalidGithubWorkflowRef(t *testing.T) {
 	require.Contains(t, err.Error(), "expected GitHub Workflow Ref not found in certificate")
 }
 
+func TestIntermediatePoolFromChain(t *testing.T) {
+	// A chain attached next to a signature ends with a root only when the signer attached
+	// the whole chain. When the root is supplied separately, the chain is intermediates
+	// only and the last entry must not be dropped.
+	// https://github.com/sigstore/cosign/issues/3976
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	subCert, subKey, _ := test.GenerateSubordinateCa(rootCert, rootKey)
+	sub2Cert, _, _ := test.GenerateSubordinateCa(subCert, subKey)
+
+	tests := []struct {
+		name  string
+		chain []*x509.Certificate
+		want  []*x509.Certificate
+	}{{
+		name:  "empty chain contributes nothing",
+		chain: nil,
+		want:  nil,
+	}, {
+		name:  "intermediate only, root supplied elsewhere",
+		chain: []*x509.Certificate{subCert},
+		want:  []*x509.Certificate{subCert},
+	}, {
+		name:  "intermediate and root attached",
+		chain: []*x509.Certificate{subCert, rootCert},
+		want:  []*x509.Certificate{subCert},
+	}, {
+		name:  "two intermediates, root supplied elsewhere",
+		chain: []*x509.Certificate{sub2Cert, subCert},
+		want:  []*x509.Certificate{sub2Cert, subCert},
+	}, {
+		name:  "root only",
+		chain: []*x509.Certificate{rootCert},
+		want:  nil,
+	}}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			pool := intermediatePoolFromChain(tc.chain)
+			if len(tc.want) == 0 {
+				if pool != nil {
+					t.Fatalf("expected no pool, got one")
+				}
+				return
+			}
+			if pool == nil {
+				t.Fatalf("expected a pool with %d cert(s), got nil", len(tc.want))
+			}
+			if got := len(pool.Subjects()); got != len(tc.want) { //nolint:staticcheck // pool built here, not from the system
+				t.Errorf("expected %d cert(s) in pool, got %d", len(tc.want), got)
+			}
+		})
+	}
+}
+
 func TestValidateAndUnpackCertWithChainSuccess(t *testing.T) {
 	subject := "email@email"
 	oidcIssuer := "https://accounts.google.com"

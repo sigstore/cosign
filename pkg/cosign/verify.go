@@ -574,6 +574,30 @@ func validateCertExtensions(ce CertExtensions, co *CheckOpts) error {
 	return nil
 }
 
+// intermediatePoolFromChain builds the intermediate pool from a certificate chain that
+// was attached alongside a signature. The chain ends with a root only when the signer
+// attached the whole chain; when the root is supplied separately (co.RootCerts), every
+// certificate in the chain is an intermediate and must be kept, including the last one.
+// Returns nil when the chain contributes no intermediates.
+func intermediatePoolFromChain(chain []*x509.Certificate) *x509.CertPool {
+	intermediates := chain
+	if len(chain) > 0 {
+		last := chain[len(chain)-1]
+		if bytes.Equal(last.RawIssuer, last.RawSubject) {
+			// Self-signed: this is a root, not an intermediate.
+			intermediates = chain[:len(chain)-1]
+		}
+	}
+	if len(intermediates) == 0 {
+		return nil
+	}
+	pool := x509.NewCertPool()
+	for _, cert := range intermediates {
+		pool.AddCert(cert)
+	}
+	return pool
+}
+
 // ValidateAndUnpackCertWithChain creates a Verifier from a certificate. Verifies that the certificate
 // chains up to the provided root. Chain should start with the parent of the certificate and end with the root.
 // Optionally verifies the subject and issuer of the certificate.
@@ -902,14 +926,9 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		// If there is no chain annotation present, we preserve the pools set in the CheckOpts.
 		var pool *x509.CertPool
-		if len(chain) > 1 {
-			if co.IntermediateCerts == nil {
-				// If the intermediate certs have not been loaded in by TUF
-				pool = x509.NewCertPool()
-				for _, cert := range chain[:len(chain)-1] {
-					pool.AddCert(cert)
-				}
-			}
+		if co.IntermediateCerts == nil {
+			// If the intermediate certs have not been loaded in by TUF
+			pool = intermediatePoolFromChain(chain)
 		}
 		// In case pool is not set than set it from co.IntermediateCerts
 		if pool == nil {
