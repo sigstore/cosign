@@ -20,7 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	gitlab "gitlab.com/gitlab-org/api/client-go/v2"
 )
 
 func TestIsGroup(t *testing.T) {
