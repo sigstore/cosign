@@ -213,7 +213,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return err
 			}
 
-			if i == 0 && bundles != nil {
+			if i == 0 && co.NewBundleFormat && len(bundles) > 0 {
 				// Reuse the bundles fetched by the format auto-detect.
 				verified, bundleVerified, err = cosign.VerifyImageAttestationsWithBundles(ctx, bundles, bundlesHash, co)
 			} else {

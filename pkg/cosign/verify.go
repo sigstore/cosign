@@ -1937,6 +1937,9 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 // because it fetched them to decide between the bundle and legacy
 // verification paths — can verify without downloading them again.
 func VerifyImageAttestationsWithBundles(ctx context.Context, bundles []*sgbundle.Bundle, hash *v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
+	if hash == nil {
+		return nil, false, errors.New("image digest hash is required")
+	}
 	digestBytes, err := hex.DecodeString(hash.Hex)
 	if err != nil {
 		return nil, false, err

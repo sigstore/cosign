@@ -245,7 +245,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 
 			if co.NewBundleFormat {
 				// OCI bundle always contains attestation
-				if i == 0 && bundles != nil {
+				if i == 0 && len(bundles) > 0 {
 					// Reuse the bundles fetched by the format auto-detect.
 					verified, bundleVerified, err = cosign.VerifyImageAttestationsWithBundles(ctx, bundles, bundlesHash, co)
 				} else {
