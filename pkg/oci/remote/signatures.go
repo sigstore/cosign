@@ -25,6 +25,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	payloadsize "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/empty"
 	"github.com/sigstore/cosign/v3/pkg/oci/internal/signature"
@@ -54,6 +55,23 @@ func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 	}, nil
 }
 
+// readCapped reads r fully, refusing to grow past the configured maximum layer
+// size. It exists because a decompressed stream is not bounded by the size a
+// registry declares for the layer, so a small compressed blob can otherwise
+// expand without limit. One byte past the maximum is read so that reaching the
+// limit is distinguishable from a payload that is exactly the maximum size.
+func readCapped(r io.Reader) ([]byte, error) {
+	maxSize := payloadsize.MaxSize()
+	b, err := io.ReadAll(io.LimitReader(r, int64(maxSize)+1))
+	if err != nil {
+		return nil, err
+	}
+	if uint64(len(b)) > maxSize {
+		return nil, payloadsize.NewMaxLayerSizeExceeded(uint64(len(b)), maxSize)
+	}
+	return b, nil
+}
+
 func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	o := makeOptions(ref.Context(), opts...)
 	img, err := remoteImage(ref, o.ROpt...)
@@ -74,12 +92,22 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if !strings.HasPrefix(string(mediaType), "application/vnd.dev.sigstore.bundle") {
 		return nil, errors.New("expected bundle layer")
 	}
+	size, err := layers[0].Size()
+	if err != nil {
+		return nil, err
+	}
+	if err := payloadsize.CheckSize(uint64(size)); err != nil {
+		return nil, err
+	}
 	layer0, err := layers[0].Uncompressed()
 	if err != nil {
 		return nil, err
 	}
 	defer layer0.Close()
-	bundleBytes, err := io.ReadAll(layer0)
+	// The size checked above is the compressed size the registry declares, and this
+	// is the only bundle read that goes through Uncompressed, so that check alone
+	// does not bound the result.
+	bundleBytes, err := readCapped(layer0)
 	if err != nil {
 		return nil, err
 	}
