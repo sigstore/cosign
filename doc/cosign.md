@@ -30,7 +30,7 @@ A tool for Container Signing, Verification and Storage in an OCI registry
 * [cosign public-key](cosign_public-key.md)	 - Gets a public key from the key-pair
 * [cosign save](cosign_save.md)	 - Save the container image and associated signatures to disk at the specified directory
 * [cosign sign](cosign_sign.md)	 - Sign the supplied container image
-* [cosign sign-blob](cosign_sign-blob.md)	 - Sign the supplied blob, outputting the base64-encoded signature to stdout
+* [cosign sign-blob](cosign_sign-blob.md)	 - Sign the supplied blob, outputting the bundle to a file
 * [cosign signing-config](cosign_signing-config.md)	 - Interact with a Sigstore protobuf signing config
 * [cosign tree](cosign_tree.md)	 - Display supply chain security related artifacts for an image such as signatures, SBOMs and attestations
 * [cosign trusted-root](cosign_trusted-root.md)	 - Interact with a Sigstore protobuf trusted root

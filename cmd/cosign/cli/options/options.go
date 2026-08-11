@@ -55,8 +55,3 @@ var signatureExts = []string{
 var wasmExts = []string{
 	"wasm",
 }
-
-var rekorEntryTypes = []string{
-	"dsse", // first one is the default
-	"intoto",
-}

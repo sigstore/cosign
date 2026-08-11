@@ -17,7 +17,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -38,7 +37,7 @@ Make sure to sign the image by its digest (@sha256:...) rather than by tag
 (:latest) so that you actually sign what you think you're signing! This prevents
 race conditions or (worse) malicious tampering.
 `,
-		Example: `  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+		Example: `  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-y] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -88,20 +87,23 @@ race conditions or (worse) malicious tampering.
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if o.NewBundleFormat && !o.Upload && o.BundlePath == "" {
-				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			if !o.Upload && o.BundlePath == "" {
+				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path")
+			}
+			var signType string
+			if o.Key == "" && !o.SecurityKey.Use {
+				signType = "keyless"
+			} else if o.IssueCertificate {
+				signType = "certificate-based"
+			}
+			if signType != "" {
+				if !o.UseSigningConfig && o.SigningConfigPath == "" {
+					return fmt.Errorf("%s signing requires a signing config (either from TUF via --use-signing-config or explicitly via a file with --signing-config)", signType)
+				}
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			switch o.Attachment {
-			case "sbom":
-				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
-			case "":
-				break
-			default:
-				return fmt.Errorf("specified image attachment %s not specified. Can be 'sbom'", o.Attachment)
-			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -112,12 +114,8 @@ race conditions or (worse) malicious tampering.
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
-				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
-				RekorURL:                       o.Rekor.URL,
-				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
@@ -128,21 +126,15 @@ race conditions or (worse) malicious tampering.
 				TSAClientCert:                  o.TSAClientCert,
 				TSAClientKey:                   o.TSAClientKey,
 				TSAServerName:                  o.TSAServerName,
-				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
-				NewBundleFormat:                o.NewBundleFormat,
 			}
 			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
-				o.NewBundleFormat, "", o.Key, o.IssueCertificate, o.Output, "", o.OutputCertificate, o.OutputPayload, o.OutputSignature, ""); err != nil {
+				o.TrustedRootPath, o.Key); err != nil {
 				return err
 			}
 
 			if err := sign.SignCmd(cmd.Context(), ro, ko, *o, args); err != nil {
-				if o.Attachment == "" {
-					return fmt.Errorf("signing %v: %w", args, err)
-				}
-				return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, args, err)
+				return fmt.Errorf("signing %v: %w", args, err)
 			}
 			return nil
 		},
