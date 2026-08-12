@@ -67,7 +67,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("upload to tlog: %w", err)
 		}
-		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(ko, shouldUpload)
+		ko.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(ko)
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
@@ -76,6 +76,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 
 	if !shouldUpload {
+		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
 		// To maintain backwards compatibility with older cosign versions,
 		// we do not use ed25519ph for ed25519 keys when the signatures are not
 		// uploaded to the Tlog.

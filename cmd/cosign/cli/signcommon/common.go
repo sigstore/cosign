@@ -631,7 +631,7 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
 // This only supports Rekor v1. Rekor v2 requires a user-provided signing config.
-func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.SigningConfig, error) {
+func NewSigningConfigFromKeyOpts(ko options.KeyOpts) (*root.SigningConfig, error) {
 	var fulcioServices []root.Service
 	if ko.FulcioURL != "" {
 		fulcioServices = append(fulcioServices, root.Service{
@@ -652,7 +652,7 @@ func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.Sig
 
 	var rekorServices []root.Service
 	var rekorConfig root.ServiceConfiguration
-	if ko.RekorURL != "" && tlogUpload {
+	if ko.RekorURL != "" {
 		rekorServices = append(rekorServices, root.Service{
 			URL:                 ko.RekorURL,
 			MajorAPIVersion:     1,

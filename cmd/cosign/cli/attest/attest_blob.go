@@ -148,9 +148,12 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 
 	if c.SigningConfig == nil {
 		var err error
-		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts, c.TlogUpload)
+		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts)
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
+		}
+		if !c.TlogUpload {
+			c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
 		}
 	}
 
