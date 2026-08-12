@@ -23,14 +23,17 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -207,19 +210,31 @@ func Test_ParseOCIReference(t *testing.T) {
 	}
 }
 
+func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
+	t.Helper()
+	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{RekorURL: rekorURL})
+	if err != nil {
+		t.Fatalf("creating signing config: %v", err)
+	}
+	return sc
+}
+
 func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
 	tests := []struct {
-		name        string
-		rekorURL    string
-		wantWarning bool
+		name          string
+		signingConfig *root.SigningConfig
+		wantWarning   bool
 	}{
-		{"custom Rekor URL skips public instance statement", "http://localhost:3000", false},
-		{"region-specific public good URL shows public instance statement", "https://rekor.us-central1.sigstore.dev", true},
+		{"custom Rekor URL skips public instance statement", mustSigningConfig(t, "http://localhost:3000"), false},
+		{"region-specific public good URL shows public instance statement", mustSigningConfig(t, "https://rekor.us-central1.sigstore.dev"), true},
+		{"staging public good signing config shows public instance statement", mustSigningConfig(t, "https://rekor.sigstage.dev"), true},
+		{"nil signing config skips public instance statement", nil, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			privacy.StatementOnce = sync.Once{}
 			ko := options.KeyOpts{
-				RekorURL:         tt.rekorURL,
+				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
 			var upload bool
@@ -234,6 +249,25 @@ func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
 			} else {
 				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
 			}
+		})
+	}
+}
+
+func TestHasPublicGoodRekorURL(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		want          bool
+	}{
+		{"nil signing config returns false", nil, false},
+		{"empty signing config returns false", mustSigningConfig(t, ""), false},
+		{"custom Rekor URL returns false", mustSigningConfig(t, "http://localhost:3000"), false},
+		{"public good Rekor URL returns true", mustSigningConfig(t, options.DefaultRekorURL), true},
+		{"signing config with cleared Rekor URLs returns false", mustSigningConfig(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, hasPublicGoodRekorURL(tt.signingConfig))
 		})
 	}
 }
