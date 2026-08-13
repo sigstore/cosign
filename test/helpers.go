@@ -527,7 +527,7 @@ func setLocalEnv(t *testing.T, dir string) error {
 
 // copyFile copies a file from a source to a destination.
 func copyFile(src, dst string) error {
-	f, err := os.Open(src)
+	f, err := os.Open(src) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("error opening source file: %w", err)
 	}

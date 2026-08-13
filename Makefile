@@ -61,9 +61,6 @@ LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION)
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
 
-GOLANGCI_LINT_DIR = $(shell pwd)/bin
-GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
-
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
 GHCR_PREFIX ?= ghcr.io/sigstore/cosign
@@ -105,13 +102,13 @@ cross:
 # lint / test section
 #####################
 
-golangci-lint:
-	rm -f $(GOLANGCI_LINT_BIN) || :
-	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2  ;\
-
-lint: golangci-lint ## Run golangci-lint linter
-	$(GOLANGCI_LINT_BIN) run -n
+lint:
+	docker run -t --rm -v $(PWD):/app -w /app \
+		--user $(shell id -u):$(shell id -g) \
+		-v $(shell go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $(shell go env GOMODCACHE):/go/pkg/mod -e GOMODCACHE=/go/pkg/mod \
+		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
 
 test:
 	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
