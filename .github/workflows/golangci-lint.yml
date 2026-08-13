@@ -38,6 +38,11 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
+      - name: "Extract golangci-lint version from Dockerfile.golangci-lint"
+        id: "golangci-lint-version"
+        run: |
+          awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '${{ env.GOVERSION }}'
@@ -47,7 +52,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.12
+          version: ${{ steps.golangci-lint-version.outputs.version }}
 
   golangci-test-e2e:
     name: lint-test-e2e
@@ -63,6 +68,11 @@ jobs:
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
+      
+      - name: "Extract golangci-lint version from Dockerfile.golangci-lint"
+        id: "golangci-lint-version"
+        run: |
+          awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -73,5 +83,5 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.9
+          version: ${{ steps.golangci-lint-version.outputs.version }}
           args: --build-tags e2e ./test
