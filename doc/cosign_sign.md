@@ -103,7 +103,6 @@ cosign sign [flags]
       --timestamp-server-name string                    SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --trusted-root string                             optional path to a TrustedRoot JSON file to verify a signature after signing
       --upload                                          whether to upload the signature (default true)
-      --use-signing-config                              whether to use a TUF-provided signing config for the service URLs (default true)
   -y, --yes                                             skip confirmation prompts for non-destructive operations
 ```
 
