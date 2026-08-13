@@ -60,3 +60,10 @@ var rekorEntryTypes = []string{
 	"dsse", // first one is the default
 	"intoto",
 }
+
+var securityKeySlots = []string{
+	"authentication",
+	"signature",
+	"card-authentication",
+	"key-management",
+}

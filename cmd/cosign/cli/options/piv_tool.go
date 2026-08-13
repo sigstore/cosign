@@ -16,6 +16,9 @@
 package options
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -105,7 +108,8 @@ func (o *PIVToolAttestationOptions) AddFlags(cmd *cobra.Command) {
 		"format to output attestation information in. (text|json)")
 
 	cmd.Flags().StringVar(&o.Slot, "slot", "",
-		"Slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		fmt.Sprintf("Slot to use for generated key (%s)", strings.Join(securityKeySlots, "|")))
+	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
 }
 
 // PIVToolGenerateKeyOptions is the wrapper for `piv-tool generate-key` related options.
@@ -128,7 +132,8 @@ func (o *PIVToolGenerateKeyOptions) AddFlags(cmd *cobra.Command) {
 		"if set to true, generates a new random management key and deletes it after")
 
 	cmd.Flags().StringVar(&o.Slot, "slot", "",
-		"Slot to use for generated key (authentication|signature|card-authentication|key-management)")
+		fmt.Sprintf("Slot to use for generated key (%s)", strings.Join(securityKeySlots, "|")))
+	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
 
 	cmd.Flags().StringVar(&o.PINPolicy, "pin-policy", "",
 		"PIN policy for slot (never|once|always)")
