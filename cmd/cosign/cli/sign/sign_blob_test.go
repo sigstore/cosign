@@ -28,9 +28,9 @@ import (
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 func TestSignBlobCmd(t *testing.T) {
@@ -105,20 +105,11 @@ func TestSignBlobCmd(t *testing.T) {
 
 	// Test signing using Ed25519 key with custom signing config and no transparency log upload
 	edKeyRef := writeFile(t, td, string(pemBytes), "ed_key.pem")
-	keyOpts = options.KeyOpts{KeyRef: edKeyRef, BundlePath: bundlePath}
-	sc, err := root.NewSigningConfig(
-		root.SigningConfigMediaType02,
-		nil,
-		nil,
-		nil,
-		root.ServiceConfiguration{},
-		nil,
-		root.ServiceConfiguration{},
-	)
-	if err != nil {
-		t.Fatal(err)
+	keyOpts = options.KeyOpts{
+		KeyRef:        edKeyRef,
+		BundlePath:    bundlePath,
+		SigningConfig: signcommon.NewEmptySigningConfig(),
 	}
-	keyOpts.SigningConfig = sc
 	sigBytes, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", true)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
