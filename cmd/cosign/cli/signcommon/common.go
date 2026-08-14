@@ -468,9 +468,9 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 }
 
 // ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
-func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
+func ValidateSigningOptions(ctx context.Context, offline bool, useSigningConfig bool, signingConfigPath string,
 	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string,
+	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
 	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
 	if newBundleFormat && outputSignature != "" {
@@ -492,12 +492,23 @@ func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingC
 		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
 
-	// If a signing config is used, then service URLs cannot be specified
-	if (useSigningConfig || signingConfigPath != "") &&
-		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
-			(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
-			(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
-			tsaServerURL != "") {
+	serviceURLsSpecified := (rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
+		(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
+		(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
+		tsaServerURL != ""
+	if offline {
+		if keyRef == "" {
+			return fmt.Errorf("offline signing requires a private key")
+		}
+		if issueCertificate {
+			return fmt.Errorf("cannot issue certificate when offline")
+		}
+		if serviceURLsSpecified {
+			return fmt.Errorf("cannot specify service URLs when signing offline")
+		}
+		return nil
+	}
+	if (useSigningConfig || signingConfigPath != "") && serviceURLsSpecified {
 		return fmt.Errorf("cannot specify service URLs and use signing config")
 	}
 	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
@@ -512,7 +523,13 @@ func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingC
 }
 
 // LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, offline bool, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+	if offline {
+		// An empty signing config prevents any network calls during signing
+		ko.SigningConfig = NewEmptySigningConfig()
+		return nil
+	}
+
 	var err error
 	// Fetch a trusted root when:
 	// * requesting a certificate and no CT log key is provided to verify an SCT
@@ -646,6 +663,17 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 	}
 
 	return json.Marshal(signedPayload)
+}
+
+// NewEmptySigningConfig returns a signing config with no services configured.
+func NewEmptySigningConfig() *root.SigningConfig {
+	sc, _ := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil, nil, nil,
+		root.ServiceConfiguration{},
+		nil, root.ServiceConfiguration{},
+	)
+	return sc
 }
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.

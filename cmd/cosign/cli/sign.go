@@ -97,9 +97,9 @@ race conditions or (worse) malicious tampering.
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
+			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.Offline, o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath, o.Key, o.IssueCertificate,
 				o.Output, "", o.OutputCertificate, o.OutputPayload, o.OutputSignature, ""); err != nil {
 				return err
 			}
@@ -142,7 +142,7 @@ race conditions or (worse) malicious tampering.
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.Offline, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 

@@ -59,6 +59,7 @@ cosign attest [flags]
       --k8s-keychain                     whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --no-upload                        do not upload the generated attestation, but send the attestation output to STDOUT
+      --offline                          only allow offline signing with a local key without contacting network services
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read

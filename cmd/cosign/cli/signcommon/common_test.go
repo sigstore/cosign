@@ -329,6 +329,7 @@ func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
 func TestValidateSigningOptions(t *testing.T) {
 	tests := []struct {
 		name              string
+		offline           bool
 		useSigningConfig  bool
 		signingConfigPath string
 		rekorURL          string
@@ -338,6 +339,8 @@ func TestValidateSigningOptions(t *testing.T) {
 		tlogUpload        bool
 		newBundleFormat   bool
 		bundlePath        string
+		keyRef            string
+		issueCertificate  bool
 		output            string
 		outputAttestation string
 		outputCertificate string
@@ -356,6 +359,37 @@ func TestValidateSigningOptions(t *testing.T) {
 			tlogUpload:      true,
 			newBundleFormat: true,
 			wantErr:         false,
+		},
+		{
+			name:            "valid offline signing flags",
+			offline:         true,
+			keyRef:          "cosign.key",
+			tlogUpload:      false,
+			newBundleFormat: true,
+			wantErr:         false,
+		},
+		{
+			name:          "offline missing key",
+			offline:       true,
+			keyRef:        "",
+			wantErr:       true,
+			wantErrSubstr: "offline signing requires a private key",
+		},
+		{
+			name:             "offline with issue certificate",
+			offline:          true,
+			keyRef:           "cosign.key",
+			issueCertificate: true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot issue certificate when offline",
+		},
+		{
+			name:          "offline with custom service URLs",
+			offline:       true,
+			keyRef:        "cosign.key",
+			rekorURL:      "http://localhost:3000",
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when signing offline",
 		},
 		{
 			name:             "valid signing config from TUF",
@@ -546,9 +580,9 @@ func TestValidateSigningOptions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				err = ValidateSigningOptions(ctx, tt.useSigningConfig, tt.signingConfigPath,
+				err = ValidateSigningOptions(ctx, tt.offline, tt.useSigningConfig, tt.signingConfigPath,
 					tt.rekorURL, tt.fulcioURL, tt.oidcIssuer, tt.tsaServerURL,
-					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath,
+					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath, tt.keyRef, tt.issueCertificate,
 					tt.output, tt.outputAttestation, tt.outputCertificate, tt.outputPayload, tt.outputSignature, tt.outputTimestamp)
 			})
 			if tt.wantErr {
