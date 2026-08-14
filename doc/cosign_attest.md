@@ -82,7 +82,6 @@ cosign attest [flags]
       --timestamp-server-name string     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
       --type string                      specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
-      --use-signing-config               whether to use a TUF-provided signing config for the service URLs (default true)
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
 
