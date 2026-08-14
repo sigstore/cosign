@@ -54,7 +54,6 @@ type SignBlobOptions struct {
 	SigningAlgorithm     string
 
 	Offline           bool
-	UseSigningConfig  bool
 	SigningConfigPath string
 	TrustedRootPath   string
 }
@@ -113,18 +112,13 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
 		"only allow offline signing with a local key without contacting network services")
 
-	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format")
-	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
-
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file. Must provide --bundle, which will output verification material in the new format")
-
-	cmd.MarkFlagsMutuallyExclusive("offline", "signing-config", "use-signing-config")
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"optional path to a TrustedRoot JSON file to verify a signature after signing")
 
+	cmd.MarkFlagsMutuallyExclusive("offline", "signing-config")
 	cmd.MarkFlagsMutuallyExclusive("offline", "trusted-root")
 
 	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
