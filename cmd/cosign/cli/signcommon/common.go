@@ -122,8 +122,8 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
 	var statementErr error
 	// Only warn about the public good instance's data retention policy when
-	// actually uploading to it; a custom --rekor-url points elsewhere.
-	if upload && isPublicGoodRekorURL(ko.RekorURL) {
+	// actually uploading to it
+	if upload && hasPublicGoodRekorURL(ko.SigningConfig) {
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
 			ui.Infof(ctx, privacy.StatementConfirmation)
@@ -143,10 +143,23 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 // good instance is served from multiple region- and year-specific hostnames.
 var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
 
-// isPublicGoodRekorURL reports whether rekorURL points at the sigstore public good
-// instance (production or staging), which is the only case where the data-retention
-// privacy statement applies. An empty rekorURL means no Rekor service is configured
-// for upload (see NewSigningConfigFromKeyOpts), so it is not treated as public good.
+// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
+// points at the sigstore public good instance (production or staging), which is the
+// only case where the data-retention privacy statement applies.
+func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.RekorLogURLs() {
+		if isPublicGoodRekorURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicGoodRekorURL reports whether a rekor URL points at the sigstore public good
+// instance (production or staging).
 func isPublicGoodRekorURL(rekorURL string) bool {
 	if rekorURL == "" {
 		return false
@@ -631,7 +644,7 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
 // This only supports Rekor v1. Rekor v2 requires a user-provided signing config.
-func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.SigningConfig, error) {
+func NewSigningConfigFromKeyOpts(ko options.KeyOpts) (*root.SigningConfig, error) {
 	var fulcioServices []root.Service
 	if ko.FulcioURL != "" {
 		fulcioServices = append(fulcioServices, root.Service{
@@ -652,7 +665,7 @@ func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.Sig
 
 	var rekorServices []root.Service
 	var rekorConfig root.ServiceConfiguration
-	if ko.RekorURL != "" && tlogUpload {
+	if ko.RekorURL != "" {
 		rekorServices = append(rekorServices, root.Service{
 			URL:                 ko.RekorURL,
 			MajorAPIVersion:     1,
