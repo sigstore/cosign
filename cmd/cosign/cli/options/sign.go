@@ -44,6 +44,7 @@ type SignOptions struct {
 	SignContainerIdentities []string
 	RecordCreationTimestamp bool
 	NewBundleFormat         bool
+	Offline                 bool
 	UseSigningConfig        bool
 	SigningConfigPath       string
 	TrustedRootPath         string
@@ -161,6 +162,9 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "expect the signature/attestation to be packaged in a Sigstore bundle")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
+	cmd.Flags().BoolVar(&o.Offline, "offline", false,
+		"only allow offline signing with a local key without contacting network services")
+
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")
 	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
@@ -168,8 +172,10 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file")
 
-	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
+	cmd.MarkFlagsMutuallyExclusive("offline", "signing-config", "use-signing-config")
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"optional path to a TrustedRoot JSON file to verify a signature after signing")
+
+	cmd.MarkFlagsMutuallyExclusive("offline", "trusted-root")
 }
