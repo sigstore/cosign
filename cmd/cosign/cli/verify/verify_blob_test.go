@@ -22,6 +22,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -798,6 +799,55 @@ func TestVerifyBlobSkWithoutIdentities(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "opening piv token") {
 		t.Fatalf("expected PIV error, got: %v", err)
+	}
+}
+
+// TestVerifyBlobWithUnsetHashAlgorithmMatchesKeyDefault reproduces
+// https://github.com/sigstore/cosign/issues/5063: verifying a blob signed
+// with a P-521 key (which pairs with SHA-512, not SHA-256) failed unless the
+// deprecated --signature-digest-algorithm flag was explicitly set to sha512,
+// because VerifyBlobCmd forced HashAlgorithm to SHA256 whenever it was left
+// unset (its zero value), rather than letting the key's own default apply.
+func TestVerifyBlobWithUnsetHashAlgorithmMatchesKeyDefault(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubPEM, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := filepath.Join(td, "key.pub")
+	if err := os.WriteFile(keyPath, pubPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	blob := "someblob"
+	blobPath := writeBlobFile(t, td, blob, "blob.txt")
+
+	digest := sha512.Sum512([]byte(blob))
+	sig, err := ecdsa.SignASN1(rand.Reader, priv, digest[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigPath := filepath.Join(td, "blob.sig")
+	if err := os.WriteFile(sigPath, []byte(base64.StdEncoding.EncodeToString(sig)), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := VerifyBlobCmd{
+		KeyOpts: options.KeyOpts{KeyRef: keyPath},
+		SigRef:  sigPath,
+		// HashAlgorithm is left unset (its zero value), matching what
+		// options.SignatureDigestOptions.HashAlgorithm() now returns when
+		// --signature-digest-algorithm is not passed on the command line.
+		IgnoreTlog: true,
+	}
+	if err := cmd.Exec(ctx, blobPath); err != nil {
+		t.Fatalf("expected verification to succeed using the P-521 key's default hash algorithm (SHA512), got: %v", err)
 	}
 }
 
