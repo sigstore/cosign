@@ -86,10 +86,9 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		return fmt.Errorf("please specify path to the DSSE envelope signature via --signature or --bundle")
 	}
 
-	// always default to sha256 if the algorithm hasn't been explicitly set
-	if c.HashAlgorithm == 0 {
-		c.HashAlgorithm = crypto.SHA256
-	}
+	// c.HashAlgorithm may be 0 (unset) here, in which case LoadVerifierFromKeyOrCert
+	// picks the digest algorithm that matches the provided key, rather than assuming
+	// SHA256 for keys that require a different algorithm (e.g. P-521 ECDSA keys).
 
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
