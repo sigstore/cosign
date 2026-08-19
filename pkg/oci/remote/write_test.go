@@ -16,7 +16,11 @@
 package remote
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -26,6 +30,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 	cosignstatic "github.com/sigstore/cosign/v3/pkg/oci/static"
@@ -628,4 +634,177 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 	if !strings.Contains(string(manifestBytes), `"artifactType"`) {
 		t.Errorf("Expected manifest JSON to contain artifactType field, got: %s", string(manifestBytes))
 	}
+}
+
+// stubSignedImageIndex is a minimal oci.SignedImageIndex whose SignedImage
+// and SignedImageIndex accessors report no nested image or index, so
+// WriteSignedImageIndexImages falls straight through to scanning the
+// on-disk layout for referrer manifests. The methods below that aren't
+// exercised by that code path are unimplemented on purpose.
+type stubSignedImageIndex struct{}
+
+func (*stubSignedImageIndex) MediaType() (types.MediaType, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) Digest() (v1.Hash, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) Size() (int64, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) IndexManifest() (*v1.IndexManifest, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) RawManifest() ([]byte, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) Image(v1.Hash) (v1.Image, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) ImageIndex(v1.Hash) (v1.ImageIndex, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) Attachment(string) (oci.File, error) {
+	panic("not implemented")
+}
+
+func (*stubSignedImageIndex) SignedImage(v1.Hash) (oci.SignedImage, error) {
+	return nil, nil
+}
+
+func (*stubSignedImageIndex) SignedImageIndex(v1.Hash) (oci.SignedImageIndex, error) {
+	return nil, nil
+}
+
+func (*stubSignedImageIndex) Signatures() (oci.Signatures, error) {
+	return nil, nil
+}
+
+func (*stubSignedImageIndex) Attestations() (oci.Signatures, error) {
+	return nil, nil
+}
+
+var _ oci.SignedImageIndex = (*stubSignedImageIndex)(nil)
+
+// TestWriteSignedImageIndexImagesBundleLayerBeforeManifest is a regression
+// test for https://github.com/sigstore/cosign/issues/5030: `cosign load`
+// PUT the bundle referrer manifest before uploading the bundle layer blob
+// it references, which registries that enforce blob-before-manifest
+// ordering (e.g. AWS ECR) reject with BLOB_UPLOAD_UNKNOWN.
+func TestWriteSignedImageIndexImagesBundleLayerBeforeManifest(t *testing.T) {
+	origPut := remotePut
+	origWriteLayer := remoteWriteLayer
+	t.Cleanup(func() {
+		remotePut = origPut
+		remoteWriteLayer = origWriteLayer
+	})
+
+	// writeEmptyConfigLayer also goes through remoteWriteLayer, so tell the
+	// bundle layer apart from the empty config layer by media type rather
+	// than assuming there's only one layer write.
+	var order []string
+	remoteWriteLayer = func(_ name.Repository, layer v1.Layer, _ ...remote.Option) error {
+		mt, err := layer.MediaType()
+		if err != nil {
+			return err
+		}
+		if mt == types.MediaType(bundle.BundleV03MediaType) {
+			order = append(order, "bundle-layer")
+		} else {
+			order = append(order, "config-layer")
+		}
+		return nil
+	}
+	remotePut = func(_ name.Reference, _ remote.Taggable, _ ...remote.Option) error {
+		order = append(order, "manifest")
+		return nil
+	}
+
+	digestRef := name.MustParseReference(
+		"gcr.io/test/image@sha256:1111111111111111111111111111111111111111111111111111111111111111").(name.Digest)
+	subjectHash, err := v1.NewHash(digestRef.DigestStr())
+	if err != nil {
+		t.Fatalf("NewHash() = %v", err)
+	}
+
+	tmpDir := t.TempDir()
+	blobDir := filepath.Join(tmpDir, "blobs", "sha256")
+	if err := os.MkdirAll(blobDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() = %v", err)
+	}
+
+	bundleLayerBytes := []byte(`{"bundle":"contents"}`)
+	layerHash, _, err := v1.SHA256(bytes.NewReader(bundleLayerBytes))
+	if err != nil {
+		t.Fatalf("SHA256(layer) = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(blobDir, layerHash.Hex), bundleLayerBytes, 0o644); err != nil {
+		t.Fatalf("WriteFile(layer) = %v", err)
+	}
+
+	bundleManifest := v1.Manifest{
+		SchemaVersion: 2,
+		MediaType:     types.OCIManifestSchema1,
+		Config: v1.Descriptor{
+			MediaType: "application/vnd.oci.empty.v1+json",
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: strings.Repeat("0", 64)},
+			Size:      2,
+		},
+		Layers: []v1.Descriptor{{
+			MediaType: types.MediaType(bundle.BundleV03MediaType),
+			Digest:    layerHash,
+			Size:      int64(len(bundleLayerBytes)),
+		}},
+		Subject: &v1.Descriptor{
+			MediaType: types.OCIManifestSchema1,
+			Digest:    subjectHash,
+			Size:      100,
+		},
+		Annotations: map[string]string{
+			BundlePredicateType: "https://test.predicate.type",
+		},
+	}
+	manifestBytes, err := json.Marshal(bundleManifest)
+	if err != nil {
+		t.Fatalf("json.Marshal(manifest) = %v", err)
+	}
+	manifestHash, _, err := v1.SHA256(bytes.NewReader(manifestBytes))
+	if err != nil {
+		t.Fatalf("SHA256(manifest) = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(blobDir, manifestHash.Hex), manifestBytes, 0o644); err != nil {
+		t.Fatalf("WriteFile(manifest) = %v", err)
+	}
+
+	if err := WriteSignedImageIndexImages(digestRef, &stubSignedImageIndex{}, tmpDir); err != nil {
+		t.Fatalf("WriteSignedImageIndexImages() = %v", err)
+	}
+
+	if len(order) != 3 {
+		t.Fatalf("expected the empty config layer, the bundle layer, and the manifest to each be written once, got %v", order)
+	}
+	bundleLayerIdx := indexOf(order, "bundle-layer")
+	manifestIdx := indexOf(order, "manifest")
+	if bundleLayerIdx == -1 || manifestIdx == -1 {
+		t.Fatalf("expected both a bundle-layer write and a manifest put, got %v", order)
+	}
+	if bundleLayerIdx > manifestIdx {
+		t.Errorf("expected the bundle layer to be uploaded before the manifest, got order %v", order)
+	}
+}
+
+func indexOf(haystack []string, needle string) int {
+	for i, v := range haystack {
+		if v == needle {
+			return i
+		}
+	}
+	return -1
 }

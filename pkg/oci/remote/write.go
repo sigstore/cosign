@@ -137,17 +137,9 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 					return err
 				}
 
-				// Write the manifest
-				m := referrerManifest{*manifest, bundle.BundleV03MediaType}
-				targetRef, err := m.targetRef(o.TargetRepository, opts...)
-				if err != nil {
-					return fmt.Errorf("failed to create target reference: %w", err)
-				}
-				if err := remotePut(targetRef, m, o.ROpt...); err != nil {
-					return fmt.Errorf("failed to upload manifest: %w", err)
-				}
-
-				// Write bundle layers
+				// Write bundle layers before the manifest. Registries that enforce
+				// blob-before-manifest ordering (e.g. AWS ECR) reject a manifest PUT
+				// that references layer digests which have not been uploaded yet.
 				for _, layer := range manifest.Layers {
 					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
 					bundleBytes, err := os.ReadFile(bundlePath)
@@ -159,6 +151,16 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 					if err != nil {
 						return err
 					}
+				}
+
+				// Write the manifest
+				m := referrerManifest{*manifest, bundle.BundleV03MediaType}
+				targetRef, err := m.targetRef(o.TargetRepository, opts...)
+				if err != nil {
+					return fmt.Errorf("failed to create target reference: %w", err)
+				}
+				if err := remotePut(targetRef, m, o.ROpt...); err != nil {
+					return fmt.Errorf("failed to upload manifest: %w", err)
 				}
 			}
 		}
