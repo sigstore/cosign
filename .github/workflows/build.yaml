@@ -83,3 +83,4 @@ jobs:
         env:
           KO_PREFIX: ghcr.io/sigstore/cosign/cosign/ci
           COSIGN_PASSWORD: "${{secrets.COSIGN_PASSWORD}}"
+          LATEST_TAG: ${{ github.ref == 'refs/heads/main' && ',latest' || '' }}
