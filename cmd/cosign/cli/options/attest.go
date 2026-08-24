@@ -130,7 +130,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.Offline, "offline", false,
-		"only allow offline signing with a local key without contacting network services")
+		"only allow offline signing with a local key without contacting network services. Key usage is not logged and therefore not auditable")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file")
