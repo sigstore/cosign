@@ -467,12 +467,31 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
 }
 
-// LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath string,
-	rekorURL, fulcioURL, oidcIssuer, tsaServerURL, trustedRootPath string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
+// ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
+func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
+	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
+	tlogUpload bool, newBundleFormat bool, bundlePath string,
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
-	var err error
+	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
+	if newBundleFormat && outputSignature != "" {
+		ui.Warnf(ctx, "--output-signature is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputAttestation != "" {
+		ui.Warnf(ctx, "--output-attestation is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputCertificate != "" {
+		ui.Warnf(ctx, "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputPayload != "" {
+		ui.Warnf(ctx, "--output-payload is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputTimestamp != "" {
+		ui.Warnf(ctx, "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && output != "" {
+		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
+	}
+
 	// If a signing config is used, then service URLs cannot be specified
 	if (useSigningConfig || signingConfigPath != "") &&
 		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
@@ -488,10 +507,17 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
 		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
 	}
+
+	return nil
+}
+
+// LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
+func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+	var err error
 	// Fetch a trusted root when:
 	// * requesting a certificate and no CT log key is provided to verify an SCT
 	// * using a signing config
-	if ((keyRef == "" || issueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+	if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
 		(useSigningConfig || signingConfigPath != "") {
 		if trustedRootPath != "" {
 			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
@@ -515,26 +541,6 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
 		}
-	}
-
-	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
-	if newBundleFormat && outputSignature != "" {
-		ui.Warnf(context.Background(), "--output-signature is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputAttestation != "" {
-		ui.Warnf(context.Background(), "--output-attestation is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputCertificate != "" {
-		ui.Warnf(context.Background(), "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputPayload != "" {
-		ui.Warnf(context.Background(), "--output-payload is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputTimestamp != "" {
-		ui.Warnf(context.Background(), "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && output != "" {
-		ui.Warnf(context.Background(), "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
 
 	return nil
