@@ -67,12 +67,10 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
-		shouldUpload, err = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-		if err != nil {
-			return nil, fmt.Errorf("upload to tlog: %w", err)
-		}
-	} else {
-		shouldUpload = len(ko.SigningConfig.RekorLogURLs()) > 0
+	}
+	shouldUpload, err = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
+	if err != nil {
+		return nil, fmt.Errorf("upload to tlog: %w", err)
 	}
 
 	if !shouldUpload {

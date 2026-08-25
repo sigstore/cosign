@@ -253,6 +253,51 @@ func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
 	}
 }
 
+func TestShouldUploadToTlog(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		tlogUpload    bool
+		wantUpload    bool
+	}{
+		{
+			name:          "tlogUpload false returns false",
+			signingConfig: mustSigningConfig(t, options.DefaultRekorURL),
+			tlogUpload:    false,
+			wantUpload:    false,
+		},
+		{
+			name:          "signing config with no Rekor URLs returns false",
+			signingConfig: mustSigningConfig(t, options.DefaultRekorURL).WithRekorLogURLs(),
+			tlogUpload:    true,
+			wantUpload:    false,
+		},
+		{
+			name:          "tlogUpload true with Rekor URL returns true",
+			signingConfig: mustSigningConfig(t, "http://localhost:3000"),
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+		{
+			name:          "nil signing config with tlogUpload true returns true",
+			signingConfig: nil,
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ko := options.KeyOpts{
+				SigningConfig:    tt.signingConfig,
+				SkipConfirmation: true,
+			}
+			upload, err := ShouldUploadToTlog(context.Background(), ko, nil, tt.tlogUpload)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantUpload, upload)
+		})
+	}
+}
+
 func TestHasPublicGoodRekorURL(t *testing.T) {
 	tests := []struct {
 		name          string

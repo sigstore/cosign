@@ -1200,6 +1200,7 @@ func TestSignVerifyContainerWithSigningConfigWithCertificate(t *testing.T) {
 		},
 		NewBundleFormat: true,
 		IgnoreSCT:       true,
+		IgnoreTlog:      true,
 	}
 	args := []string{imgName}
 	must(cmd.Exec(ctx, args), t)
@@ -1301,6 +1302,7 @@ func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
 						AllowCertificateChain: tc.allowChain,
 					},
 					IgnoreSCT:     true,
+					IgnoreTlog:    true,
 					PredicateType: predicateType,
 					CheckClaims:   true,
 				}).Exec(ctx, []string{imgName})
@@ -1321,7 +1323,8 @@ func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
 						NewBundleFormat:       true,
 						AllowCertificateChain: tc.allowChain,
 					},
-					IgnoreSCT: true,
+					IgnoreSCT:  true,
+					IgnoreTlog: true,
 				}).Exec(ctx, []string{imgName})
 			}
 
@@ -1427,6 +1430,7 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
 					CertVerifyOptions:     certVerify,
 					IgnoreSCT:             true,
+					IgnoreTlog:            true,
 					CheckClaims:           true,
 					PredicateType:         "something",
 					Digest:                "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
@@ -1441,6 +1445,7 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
 					CertVerifyOptions:     certVerify,
 					IgnoreSCT:             true,
+					IgnoreTlog:            true,
 					AllowCertificateChain: tc.allowChain,
 				}).Exec(ctx, bp)
 			}

@@ -182,6 +182,10 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		return false
 	}
 
+	if ko.SigningConfig != nil && len(ko.SigningConfig.RekorLogURLs()) == 0 {
+		return false
+	}
+
 	if ko.SkipConfirmation {
 		return true
 	}
