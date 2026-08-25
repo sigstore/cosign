@@ -166,39 +166,53 @@ func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRe
 	return nil
 }
 
-// publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
-// as part of the sigstore public good instance (production and staging). A literal
-// comparison against options.DefaultRekorURL is not sufficient because the public
-// good instance is served from multiple region- and year-specific hostnames.
-var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
+// publicGoodHostSuffixes are the hostname suffixes of services operated as part
+// of the sigstore public good instance (production and staging). A literal
+// comparison against options.DefaultRekorURL or options.DefaultFulcioURL is not
+// sufficient because the public good instance is served from multiple region-
+// and year-specific hostnames.
+var publicGoodHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
 
 // hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
-// points at the sigstore public good instance (production or staging), which is the
-// only case where the data-retention privacy statement applies.
+// points at the sigstore public good instance (production or staging).
 func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
 	if sc == nil {
 		return false
 	}
 	for _, s := range sc.RekorLogURLs() {
-		if isPublicGoodRekorURL(s.URL) {
+		if isPublicGoodURL(s.URL) {
 			return true
 		}
 	}
 	return false
 }
 
-// isPublicGoodRekorURL reports whether a rekor URL points at the sigstore public good
-// instance (production or staging).
-func isPublicGoodRekorURL(rekorURL string) bool {
-	if rekorURL == "" {
+// hasPublicGoodFulcioURL reports whether a signing config contains a fulcio URL that
+// points at the sigstore public good instance (production or staging).
+func hasPublicGoodFulcioURL(sc *root.SigningConfig) bool {
+	if sc == nil {
 		return false
 	}
-	parsed, err := url.Parse(rekorURL)
+	for _, s := range sc.FulcioCertificateAuthorityURLs() {
+		if isPublicGoodURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicGoodURL reports whether a URL points at the sigstore public good
+// instance (production or staging).
+func isPublicGoodURL(rawURL string) bool {
+	if rawURL == "" {
+		return false
+	}
+	parsed, err := url.Parse(rawURL)
 	if err != nil || parsed.Hostname() == "" {
 		return false
 	}
 	host := strings.ToLower(parsed.Hostname())
-	for _, suffix := range publicGoodRekorHostSuffixes {
+	for _, suffix := range publicGoodHostSuffixes {
 		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
 			return true
 		}
