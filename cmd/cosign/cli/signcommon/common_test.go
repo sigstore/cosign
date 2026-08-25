@@ -523,3 +523,38 @@ func TestValidateSigningOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadTrustedMaterialAndSigningConfig(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("offline signing bypasses TUF and sets empty signing config", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		var ko options.KeyOpts
+		err := LoadTrustedMaterialAndSigningConfig(ctx, &ko, true, "", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		// Verify TUF directory remained empty and was not populated
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing offline")
+	})
+
+	t.Run("online signing attempts to contact TUF and fails when mirror is invalid", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		var ko options.KeyOpts
+		var err error
+		_ = ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+			err = LoadTrustedMaterialAndSigningConfig(ctx, &ko, false, "", "")
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error getting signing config from TUF")
+	})
+}
