@@ -152,9 +152,13 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
-		if !c.TlogUpload {
-			c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
-		}
+	}
+	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, nil, c.TlogUpload)
+	if err != nil {
+		return fmt.Errorf("should upload to tlog: %w", err)
+	}
+	if !shouldUpload {
+		c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
 	}
 
 	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
