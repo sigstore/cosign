@@ -232,23 +232,83 @@ func TestConfirmPrivacyStatement(t *testing.T) {
 	tests := []struct {
 		name          string
 		signingConfig *root.SigningConfig
+		keyRef        string
+		sk            bool
+		uploadToRekor bool
 		wantWarning   bool
 	}{
-		{"custom Rekor URL skips public instance statement", mustSigningConfigWithRekor(t, "http://localhost:3000"), false},
-		{"region-specific public good URL shows public instance statement", mustSigningConfigWithRekor(t, "https://rekor.us-central1.sigstore.dev"), true},
-		{"staging public good signing config shows public instance statement", mustSigningConfigWithRekor(t, "https://rekor.sigstage.dev"), true},
-		{"nil signing config skips public instance statement", nil, false},
+		{
+			name:          "custom Rekor URL with key skips public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "http://localhost:3000"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   false,
+		},
+		{
+			name:          "region-specific public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.us-central1.sigstore.dev"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   true,
+		},
+		{
+			name:          "staging public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.sigstage.dev"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   true,
+		},
+		{
+			name:          "public good Rekor URL without tlog upload and with key skips statement",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL),
+			keyRef:        "cosign.key",
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "keyless with public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			uploadToRekor: false,
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with staging public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "https://fulcio.sigstage.dev"),
+			uploadToRekor: false,
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with custom Fulcio URL skips public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "http://localhost:5555"),
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "public good Fulcio URL with key and without tlog upload skips statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			keyRef:        "cosign.key",
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "nil signing config skips public instance statement",
+			signingConfig: nil,
+			uploadToRekor: true,
+			wantWarning:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			privacy.StatementOnce = sync.Once{}
 			ko := options.KeyOpts{
+				KeyRef:           tt.keyRef,
+				Sk:               tt.sk,
 				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				err = ConfirmPrivacyStatement(ctx, ko, true)
+				err = ConfirmPrivacyStatement(ctx, ko, tt.uploadToRekor)
 			})
 			assert.NoError(t, err)
 			if tt.wantWarning {
