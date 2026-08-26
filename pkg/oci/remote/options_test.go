@@ -162,6 +162,12 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			envVal: "",
 			want:   name.Repository{},
 		},
+		{
+			desc: "registry without repository path",
+
+			envVal:  "registry.example.com:5000",
+			wantErr: errors.New(`parsing $COSIGN_REPOSITORY: "registry.example.com:5000" looks like a registry, but COSIGN_REPOSITORY must be a full repository (registry plus path), e.g. "registry.example.com:5000/my-repo": repository can only contain the characters ` + "`abcdefghijklmnopqrstuvwxyz0123456789_-./`" + `: registry.example.com:5000`),
+		},
 	}
 
 	for _, tc := range tests {
