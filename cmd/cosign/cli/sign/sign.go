@@ -203,12 +203,12 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 			return fmt.Errorf("creating signing config: %w", err)
 		}
 	}
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-	if err != nil {
-		return fmt.Errorf("should upload to tlog: %w", err)
-	}
+	shouldUpload := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if !shouldUpload {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
+	}
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, shouldUpload); err != nil {
+		return err
 	}
 
 	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
@@ -264,12 +264,12 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("creating signing config: %w", err)
 		}
 	}
-	shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-	if err != nil {
-		return fmt.Errorf("should upload to tlog: %w", err)
-	}
+	shouldUpload := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
 	if !shouldUpload {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
+	}
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, shouldUpload); err != nil {
+		return err
 	}
 
 	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)

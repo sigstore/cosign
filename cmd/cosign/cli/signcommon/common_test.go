@@ -219,7 +219,7 @@ func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
 	return sc
 }
 
-func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+func TestConfirmPrivacyStatement(t *testing.T) {
 	tests := []struct {
 		name          string
 		signingConfig *root.SigningConfig
@@ -237,13 +237,11 @@ func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
 				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
-			var upload bool
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+				err = ConfirmPrivacyStatement(ctx, ko, true)
 			})
 			assert.NoError(t, err)
-			assert.True(t, upload)
 			if tt.wantWarning {
 				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
 			} else {
@@ -291,8 +289,7 @@ func TestShouldUploadToTlog(t *testing.T) {
 				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
-			upload, err := ShouldUploadToTlog(context.Background(), ko, nil, tt.tlogUpload)
-			assert.NoError(t, err)
+			upload := ShouldUploadToTlog(context.Background(), ko, nil, tt.tlogUpload)
 			assert.Equal(t, tt.wantUpload, upload)
 		})
 	}

@@ -117,12 +117,41 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 }
 
 // ShouldUploadToTlog determines whether the user wants to upload the entry to Rekor.
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
-	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
-	var statementErr error
-	// Only warn about the public good instance's data retention policy when
-	// actually uploading to it
-	if upload && hasPublicGoodRekorURL(ko.SigningConfig) {
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
+	// return false if not uploading to the tlog has been requested
+	if !tlogUpload {
+		return false
+	}
+
+	if ko.SigningConfig != nil && len(ko.SigningConfig.RekorLogURLs()) == 0 {
+		return false
+	}
+
+	if ko.SkipConfirmation {
+		return true
+	}
+
+	// We don't need to validate the ref, just return true
+	if ref == nil {
+		return true
+	}
+
+	// Check if the image is public (no auth in Get)
+	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
+		ui.Warnf(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
+		if ui.ConfirmContinue(ctx) != nil {
+			ui.Infof(ctx, "not uploading to transparency log")
+			return false
+		}
+	}
+	return true
+}
+
+// ConfirmPrivacyStatement prompts the user with the Sigstore privacy statement
+// if the operation will record data to the public Rekor transparency log.
+func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRekor bool) error {
+	if uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig) {
+		var statementErr error
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
 			ui.Infof(ctx, privacy.StatementConfirmation)
@@ -132,8 +161,9 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 				}
 			}
 		})
+		return statementErr
 	}
-	return upload, statementErr
+	return nil
 }
 
 // publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
@@ -174,36 +204,6 @@ func isPublicGoodRekorURL(rekorURL string) bool {
 		}
 	}
 	return false
-}
-
-func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
-	// return false if not uploading to the tlog has been requested
-	if !tlogUpload {
-		return false
-	}
-
-	if ko.SigningConfig != nil && len(ko.SigningConfig.RekorLogURLs()) == 0 {
-		return false
-	}
-
-	if ko.SkipConfirmation {
-		return true
-	}
-
-	// We don't need to validate the ref, just return true
-	if ref == nil {
-		return true
-	}
-
-	// Check if the image is public (no auth in Get)
-	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		ui.Warnf(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
-		if ui.ConfirmContinue(ctx) != nil {
-			ui.Infof(ctx, "not uploading to transparency log")
-			return false
-		}
-	}
-	return true
 }
 
 func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
