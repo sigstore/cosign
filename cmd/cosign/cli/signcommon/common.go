@@ -101,7 +101,6 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 			DisableProviders: ko.OIDCDisableProviders,
 			Provider:         ko.OIDCProvider,
 			AuthFlow:         ko.FulcioAuthFlow,
-			SkipConfirm:      ko.SkipConfirmation,
 			OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
 			ClientID:         ko.OIDCClientID,
 			ClientSecret:     ko.OIDCClientSecret,
@@ -148,9 +147,13 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 }
 
 // ConfirmPrivacyStatement prompts the user with the Sigstore privacy statement
-// if the operation will record data to the public Rekor transparency log.
+// if the operation will record data to a public transparency log.
 func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRekor bool) error {
-	if uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig) {
+	isKeyless := (ko.KeyRef == "" && !ko.Sk) || ko.IssueCertificateForExistingKey
+	// The privacy statement applies when publishing to the public Rekor
+	// transparency log or the public Fulcio Certificate Transparency (CT) log.
+	if (uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig)) ||
+		(isKeyless && hasPublicGoodFulcioURL(ko.SigningConfig)) {
 		var statementErr error
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
