@@ -21,7 +21,10 @@ import (
 	"testing"
 
 	"github.com/sigstore/cosign/v3/internal/test"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 func TestLocalCertChainProvider_GetCertificateChain(t *testing.T) {
@@ -116,5 +119,59 @@ func TestLocalCertChainProvider_GetCertificateChain(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The bundle is verified against the signing key right after signing, so the
+// verifier has to agree with the keypair about the signature scheme. Ed25519
+// is the case where they can disagree: Ed25519ph and pure Ed25519 share a key
+// and are not interchangeable.
+func TestVerifierForKeypairMatchesTheSigningScheme(t *testing.T) {
+	data := []byte("signed content")
+
+	for _, algorithm := range []protocommon.PublicKeyDetails{
+		protocommon.PublicKeyDetails_PKIX_ED25519_PH,
+		protocommon.PublicKeyDetails_PKIX_ED25519,
+		protocommon.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	} {
+		t.Run(algorithm.String(), func(t *testing.T) {
+			keypair, err := sign.NewEphemeralKeypair(&sign.EphemeralKeypairOptions{Algorithm: algorithm})
+			if err != nil {
+				t.Fatalf("NewEphemeralKeypair: %v", err)
+			}
+			sig, _, err := keypair.SignData(context.Background(), data)
+			if err != nil {
+				t.Fatalf("SignData: %v", err)
+			}
+
+			verifier, err := verifierForKeypair(keypair, keypair.GetPublicKey())
+			if err != nil {
+				t.Fatalf("verifierForKeypair: %v", err)
+			}
+			if err := verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)); err != nil {
+				t.Fatalf("a verifier loaded for the keypair must accept its signature: %v", err)
+			}
+		})
+	}
+}
+
+// Loading the verifier with the default options is exactly the mistake the
+// helper exists to avoid; this pins the failure it would reintroduce.
+func TestDefaultVerifierRejectsAnEd25519phSignature(t *testing.T) {
+	keypair, err := sign.NewEphemeralKeypair(&sign.EphemeralKeypairOptions{Algorithm: protocommon.PublicKeyDetails_PKIX_ED25519_PH})
+	if err != nil {
+		t.Fatalf("NewEphemeralKeypair: %v", err)
+	}
+	data := []byte("signed content")
+	sig, _, err := keypair.SignData(context.Background(), data)
+	if err != nil {
+		t.Fatalf("SignData: %v", err)
+	}
+	verifier, err := signature.LoadDefaultVerifier(keypair.GetPublicKey())
+	if err != nil {
+		t.Fatalf("LoadDefaultVerifier: %v", err)
+	}
+	if err := verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(data)); err == nil {
+		t.Fatal("a pure Ed25519 verifier accepted an Ed25519ph signature; the helper is no longer needed")
 	}
 }

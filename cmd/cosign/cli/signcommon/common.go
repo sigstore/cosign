@@ -407,6 +407,17 @@ type CommonBundleOpts struct {
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
 func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, pb_go_v1.HashAlgorithm, error) {
+	// A DSSE envelope is verified with pure Ed25519: sigstore-go reserves
+	// Ed25519ph for hashedrekord message signatures, where it is the only
+	// option, and loads the verifier for an envelope without it. An Ed25519
+	// key therefore has to sign the envelope as pure Ed25519 too. Left at the
+	// default, it signs as Ed25519ph and the bundle fails its own
+	// post-signing verification with "accepted signatures do not match
+	// threshold".
+	if ko.DefaultLoadOptions == nil {
+		ko.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
 	keypair, certBytes, chainBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
 		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
