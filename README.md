@@ -25,7 +25,7 @@ Cosign supports:
 
 `Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
 We also use a [slack channel](https://sigstore.slack.com)!
-Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-2ub0ztl5z-PkWb_Ldwef5d6nb~oryaTA) for the invite link.
+Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-47srvpyn6-j8Ek5hGBwKN32IjLw8BvYA) for the invite link.
 
 ## Installation
 
