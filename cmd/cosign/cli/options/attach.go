@@ -24,44 +24,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AttachSignatureOptions is the top level wrapper for the attach signature command.
-type AttachSignatureOptions struct {
-	Signature      string
-	Payload        string
-	Cert           string
-	CertChain      string
-	TimeStampedSig string
-	RekorBundle    string
-	Registry       RegistryOptions
+// AttachBundleOptions is the top level wrapper for the attach bundle command.
+type AttachBundleOptions struct {
+	BundlePaths []string
+	Registry    RegistryOptions
 }
 
-var _ Interface = (*AttachSignatureOptions)(nil)
+var _ Interface = (*AttachBundleOptions)(nil)
 
 // AddFlags implements Interface
-func (o *AttachSignatureOptions) AddFlags(cmd *cobra.Command) {
+func (o *AttachBundleOptions) AddFlags(cmd *cobra.Command) {
 	o.Registry.AddFlags(cmd)
 
-	cmd.Flags().StringVar(&o.Signature, "signature", "",
-		"path to the signature, or {-} for stdin")
+	cmd.Flags().StringArrayVar(&o.BundlePaths, "bundle", nil,
+		"path to bundle to attach")
 
-	cmd.Flags().StringVar(&o.Payload, "payload", "",
-		"path to the payload covered by the signature")
+	cmd.Flags().StringArrayVar(&o.BundlePaths, "payload", nil,
+		"path to bundle to attach (deprecated: use --bundle)")
+	_ = cmd.Flags().MarkDeprecated("payload", "use --bundle instead")
 
-	cmd.Flags().StringVar(&o.Payload, "bundle", "",
-		"path to bundle containing signature (alias for payload)")
-
-	cmd.Flags().StringVar(&o.Cert, "certificate", "",
-		"path to the X.509 certificate in PEM format to include in the OCI Signature")
-
-	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
-		"path to a list of CA X.509 certificates in PEM format which will be needed "+
-			"when building the certificate chain for the signing certificate. "+
-			"Must start with the parent intermediate CA certificate of the "+
-			"signing certificate and end with the root certificate. Included in the OCI Signature")
-	cmd.Flags().StringVar(&o.TimeStampedSig, "tsr", "",
-		"path to the Time Stamped Signature Response from RFC3161 compliant TSA")
-	cmd.Flags().StringVar(&o.RekorBundle, "rekor-response", "",
-		"path to the rekor bundle")
+	cmd.Flags().StringArrayVar(&o.BundlePaths, "attestation", nil,
+		"path to bundle to attach (deprecated: use --bundle)")
+	_ = cmd.Flags().MarkDeprecated("attestation", "use --bundle instead")
 }
 
 // AttachSBOMOptions is the top level wrapper for the attach sbom command.
@@ -126,18 +110,4 @@ func (o *AttachSBOMOptions) MediaType() (types.MediaType, error) {
 	default:
 		return "unknown", fmt.Errorf("unknown SBOM type: %q, expected (spdx|cyclonedx|syft)", o.SBOMType)
 	}
-}
-
-// AttachAttestationOptions is the top level wrapper for the attach attestation command.
-type AttachAttestationOptions struct {
-	Attestations []string
-	Registry     RegistryOptions
-}
-
-// AddFlags implements Interface
-func (o *AttachAttestationOptions) AddFlags(cmd *cobra.Command) {
-	o.Registry.AddFlags(cmd)
-
-	cmd.Flags().StringArrayVarP(&o.Attestations, "attestation", "", nil,
-		"path to the attestation envelope")
 }
