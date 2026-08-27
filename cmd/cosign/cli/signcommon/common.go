@@ -101,7 +101,6 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 			DisableProviders: ko.OIDCDisableProviders,
 			Provider:         ko.OIDCProvider,
 			AuthFlow:         ko.FulcioAuthFlow,
-			SkipConfirm:      ko.SkipConfirmation,
 			OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
 			ClientID:         ko.OIDCClientID,
 			ClientSecret:     ko.OIDCClientSecret,
@@ -117,68 +116,13 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 }
 
 // ShouldUploadToTlog determines whether the user wants to upload the entry to Rekor.
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
-	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
-	var statementErr error
-	// Only warn about the public good instance's data retention policy when
-	// actually uploading to it
-	if upload && hasPublicGoodRekorURL(ko.SigningConfig) {
-		privacy.StatementOnce.Do(func() {
-			ui.Infof(ctx, privacy.Statement)
-			ui.Infof(ctx, privacy.StatementConfirmation)
-			if !ko.SkipConfirmation {
-				if err := ui.ConfirmContinue(ctx); err != nil {
-					statementErr = err
-				}
-			}
-		})
-	}
-	return upload, statementErr
-}
-
-// publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
-// as part of the sigstore public good instance (production and staging). A literal
-// comparison against options.DefaultRekorURL is not sufficient because the public
-// good instance is served from multiple region- and year-specific hostnames.
-var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
-
-// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
-// points at the sigstore public good instance (production or staging), which is the
-// only case where the data-retention privacy statement applies.
-func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
-	if sc == nil {
-		return false
-	}
-	for _, s := range sc.RekorLogURLs() {
-		if isPublicGoodRekorURL(s.URL) {
-			return true
-		}
-	}
-	return false
-}
-
-// isPublicGoodRekorURL reports whether a rekor URL points at the sigstore public good
-// instance (production or staging).
-func isPublicGoodRekorURL(rekorURL string) bool {
-	if rekorURL == "" {
-		return false
-	}
-	parsed, err := url.Parse(rekorURL)
-	if err != nil || parsed.Hostname() == "" {
-		return false
-	}
-	host := strings.ToLower(parsed.Hostname())
-	for _, suffix := range publicGoodRekorHostSuffixes {
-		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
 	// return false if not uploading to the tlog has been requested
 	if !tlogUpload {
+		return false
+	}
+
+	if ko.SigningConfig != nil && len(ko.SigningConfig.RekorLogURLs()) == 0 {
 		return false
 	}
 
@@ -200,6 +144,83 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		}
 	}
 	return true
+}
+
+// ConfirmPrivacyStatement prompts the user with the Sigstore privacy statement
+// if the operation will record data to a public transparency log.
+func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRekor bool) error {
+	isKeyless := (ko.KeyRef == "" && !ko.Sk) || ko.IssueCertificateForExistingKey
+	// The privacy statement applies when publishing to the public Rekor
+	// transparency log or the public Fulcio Certificate Transparency (CT) log.
+	if (uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig)) ||
+		(isKeyless && hasPublicGoodFulcioURL(ko.SigningConfig)) {
+		var statementErr error
+		privacy.StatementOnce.Do(func() {
+			ui.Infof(ctx, privacy.Statement)
+			ui.Infof(ctx, privacy.StatementConfirmation)
+			if !ko.SkipConfirmation {
+				if err := ui.ConfirmContinue(ctx); err != nil {
+					statementErr = err
+				}
+			}
+		})
+		return statementErr
+	}
+	return nil
+}
+
+// publicGoodHostSuffixes are the hostname suffixes of services operated as part
+// of the sigstore public good instance (production and staging). A literal
+// comparison against options.DefaultRekorURL or options.DefaultFulcioURL is not
+// sufficient because the public good instance is served from multiple region-
+// and year-specific hostnames.
+var publicGoodHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
+
+// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
+// points at the sigstore public good instance (production or staging).
+func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.RekorLogURLs() {
+		if isPublicGoodURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasPublicGoodFulcioURL reports whether a signing config contains a fulcio URL that
+// points at the sigstore public good instance (production or staging).
+func hasPublicGoodFulcioURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.FulcioCertificateAuthorityURLs() {
+		if isPublicGoodURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicGoodURL reports whether a URL points at the sigstore public good
+// instance (production or staging).
+func isPublicGoodURL(rawURL string) bool {
+	if rawURL == "" {
+		return false
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, suffix := range publicGoodHostSuffixes {
+		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
@@ -662,9 +683,12 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 func NewEmptySigningConfig() *root.SigningConfig {
 	sc, _ := root.NewSigningConfig(
 		root.SigningConfigMediaType02,
-		nil, nil, nil,
-		root.ServiceConfiguration{},
-		nil, root.ServiceConfiguration{},
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
 	)
 	return sc
 }

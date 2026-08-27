@@ -50,6 +50,10 @@ func (m *mockEntriesClient) GetLogEntryByIndex(params *entries.GetLogEntryByInde
 	return nil, nil
 }
 
+func (m *mockEntriesClient) GetLogEntryByIndexContext(_ context.Context, params *entries.GetLogEntryByIndexParams, opts ...entries.ClientOption) (*entries.GetLogEntryByIndexOK, error) {
+	return m.GetLogEntryByIndex(params, opts...)
+}
+
 func TestUpgradeBundle(t *testing.T) {
 	checkV03 := func(expectedCertB64 string) func(t *testing.T, output []byte) {
 		return func(t *testing.T, output []byte) {
