@@ -683,9 +683,12 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 func NewEmptySigningConfig() *root.SigningConfig {
 	sc, _ := root.NewSigningConfig(
 		root.SigningConfigMediaType02,
-		nil, nil, nil,
-		root.ServiceConfiguration{},
-		nil, root.ServiceConfiguration{},
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
 	)
 	return sc
 }
