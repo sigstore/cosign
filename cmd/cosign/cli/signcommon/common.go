@@ -511,7 +511,7 @@ func ValidateSigningOptions(ctx context.Context, offline bool,
 		return fmt.Errorf("cannot specify service URLs when using a signing config")
 	}
 	if !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with a signing config. Use --offline without a signing config instead")
+		return fmt.Errorf("--tlog-upload=false is not supported with a signing config. Provide a --signing-config without transparency log services, or use --offline if signing without network services")
 	}
 	// Signing config requires a bundle as output for verification materials since sigstore-go is used
 	if !newBundleFormat && bundlePath == "" {
