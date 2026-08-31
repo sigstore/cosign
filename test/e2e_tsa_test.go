@@ -255,11 +255,11 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 		IgnoreTlog:          true,
 		IgnoreSCT:           true,
 		CheckClaims:         true,
-		NewBundleFormat:     true,
 		UseSignedTimestamps: true,
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootFile,
 		},
+		AllowCertificateChain: true,
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentityRegexp:   ".*",
 			CertOidcIssuerRegexp: ".*",
