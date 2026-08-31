@@ -109,8 +109,7 @@ func TestInsecureRegistry(t *testing.T) {
 
 	// Sign without bundle format (legacy format does not support Rekor v2)
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: false,
+		Upload: true,
 	}
 	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
@@ -145,8 +144,6 @@ func TestInsecureRegistry(t *testing.T) {
 	defer cleanup2()
 
 	ko.SigningConfig = newRekorV2SigningConfig(t, rekorURL)
-	so.NewBundleFormat = true
-	so.TlogUpload = true
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	cmd.NewBundleFormat = true
 	cmd.IgnoreTlog = false

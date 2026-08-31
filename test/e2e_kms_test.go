@@ -123,9 +123,7 @@ func TestSecretsKMS(t *testing.T) {
 		NewBundleFormat:  true,
 	}
 	so := options.SignOptions{
-		Upload:          true,
-		TlogUpload:      true,
-		NewBundleFormat: true,
+		Upload: true,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	must(verifyKMS(pubKey, imgName, nil), t)
@@ -133,9 +131,7 @@ func TestSecretsKMS(t *testing.T) {
 	// Sign and verify with annotations
 	mustErr(verifyKMS(pubKey, imgName, map[string]any{"foo": "bar"}), t)
 	soAnno := options.SignOptions{
-		Upload:          true,
-		TlogUpload:      true,
-		NewBundleFormat: true,
+		Upload: true,
 		AnnotationOptions: options.AnnotationOptions{
 			Annotations: []string{"foo=bar"},
 		},
