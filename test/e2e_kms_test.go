@@ -18,7 +18,6 @@ package test
 
 import (
 	"context"
-	"crypto"
 	"os"
 	"path"
 	"testing"
@@ -44,14 +43,10 @@ const (
 
 func verifyKMS(keyRef, imageRef string, annotations map[string]any) error {
 	cmd := cliverify.VerifyCommand{
-		KeyRef:        keyRef,
-		CheckClaims:   true,
-		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
-		HashAlgorithm: crypto.SHA256,
-		MaxWorkers:    10,
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			NewBundleFormat: true,
-		},
+		KeyRef:      keyRef,
+		CheckClaims: true,
+		Annotations: sigs.AnnotationsMap{Annotations: annotations},
+		MaxWorkers:  10,
 	}
 	return cmd.Exec(context.Background(), []string{imageRef})
 }
