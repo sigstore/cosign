@@ -181,7 +181,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	attestCmd.KeyOpts = ko
 	must(attestCmd.Exec(ctx, imgName), t)
-	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true
 	verifyAttestation.IgnoreTlog = false
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
