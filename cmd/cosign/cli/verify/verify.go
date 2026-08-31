@@ -141,7 +141,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		var bundleVerified bool
 
 		if c.LocalImage {
-			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
+			verified, bundleVerified, err = cosign.VerifyLocalImageSignatures(ctx, img, co)
 			if err != nil {
 				return err
 			}

@@ -31,7 +31,7 @@ func Attest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attest",
 		Short: "Attest the supplied container image",
-		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
+		Example: `  cosign attest [--key <key path>|<kms uri>] [--predicate <path>] [--no-upload=true|false] [-y] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -52,7 +52,7 @@ func Attest() *cobra.Command {
   cosign attest --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <IMAGE>
 
   # attach an attestation to a container image with a local key pair file, including a certificate and certificate chain
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --certificate cosign.crt --certificate-chain chain.crt <IMAGE>
 
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image
@@ -61,16 +61,13 @@ func Attest() *cobra.Command {
   echo <PAYLOAD> | cosign attest --predicate - <IMAGE>
 
   # write attestation to stdout
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
-
-  # attach an attestation to a container image and honor the creation timestamp of the signature
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>`,
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, args []string) error {
-			if o.NewBundleFormat && o.NoUpload && o.BundlePath == "" {
-				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			if o.NoUpload && o.BundlePath == "" {
+				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path")
 			}
 			if o.BundlePath != "" && len(args) > 1 {
 				return fmt.Errorf("cannot use --bundle when attesting multiple images")
@@ -79,8 +76,8 @@ func Attest() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.Offline,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, o.BundlePath, o.Key, o.IssueCertificate,
+				"", o.Fulcio.URL, o.OIDC.Issuer, "",
+				true, true, o.BundlePath, o.Key, o.IssueCertificate,
 				"", "", "", "", "", ""); err != nil {
 				return err
 			}
@@ -95,11 +92,8 @@ func Attest() *cobra.Command {
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
-				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				RekorURL:                       o.Rekor.URL,
-				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
@@ -110,28 +104,22 @@ func Attest() *cobra.Command {
 				TSAClientKey:                   o.TSAClientKey,
 				TSAClientCert:                  o.TSAClientCert,
 				TSAServerName:                  o.TSAServerName,
-				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				BundlePath:                     o.BundlePath,
-				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.Offline, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, !o.Offline, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 
 			attestCommand := attest.AttestCommand{
-				KeyOpts:                 ko,
-				RegistryOptions:         o.Registry,
-				CertPath:                o.Cert,
-				CertChainPath:           o.CertChain,
-				NoUpload:                o.NoUpload,
-				PredicatePath:           o.Predicate.Path,
-				PredicateType:           o.Predicate.Type,
-				Replace:                 o.Replace,
-				Timeout:                 ro.Timeout,
-				TlogUpload:              o.TlogUpload,
-				RekorEntryType:          o.RekorEntryType,
-				RecordCreationTimestamp: o.RecordCreationTimestamp,
+				KeyOpts:         ko,
+				RegistryOptions: o.Registry,
+				CertPath:        o.Cert,
+				CertChainPath:   o.CertChain,
+				NoUpload:        o.NoUpload,
+				PredicatePath:   o.Predicate.Path,
+				PredicateType:   o.Predicate.Type,
+				Timeout:         ro.Timeout,
 			}
 
 			for _, img := range args {

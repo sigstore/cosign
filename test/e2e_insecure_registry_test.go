@@ -126,8 +126,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	_, privKey, pubKey := keypair(t, td)
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -136,9 +134,9 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig,
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -153,12 +151,10 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	// Attest without bundle
 	attestCmd := attest.AttestCommand{
-		KeyOpts:        ko,
-		PredicatePath:  slsaAttestationPath,
-		PredicateType:  "slsaprovenance",
-		Timeout:        30 * time.Second,
-		RekorEntryType: "dsse",
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -166,6 +162,9 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation := cliverify.VerifyAttestationCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
 		KeyRef:        pubKey,
 		PredicateType: "slsaprovenance",
 		RegistryOptions: options.RegistryOptions{
@@ -180,7 +179,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
 	defer cleanup2()
 
-	ko.NewBundleFormat = true
 	attestCmd.KeyOpts = ko
 	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true

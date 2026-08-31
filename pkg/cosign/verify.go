@@ -1907,5 +1907,3 @@ func verifyImageAttestationsSigstoreBundles(ctx context.Context, bundles []*sgbu
 
 	return checkedAttestations, atLeastOneBundleVerified, nil
 }
-
-
