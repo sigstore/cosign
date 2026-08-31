@@ -59,8 +59,6 @@ func TestInsecureRegistry(t *testing.T) {
 
 	useOCI11 := os.Getenv("oci11Var") != ""
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -69,9 +67,9 @@ func TestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -93,7 +91,7 @@ func TestInsecureRegistry(t *testing.T) {
 		}
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, false), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
 		CheckClaims: true,
@@ -101,9 +99,6 @@ func TestInsecureRegistry(t *testing.T) {
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
 		},
-	}
-	if useOCI11 {
-		cmd.ExperimentalOCI11 = true
 	}
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 
@@ -114,7 +109,6 @@ func TestInsecureRegistry(t *testing.T) {
 	defer cleanup2()
 
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	cmd.NewBundleFormat = true
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
 
@@ -132,8 +126,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	_, privKey, pubKey := keypair(t, td)
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -142,14 +134,15 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
 	must(err, t)
 	ko.TrustedMaterial = trustedMaterial
+	ko.NewBundleFormat = true
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
@@ -157,7 +150,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest without bundle
 	attestCmd := attest.AttestCommand{
 		KeyOpts:        ko,
 		PredicatePath:  slsaAttestationPath,
@@ -172,6 +164,9 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation := cliverify.VerifyAttestationCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
 		KeyRef:        pubKey,
 		PredicateType: "slsaprovenance",
 		RegistryOptions: options.RegistryOptions{
@@ -179,18 +174,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 			AllowHTTPRegistry: true,
 		},
 	}
-	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
-
-	// Attest with new bundle
-	imgName = path.Join(repo, "cosign-registry-e2e-2")
-	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
-	defer cleanup2()
-
-	ko.NewBundleFormat = true
-	attestCmd.KeyOpts = ko
-	must(attestCmd.Exec(ctx, imgName), t)
-	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true
-	verifyAttestation.IgnoreTlog = false
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
 

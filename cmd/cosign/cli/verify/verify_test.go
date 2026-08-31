@@ -178,7 +178,7 @@ func TestPrintVerification(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(p,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(certs.LeafCertPEM, appendSlices([][]byte{certs.SubCertPEM, certs.RootCertPEM})))
+		static.WithCertChain(certs.LeafCertPEM, bytes.Join([][]byte{certs.SubCertPEM, certs.RootCertPEM}, nil)))
 
 	captureOutput := func(f func()) string {
 		reader, writer, err := os.Pipe()
@@ -228,22 +228,9 @@ func TestPrintVerification(t *testing.T) {
 	assert.JSONEq(t, wantPayload, string(i))
 }
 
-func appendSlices(slices [][]byte) []byte {
-	totalLen := 0
-	for _, s := range slices {
-		totalLen += len(s)
-	}
-	tmp := make([]byte, 0, totalLen)
-	for _, s := range slices {
-		tmp = append(tmp, s...)
-	}
-	return tmp
-}
-
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: "issuer",
 		},
@@ -258,7 +245,6 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentity: "identity",
 		},
