@@ -1160,11 +1160,6 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 	return VerifyImageAttestation(ctx, atts, h, co)
 }
 
-func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
-	bool, error) {
-	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
-}
-
 func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	if atts == nil {
 		return nil, false, errors.New("no attestations provided")
