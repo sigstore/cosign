@@ -89,45 +89,28 @@ against the transparency log.`,
 				return err
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			v := &verify.VerifyCommand{
 				RegistryOptions:              o.Registry,
 				CertVerifyOptions:            o.CertVerify,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
-				Attachment:                   o.Attachment,
 				Annotations:                  annotations,
-				HashAlgorithm:                hashAlgorithm,
-				SignatureRef:                 o.SignatureRef,
-				PayloadRef:                   o.PayloadRef,
 				LocalImage:                   o.LocalImage,
 				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				NewBundleFormat:              o.CommonVerifyOptions.NewBundleFormat,
+				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {

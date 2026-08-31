@@ -84,20 +84,15 @@ var verifyOutputTypes = []string{"json", "text"} // First one is the default
 
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {
-	Key          string
-	CheckClaims  bool
-	Attachment   string
-	Output       string
-	SignatureRef string
-	PayloadRef   string
-	LocalImage   bool
+	Key         string
+	CheckClaims bool
+	Output      string
+	LocalImage  bool
 
 	CommonVerifyOptions CommonVerifyOptions
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
-	Rekor               RekorOptions
 	Registry            RegistryOptions
-	SignatureDigest     SignatureDigestOptions
 
 	AnnotationOptions
 }
@@ -107,14 +102,10 @@ var _ Interface = (*VerifyOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
-	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
-	o.SignatureDigest.AddFlags(cmd)
 	o.AnnotationOptions.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
-
-	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -123,24 +114,9 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"whether to check the claims found")
 
-	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
-		"DEPRECATED, related image attachment to verify (sbom), default none")
-	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
-	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments and verify with `--experimental-oci11`")
-
 	cmd.Flags().StringVarP(&o.Output, "output", "o", verifyOutputTypes[0],
 		"output format for the signing image information ("+strings.Join(verifyOutputTypes, "|")+")")
 	_ = cmd.RegisterFlagCompletionFunc("output", cobra.FixedCompletions(verifyOutputTypes, cobra.ShellCompDirectiveNoFileComp))
-
-	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
-		"signature content or path or remote URL")
-	_ = cmd.MarkFlagFilename("signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("signature", "signatures are automatically fetched from the OCI registry during image verification")
-
-	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
-		"payload path or remote URL")
-	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("payload", "payload will always be verified from the bundle in future versions")
 
 	cmd.Flags().BoolVar(&o.LocalImage, "local-image", false,
 		"whether the specified image is a path to an image saved locally via 'cosign save'")
