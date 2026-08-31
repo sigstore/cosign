@@ -39,16 +39,6 @@ import (
 	_ "github.com/sigstore/cosign/v3/pkg/providers/all"
 )
 
-func GetAttachedImageRef(ref name.Reference, attachment string, opts ...ociremote.Option) (name.Reference, error) {
-	if attachment == "" {
-		return ref, nil
-	}
-	if attachment == "sbom" {
-		return ociremote.SBOMTag(ref, opts...)
-	}
-	return nil, fmt.Errorf("unknown attachment type %s", attachment)
-}
-
 // nolint
 func SignCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpts, signOpts options.SignOptions, imgs []string) error {
 	if options.NOf(ko.KeyRef, ko.Sk) > 1 {
