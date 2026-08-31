@@ -118,6 +118,42 @@ func TestGenerateStatement(t *testing.T) {
 			wantJSON: `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://cyclonedx.org/bom","predicate":{"bomFormat":"CycloneDX","specVersion":"1.4","version":1,"metadata":{"timestamp":"2024-03-11T10:00:00Z","tools":[{"vendor":"Test Vendor","name":"Test Tool","version":"1.0.0"}]},"components":[]}}`,
 		},
 		{
+			name:      "syft",
+			predType:  "syft",
+			predicate: `{"artifacts":[{"name":"pkg"}],"source":{"type":"image"}}`,
+			wantJSON:  `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://anchore.com/syft/sbom/v1","predicate":{"artifacts":[{"name":"pkg"}],"source":{"type":"image"}}}`,
+		},
+		{
+			name:     "syft complex",
+			predType: "syft",
+			predicate: `{
+				"artifacts": [
+					{
+						"name": "alpine-baselayout",
+						"version": "3.4.3-r2",
+						"type": "apk",
+						"foundBy": "apkdb-cataloger",
+						"locations": [{"path": "/lib/apk/db/installed"}],
+						"licenses": ["GPL-2.0-only"],
+						"language": "",
+						"cpes": ["cpe:2.3:a:alpine-baselayout:alpine-baselayout:3.4.3-r2:*:*:*:*:*:*:*"],
+						"purl": "pkg:apk/alpine/alpine-baselayout@3.4.3-r2"
+					}
+				],
+				"source": {
+					"type": "image",
+					"target": {
+						"userInput": "alpine:latest"
+					}
+				},
+				"schema": {
+					"version": "14.0.0",
+					"url": "https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-14.0.0.json"
+				}
+			}`,
+			wantJSON: `{"_type":"https://in-toto.io/Statement/v0.1","subject":[{"name":"test-repo","digest":{"sha256":"abcdef123456"}}],"predicateType":"https://anchore.com/syft/sbom/v1","predicate":{"artifacts":[{"name":"alpine-baselayout","version":"3.4.3-r2","type":"apk","foundBy":"apkdb-cataloger","locations":[{"path":"/lib/apk/db/installed"}],"licenses":["GPL-2.0-only"],"language":"","cpes":["cpe:2.3:a:alpine-baselayout:alpine-baselayout:3.4.3-r2:*:*:*:*:*:*:*"],"purl":"pkg:apk/alpine/alpine-baselayout@3.4.3-r2"}],"source":{"type":"image","target":{"userInput":"alpine:latest"}},"schema":{"version":"14.0.0","url":"https://raw.githubusercontent.com/anchore/syft/main/schema/json/schema-14.0.0.json"}}}`,
+		},
+		{
 			name:      "link",
 			predType:  "link",
 			predicate: `{"_type":"link","name":"test-link","command":["cmd"],"materials":{"hash":{"sha256":"123"}},"products":{"hash":{"sha256":"456"}},"byproducts":{"command":"test"},"environment":{"env":"test"}}`,
