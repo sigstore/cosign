@@ -27,7 +27,6 @@ func TestVerifyAttestationMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: "issuer",
 		},
@@ -43,7 +42,6 @@ func TestVerifyAttestationMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentity: "subject",
 		},
