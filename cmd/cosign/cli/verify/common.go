@@ -200,8 +200,7 @@ func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, k
 }
 
 // SetTrustedMaterial sets TrustedMaterial on CheckOpts, either from the provided trusted root path or from TUF.
-// It does not set TrustedMaterial if the user provided trusted material via other flags or environment variables.
-func SetTrustedMaterial(ctx context.Context, trustedRootPath, _, _, _, _ string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
+func SetTrustedMaterial(trustedRootPath string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
 	var err error
 	if trustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
@@ -215,10 +214,7 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, _, _, _, _ string,
 	}
 	co.TrustedMaterial, err = cosign.TrustedRoot()
 	if err != nil {
-		if co.NewBundleFormat {
-			return fmt.Errorf("getting trusted root from TUF for bundle verification: %w", err)
-		}
-		ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+		return fmt.Errorf("getting trusted root from TUF for bundle verification: %w", err)
 	}
 	return nil
 }
@@ -375,11 +371,6 @@ func loadCertFromFileOrURL(path string) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return loadCertFromPEM(pems)
-}
-
-func loadCertFromPEM(pems []byte) (*x509.Certificate, error) {
-	var out []byte
 	out, err := base64.StdEncoding.DecodeString(string(pems))
 	if err != nil {
 		// not a base64
@@ -408,34 +399,11 @@ func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func keylessVerification(keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	return true
-}
-
-func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	if ignoreSCT {
-		return false
-	}
-	return true
-}
-
 // No trusted root is needed if verification doesn't require Rekor or
 // signed timestamps, and a key is explicitly provided instead of using
-// a Fulcio certificate either via a key or certificate reference or security key.
-func verifyOfflineWithKey(keyRef, certRef string, sk bool, co *cosign.CheckOpts) bool {
-	return (keyRef != "" || certRef != "" || sk) && co.IgnoreTlog && !co.UseSignedTimestamps
+// a Fulcio certificate either via a key or security key.
+func verifyOfflineWithKey(keyRef string, sk bool, co *cosign.CheckOpts) bool {
+	return (keyRef != "" || sk) && co.IgnoreTlog && !co.UseSignedTimestamps
 }
 
 // loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate
