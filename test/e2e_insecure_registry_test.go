@@ -80,8 +80,7 @@ func TestInsecureRegistry(t *testing.T) {
 
 	// Sign without bundle format
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 	}
 	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
@@ -114,7 +113,6 @@ func TestInsecureRegistry(t *testing.T) {
 	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
 	defer cleanup2()
 
-	so.NewBundleFormat = true
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	cmd.NewBundleFormat = true
 	must(cmd.Exec(context.Background(), []string{imgName}), t)

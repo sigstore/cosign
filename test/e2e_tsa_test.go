@@ -42,52 +42,7 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
-func TestTSAMTLS(t *testing.T) {
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
 
-	imgName := path.Join(repo, "cosign-tsa-mtls-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	pemRootRef, pemLeafRef, pemKeyRef := generateSigningKeys(t, td)
-
-	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
-
-	ko := options.KeyOpts{
-		KeyRef:          pemKeyRef,
-		PassFunc:        passFunc,
-		TSAServerURL:    timestampServerURL,
-		TSAClientCACert: timestampCACert,
-		TSAClientCert:   timestampClientCert,
-		TSAClientKey:    timestampClientKey,
-		TSAServerName:   "server.example.com",
-	}
-	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: false,
-		Cert:       pemLeafRef,
-	}
-	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-
-	verifyCmd := cliverify.VerifyCommand{
-		IgnoreTlog:       true,
-		IgnoreSCT:        true,
-		CheckClaims:      true,
-		CertChain:        pemRootRef,
-		TSACertChainPath: timestampChainFile,
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentityRegexp:   ".*",
-			CertOidcIssuerRegexp: ".*",
-		},
-	}
-	must(verifyCmd.Exec(context.Background(), []string{imgName}), t)
-}
 
 func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	td := t.TempDir()
@@ -283,10 +238,9 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 		NewBundleFormat: true,
 	}
 	so := options.SignOptions{
-		Upload:          true,
-		TlogUpload:      false,
-		Cert:            pemLeafRef,
-		NewBundleFormat: true,
+		Upload:    true,
+		Cert:      pemLeafRef,
+		CertChain: pemRootRef,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 
