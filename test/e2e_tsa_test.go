@@ -247,13 +247,13 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 	trustedRootFile := mkfile(string(trBytes), td, t)
 
 	verifyCmd := cliverify.VerifyCommand{
-		IgnoreTlog:      true,
-		IgnoreSCT:       true,
-		CheckClaims:     true,
-		NewBundleFormat: true,
+		IgnoreTlog:  true,
+		IgnoreSCT:   true,
+		CheckClaims: true,
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootFile,
 		},
+		AllowCertificateChain: true,
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentityRegexp:   ".*",
 			CertOidcIssuerRegexp: ".*",
