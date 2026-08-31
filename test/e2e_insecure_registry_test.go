@@ -152,12 +152,10 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	}
 
 	attestCmd := attest.AttestCommand{
-		KeyOpts:        ko,
-		PredicatePath:  slsaAttestationPath,
-		PredicateType:  "slsaprovenance",
-		Timeout:        30 * time.Second,
-		RekorEntryType: "dsse",
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -192,8 +190,6 @@ func TestAttachInsecureRegistry(t *testing.T) {
 
 	_, privKey, pubKey := keypair(t, td)
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -208,9 +204,9 @@ func TestAttachInsecureRegistry(t *testing.T) {
 
 	bundlePath := filepath.Join(td, "attestation.sigstore.json")
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 		NewBundleFormat:  true,
 		BundlePath:       bundlePath,
@@ -232,8 +228,6 @@ func TestAttachInsecureRegistry(t *testing.T) {
 		PredicatePath:   slsaAttestationPath,
 		PredicateType:   "slsaprovenance",
 		Timeout:         30 * time.Second,
-		RekorEntryType:  "dsse",
-		TlogUpload:      true,
 		NoUpload:        true,
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
