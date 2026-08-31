@@ -1482,7 +1482,7 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 				must(attestBlobCmd.Exec(ctx, bp), t)
 
 				verifyErr = (&cliverify.VerifyBlobAttestationCommand{
-					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
+					KeyOpts:               options.KeyOpts{BundlePath: bundlePath},
 					CertVerifyOptions:     certVerify,
 					IgnoreSCT:             true,
 					IgnoreTlog:            true,
@@ -2882,60 +2882,18 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
-	client, err := tsaclient.GetTimestampClient(tsaURL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	var certs []*x509.Certificate
-	for block, contents := pem.Decode([]byte(chain.Payload)); ; block, contents = pem.Decode(contents) {
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			t.Error(err)
-		}
-		certs = append(certs, cert)
-
-		if len(contents) == 0 {
-			break
-		}
-	}
-
-	tsaCA := &root.SigstoreTimestampingAuthority{
-		Root:          certs[len(certs)-1],
-		Intermediates: certs[:len(certs)-1],
-	}
-
-	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.TimestampingAuthority{tsaCA}, nil)
-	if err != nil {
-		t.Error(err)
-	}
-
-	trustedRootPath = filepath.Join(td, "trustedroot.json")
-	trustedRootBytes, err := trustedRoot.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
-
 	ko = options.KeyOpts{
-		KeyRef:          pubKeyPath,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
+		KeyRef:     pubKeyPath,
+		BundlePath: bundlePath,
 	}
 
 	verifyBlobAttestation := cliverify.VerifyBlobAttestationCommand{
-		KeyOpts:         ko,
-		PredicateType:   predicateType,
-		IgnoreTlog:      true,
-		CheckClaims:     true,
-		TrustedRootPath: trustedRootPath,
+		KeyOpts:             ko,
+		PredicateType:       predicateType,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: true,
+		CheckClaims:         true,
+		TrustedRootPath:     trustedRootPath,
 	}
 
 	must(verifyBlobAttestation.Exec(ctx, bp), t)
