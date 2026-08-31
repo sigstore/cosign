@@ -43,7 +43,6 @@ import (
 )
 
 
-
 func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	td := t.TempDir()
 	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
@@ -249,13 +248,13 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 	trustedRootFile := mkfile(string(trBytes), td, t)
 
 	verifyCmd := cliverify.VerifyCommand{
-		IgnoreTlog:      true,
-		IgnoreSCT:       true,
-		CheckClaims:     true,
-		NewBundleFormat: true,
+		IgnoreTlog:  true,
+		IgnoreSCT:   true,
+		CheckClaims: true,
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootFile,
 		},
+		AllowCertificateChain: true,
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentityRegexp:   ".*",
 			CertOidcIssuerRegexp: ".*",

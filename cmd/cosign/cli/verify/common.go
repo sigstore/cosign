@@ -26,12 +26,10 @@ import (
 	"reflect"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v3/pkg/oci"
@@ -203,7 +201,7 @@ func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, k
 
 // SetTrustedMaterial sets TrustedMaterial on CheckOpts, either from the provided trusted root path or from TUF.
 // It does not set TrustedMaterial if the user provided trusted material via other flags or environment variables.
-func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots, caIntermediates, tsaCertChainPath string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
+func SetTrustedMaterial(ctx context.Context, trustedRootPath, _, _, _, _ string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
 	var err error
 	if trustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
@@ -215,18 +213,12 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots
 	if verifyOnlyWithKey {
 		return nil
 	}
-	if options.NOf(certChain, caRoots, caIntermediates, tsaCertChainPath) == 0 &&
-		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
-		env.Getenv(env.VariableSigstoreRootFile) == "" &&
-		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
-		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
-		co.TrustedMaterial, err = cosign.TrustedRoot()
-		if err != nil {
-			if co.NewBundleFormat {
-				return fmt.Errorf("getting trusted root from TUF for new bundle verification: %w", err)
-			}
-			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
+	co.TrustedMaterial, err = cosign.TrustedRoot()
+	if err != nil {
+		if co.NewBundleFormat {
+			return fmt.Errorf("getting trusted root from TUF for bundle verification: %w", err)
 		}
+		ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 	}
 	return nil
 }
