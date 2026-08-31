@@ -130,11 +130,9 @@ type VerifyAttestationOptions struct {
 
 	CommonVerifyOptions CommonVerifyOptions
 	SecurityKey         SecurityKeyOptions
-	Rekor               RekorOptions
 	CertVerify          CertVerifyOptions
 	Registry            RegistryOptions
 	Predicate           PredicateRemoteOptions
-	SignatureDigest     SignatureDigestOptions
 	Policies            []string
 	LocalImage          bool
 }
@@ -144,14 +142,10 @@ var _ Interface = (*VerifyAttestationOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
-	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.Registry.AddFlags(cmd)
 	o.Predicate.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
-	o.SignatureDigest.AddFlags(cmd)
-
-	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
