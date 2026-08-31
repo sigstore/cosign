@@ -1482,7 +1482,7 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 				must(attestBlobCmd.Exec(ctx, bp), t)
 
 				verifyErr = (&cliverify.VerifyBlobAttestationCommand{
-					KeyOpts:               options.KeyOpts{NewBundleFormat: true, BundlePath: bundlePath},
+					KeyOpts:               options.KeyOpts{BundlePath: bundlePath},
 					CertVerifyOptions:     certVerify,
 					IgnoreSCT:             true,
 					IgnoreTlog:            true,
@@ -2925,9 +2925,8 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	}
 
 	ko = options.KeyOpts{
-		KeyRef:          pubKeyPath,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
+		KeyRef:     pubKeyPath,
+		BundlePath: bundlePath,
 	}
 
 	verifyBlobAttestation := cliverify.VerifyBlobAttestationCommand{
