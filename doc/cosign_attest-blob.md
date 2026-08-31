@@ -9,25 +9,28 @@ cosign attest-blob [flags]
 ### Examples
 
 ```
-  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
+  cosign attest-blob [--key <key path>|<kms uri>] [--predicate <path>] [--yes] --bundle <bundle.json> <BLOB uri>
+
+  # attach an attestation to a blob using keyless signing and write the bundle to a file
+  cosign attest-blob --predicate <FILE> --type <TYPE> --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a local key pair file and write the bundle to a file
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <path> <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Azure Key Vault
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in AWS KMS
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Google Cloud KMS
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] --bundle <bundle.json> <BLOB>
 
   # supply attestation via stdin
-  echo <PAYLOAD> | cosign attest-blob --predicate - --yes
+  echo <PAYLOAD> | cosign attest-blob --predicate - --bundle <bundle.json> --yes
 ```
 
 ### Options
@@ -47,7 +50,7 @@ cosign attest-blob [flags]
       --oidc-provider string                          Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                      OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --predicate string                              path to the predicate file.
-      --signing-config string                         path to a signing config file. Must provide --bundle, which will output verification material in the new format
+      --signing-config string                         path to a signing config file
       --sk[=true|false]                               whether to use a hardware security key
       --slot string                                   security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --statement string                              path to the statement file.
