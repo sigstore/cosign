@@ -189,41 +189,27 @@ against the transparency log.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				KeyRef:                       o.Key,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
 				PredicateType:                o.Predicate.Type,
 				Policies:                     o.Policies,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
-				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-				HashAlgorithm:                hashAlgorithm,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 

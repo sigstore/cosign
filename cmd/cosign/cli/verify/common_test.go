@@ -25,8 +25,8 @@ import (
 func TestSetTrustedMaterialNewBundleTUFError(t *testing.T) {
 	setBrokenTrustedRootTUFEnv(t)
 
-	co := &cosign.CheckOpts{NewBundleFormat: true}
-	err := SetTrustedMaterial(t.Context(), "", "", "", "", "", false, co)
+	co := &cosign.CheckOpts{}
+	err := SetTrustedMaterial("", false, co)
 
 	if err == nil {
 		t.Fatal("expected trusted root TUF error")
