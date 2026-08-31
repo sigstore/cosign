@@ -72,8 +72,7 @@ func TestSecretsKMS(t *testing.T) {
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	must(verify(pubKey, imgName, true, nil, "", false), t)
@@ -81,8 +80,7 @@ func TestSecretsKMS(t *testing.T) {
 	// Sign and verify with annotations
 	mustErr(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
 	soAnno := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 		AnnotationOptions: options.AnnotationOptions{
 			Annotations: []string{"foo=bar"},
 		},
