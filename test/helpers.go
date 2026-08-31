@@ -788,12 +788,12 @@ func generateCertificateBundle(genIntermediate bool) (
 
 var rekorSigningConfig = func() *root.SigningConfig {
 	sc := signcommon.NewEmptySigningConfig()
-	sc.WithRekorLogURLs(root.Service{
+	sc = sc.WithRekorLogURLs(root.Service{
 		URL:                 rekorURL,
 		MajorAPIVersion:     1,
 		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
 	})
-	sc.WithFulcioCertificateAuthorityURLs(root.Service{
+	sc = sc.WithFulcioCertificateAuthorityURLs(root.Service{
 		URL:                 fulcioURL,
 		MajorAPIVersion:     1,
 		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
