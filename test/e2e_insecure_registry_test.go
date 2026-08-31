@@ -187,12 +187,10 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	}
 
 	attestCmd := attest.AttestCommand{
-		KeyOpts:        ko,
-		PredicatePath:  slsaAttestationPath,
-		PredicateType:  "slsaprovenance",
-		Timeout:        30 * time.Second,
-		RekorEntryType: "dsse",
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -267,8 +265,6 @@ func TestAttachInsecureRegistry(t *testing.T) {
 		PredicatePath:   slsaAttestationPath,
 		PredicateType:   "slsaprovenance",
 		Timeout:         30 * time.Second,
-		RekorEntryType:  "dsse",
-		TlogUpload:      true,
 		NoUpload:        true,
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
