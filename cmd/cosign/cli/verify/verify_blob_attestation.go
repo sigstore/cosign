@@ -95,7 +95,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}
-	vOfflineKey := verifyOfflineWithKey(c.KeyRef, "", c.Sk, co)
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.Sk, co)
 
 	// User provides a key. Otherwise, verification requires a Fulcio certificate
 	// provided in an attached bundle.
@@ -125,7 +125,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		}
 	}
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, "", "", "", "", vOfflineKey, co)
+	err = SetTrustedMaterial(c.TrustedRootPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
