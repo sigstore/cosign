@@ -241,20 +241,15 @@ func (o *VerifyDockerfileOptions) AddFlags(cmd *cobra.Command) {
 
 // VerifyBlobAttestationOptions is the top level wrapper for the `verify-blob-attestation` command.
 type VerifyBlobAttestationOptions struct {
-	Key           string
-	SignaturePath string
-	BundlePath    string
+	Key        string
+	BundlePath string
 
 	PredicateOptions
 	CheckClaims bool
 
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
-	Rekor               RekorOptions
 	CommonVerifyOptions CommonVerifyOptions
-	SignatureDigest     SignatureDigestOptions
-
-	RFC3161TimestampPath string
 
 	Digest    string
 	DigestAlg string
@@ -266,21 +261,12 @@ var _ Interface = (*VerifyBlobOptions)(nil)
 func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.PredicateOptions.AddFlags(cmd)
 	o.SecurityKey.AddFlags(cmd)
-	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
-	o.SignatureDigest.AddFlags(cmd)
-
-	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
-
-	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
-		"path to base64-encoded signature over attestation in DSSE format")
-	_ = cmd.MarkFlagFilename("signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
@@ -288,11 +274,6 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.CheckClaims, "check-claims", true,
 		"if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified.")
-
-	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
-		"path to RFC3161 timestamp FILE")
-	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 
 	cmd.Flags().StringVar(&o.Digest, "digest", "",
 		"Digest to use for verifying in-toto subject (instead of providing a blob)")

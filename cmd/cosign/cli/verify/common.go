@@ -69,11 +69,6 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, c
 	return nil
 }
 
-func isb64(data []byte) bool {
-	_, err := base64.StdEncoding.DecodeString(string(data))
-	return err == nil
-}
-
 // LoadVerifierFromKey returns a signature.Verifier from the provided key flags to use for verifying an artifact.
 // In the case of certain types of keys, it returns a close function that must be called by the calling method.
 func LoadVerifierFromKey(ctx context.Context, keyRef, slot string, sk bool) (signature.Verifier, func(), error) {
