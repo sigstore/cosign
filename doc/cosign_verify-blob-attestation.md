@@ -65,7 +65,7 @@ cosign verify-blob-attestation [flags]
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
-      --type string                                     specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
+      --type string                                     specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|syft|vuln|openvex|custom) or an URI (default "custom")
       --use-signed-timestamps                           verify rfc3161 timestamps
 ```
 
