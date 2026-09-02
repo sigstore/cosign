@@ -78,7 +78,6 @@ type VerifyCommand struct {
 	MaxWorkers                   int
 	ExperimentalOCI11            bool
 	NewBundleFormat              bool
-	AllowCertificateChain        bool
 }
 
 // Exec runs the verification command
@@ -141,7 +140,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.NewBundleFormat,
+		NewBundleFormat:              c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
@@ -155,7 +154,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.NewBundleFormat = hasBundles
 	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
-		if err == nil && c.NewBundleFormat {
+		if err == nil && (c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat) {
 			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false

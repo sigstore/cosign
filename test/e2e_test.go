@@ -1316,10 +1316,12 @@ func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
 				must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
 				verifyErr = (&cliverify.VerifyCommand{
-					CertVerifyOptions:     certVerify,
-					NewBundleFormat:       true,
-					IgnoreSCT:             true,
-					AllowCertificateChain: tc.allowChain,
+					CertVerifyOptions: certVerify,
+					CommonVerifyOptions: options.CommonVerifyOptions{
+						NewBundleFormat:       true,
+						AllowCertificateChain: tc.allowChain,
+					},
+					IgnoreSCT: true,
 				}).Exec(ctx, []string{imgName})
 			}
 
