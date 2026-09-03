@@ -80,7 +80,7 @@ func Attest() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, "",
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
 				"", "", "", "", "", ""); err != nil {
 				return err
 			}

@@ -99,7 +99,7 @@ race conditions or (worse) malicious tampering.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, "",
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
 				o.Output, "", o.OutputCertificate, o.OutputPayload, o.OutputSignature, ""); err != nil {
 				return err
 			}
