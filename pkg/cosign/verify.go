@@ -1865,7 +1865,7 @@ func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error
 	// Find the target image digest from the index manifest
 	var targetDigest v1.Hash
 	for _, m := range manifest.Manifests {
-		if val, ok := m.Annotations["kind"]; ok && val == "dev.cosignproject.cosign/image" {
+		if val, ok := m.Annotations["kind"]; ok && (val == "dev.cosignproject.cosign/image" || val == "dev.cosignproject.cosign/imageIndex") {
 			targetDigest = m.Digest
 			break
 		}
