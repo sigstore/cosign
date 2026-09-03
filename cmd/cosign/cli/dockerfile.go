@@ -105,6 +105,7 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					Attachment:                   o.Attachment,
 					Annotations:                  annotations,
 					LocalImage:                   o.LocalImage,
+					CommonVerifyOptions:          o.CommonVerifyOptions,
 					Offline:                      o.CommonVerifyOptions.Offline,
 					TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,

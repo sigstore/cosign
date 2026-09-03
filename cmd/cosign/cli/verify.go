@@ -128,7 +128,6 @@ against the transparency log.`,
 				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				NewBundleFormat:              o.CommonVerifyOptions.NewBundleFormat,
-				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
