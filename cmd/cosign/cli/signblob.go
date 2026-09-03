@@ -55,7 +55,7 @@ func SignBlob() *cobra.Command {
 
   # sign a blob with a key pair stored in Hashicorp Vault
   cosign sign-blob --key hashivault://[KEY] <FILE>`,
-		Args:             cobra.MinimumNArgs(1),
+		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			if options.NOf(o.Key, o.SecurityKey.Use) > 1 {
@@ -123,16 +123,15 @@ func SignBlob() *cobra.Command {
 				return err
 			}
 
-			for _, blob := range args {
-				// TODO: remove when the output flag has been deprecated
-				if o.Output != "" {
-					fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
-					o.OutputSignature = o.Output
-				}
+			// TODO: remove when the output flag has been deprecated
+			if o.Output != "" {
+				fmt.Fprintln(os.Stderr, "WARNING: the '--output' flag is deprecated and will be removed in the future. Use '--output-signature'")
+				o.OutputSignature = o.Output
+			}
 
-				if _, err := sign.SignBlobCmd(cmd.Context(), ro, ko, blob, o.Cert, o.CertChain, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
-					return fmt.Errorf("signing %s: %w", blob, err)
-				}
+			blob := args[0]
+			if _, err := sign.SignBlobCmd(cmd.Context(), ro, ko, blob, o.Cert, o.CertChain, o.Base64Output, o.OutputSignature, o.OutputCertificate, o.TlogUpload); err != nil {
+				return fmt.Errorf("signing %s: %w", blob, err)
 			}
 			return nil
 		},
