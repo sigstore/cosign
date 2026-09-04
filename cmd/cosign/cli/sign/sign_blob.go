@@ -67,13 +67,8 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
-		shouldUpload, err = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-		if err != nil {
-			return nil, fmt.Errorf("upload to tlog: %w", err)
-		}
-	} else {
-		shouldUpload = len(ko.SigningConfig.RekorLogURLs()) > 0
 	}
+	shouldUpload = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 
 	if !shouldUpload {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
@@ -81,6 +76,10 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		// we do not use ed25519ph for ed25519 keys when the signatures are not
 		// uploaded to the Tlog.
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, shouldUpload); err != nil {
+		return nil, err
 	}
 
 	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)

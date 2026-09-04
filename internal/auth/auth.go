@@ -22,8 +22,6 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
-	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/providers"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/oauthflow"
@@ -44,7 +42,6 @@ type IDTokenConfig struct {
 	DisableProviders bool
 	Provider         string
 	AuthFlow         string
-	SkipConfirm      bool
 	OIDCServices     []root.Service
 	ClientID         string
 	ClientSecret     string
@@ -64,7 +61,7 @@ func RetrieveIDToken(ctx context.Context, c IDTokenConfig) (string, error) {
 	if idToken != "" {
 		return idToken, nil
 	}
-	flow, err := GetOAuthFlow(ctx, c.AuthFlow, idToken, c.SkipConfirm)
+	flow, err := GetOAuthFlow(c.AuthFlow, idToken)
 	if err != nil {
 		return "", fmt.Errorf("setting auth flow: %w", err)
 	}
@@ -105,7 +102,7 @@ func ReadIDToken(ctx context.Context, tokOrPath string, disableProviders bool, o
 }
 
 // GetOAuthFlow returns authentication flow that the client will initiate
-func GetOAuthFlow(ctx context.Context, authFlow, idToken string, skipConfirm bool) (string, error) {
+func GetOAuthFlow(authFlow, idToken string) (string, error) {
 	var flow string
 	switch {
 	case authFlow != "":
@@ -117,19 +114,6 @@ func GetOAuthFlow(ctx context.Context, authFlow, idToken string, skipConfirm boo
 		fmt.Fprintln(os.Stderr, "Non-interactive mode detected, using device flow.")
 		flow = flowDevice
 	default:
-		var statementErr error
-		privacy.StatementOnce.Do(func() {
-			ui.Infof(ctx, privacy.Statement)
-			ui.Infof(ctx, privacy.StatementConfirmation)
-			if !skipConfirm {
-				if err := ui.ConfirmContinue(ctx); err != nil {
-					statementErr = err
-				}
-			}
-		})
-		if statementErr != nil {
-			return "", statementErr
-		}
 		flow = flowNormal
 	}
 	return flow, nil
