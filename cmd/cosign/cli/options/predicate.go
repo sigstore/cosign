@@ -34,6 +34,7 @@ const (
 	PredicateSPDX      = "spdx"
 	PredicateSPDXJSON  = "spdxjson"
 	PredicateCycloneDX = "cyclonedx"
+	PredicateSyft      = "syft"
 	PredicateLink      = "link"
 	PredicateVuln      = "vuln"
 	PredicateOpenVEX   = "openvex"
@@ -48,6 +49,7 @@ var PredicateTypeMap = map[string]string{
 	PredicateSPDX:      in_toto.PredicateSPDX,
 	PredicateSPDXJSON:  in_toto.PredicateSPDX,
 	PredicateCycloneDX: in_toto.PredicateCycloneDX,
+	PredicateSyft:      attestation.SyftPredicateType,
 	PredicateLink:      in_toto.PredicateLinkV1,
 	PredicateVuln:      attestation.CosignVulnProvenanceV01,
 	PredicateOpenVEX:   attestation.OpenVexNamespace,
@@ -63,7 +65,7 @@ var _ Interface = (*PredicateOptions)(nil)
 // AddFlags implements Interface
 func (o *PredicateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Type, "type", "custom",
-		"specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI")
+		"specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|syft|vuln|openvex|custom) or an URI")
 }
 
 // ParsePredicateType parses the predicate `type` flag passed into a predicate URI, or validates `type` is a valid URI.
