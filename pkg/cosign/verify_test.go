@@ -1615,19 +1615,6 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 	rootPool := x509.NewCertPool()
 	rootPool.AddCert(chain[1])
 
-	// Grab the CTLog public keys
-	pubKeys, err := GetCTLogPubs(context.Background())
-	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
-	}
-
-	co := &CheckOpts{
-		RootCerts: rootPool,
-		// explicitly set to false
-		IgnoreSCT:    false,
-		CTLogPubKeys: pubKeys,
-	}
-
 	// write SCT verification key to disk
 	tmpPrivFile, err := os.CreateTemp(t.TempDir(), "cosign_verify_sct_*.key")
 	if err != nil {
@@ -1639,10 +1626,17 @@ func TestValidateAndUnpackCertWithSCT(t *testing.T) {
 	}
 	t.Setenv("SIGSTORE_CT_LOG_PUBLIC_KEY_FILE", tmpPrivFile.Name())
 
-	// Grab the CTLog public keys again so we get them from env.
-	co.CTLogPubKeys, err = GetCTLogPubs(context.Background())
+	// Grab the CTLog public keys from env
+	pubKeys, err := GetCTLogPubs(context.Background())
 	if err != nil {
-		t.Fatalf("Failed to get CTLog public keys from TUF: %v", err)
+		t.Fatalf("Failed to get CTLog public keys: %v", err)
+	}
+
+	co := &CheckOpts{
+		RootCerts: rootPool,
+		// explicitly set to false
+		IgnoreSCT:    false,
+		CTLogPubKeys: pubKeys,
 	}
 	_, err = ValidateAndUnpackCert(chain[0], co)
 	if err != nil {
