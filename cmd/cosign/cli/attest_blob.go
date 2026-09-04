@@ -58,9 +58,9 @@ func AttestBlob() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
+			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.Offline,
 				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath, o.Key, o.IssueCertificate,
 				"", o.OutputAttestation, o.OutputCertificate, "", o.OutputSignature, o.RFC3161TimestampPath); err != nil {
 				return err
 			}
@@ -100,7 +100,7 @@ func AttestBlob() *cobra.Command {
 				BundlePath:                     o.BundlePath,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.Offline, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 
