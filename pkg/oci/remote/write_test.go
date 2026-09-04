@@ -17,6 +17,7 @@ package remote
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -251,6 +252,98 @@ func TestWriteAttestationNewBundleFormat(t *testing.T) {
 	if refManifest.Annotations["dev.sigstore.bundle.predicateType"] != predicateType {
 		t.Errorf("Expected predicateType annotation to be %s, got %s", predicateType, refManifest.Annotations["dev.sigstore.bundle.predicateType"])
 	}
+}
+
+func TestWriteAttestationNewBundleFormatWithSubjectDescriptor(t *testing.T) {
+	// Save original functions
+	origHead := remoteHead
+	origWriteLayer := remoteWriteLayer
+	origPut := remotePut
+	t.Cleanup(func() {
+		remoteHead = origHead
+		remoteWriteLayer = origWriteLayer
+		remotePut = origPut
+	})
+
+	bundleBytes := []byte(`{"payload":"test","signatures":[]}`)
+	predicateType := "https://test.predicate.type"
+	digest := name.MustParseReference("gcr.io/test/image@sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").(name.Digest)
+	subjectHash := v1.Hash{Algorithm: "sha256", Hex: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}
+
+	// The subject manifest does not exist in the registry; remoteHead must not
+	// be consulted when a subject descriptor is provided.
+	remoteHead = func(name.Reference, ...remote.Option) (*v1.Descriptor, error) {
+		t.Error("remoteHead should not be called when WithSubjectDescriptor is used")
+		return nil, fmt.Errorf("MANIFEST_UNKNOWN")
+	}
+
+	remoteWriteLayer = func(name.Repository, v1.Layer, ...remote.Option) error {
+		return nil
+	}
+
+	var capturedManifest remote.Taggable
+	remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+		capturedManifest = manifest
+		return nil
+	}
+
+	t.Run("descriptor used verbatim", func(t *testing.T) {
+		capturedManifest = nil
+		subject := &v1.Descriptor{
+			MediaType: types.OCIImageIndex,
+			Digest:    subjectHash,
+			Size:      123,
+		}
+
+		err := WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, WithSubjectDescriptor(subject))
+		if err != nil {
+			t.Fatalf("WriteAttestationNewBundleFormat() = %v", err)
+		}
+
+		refManifest, ok := capturedManifest.(referrerManifest)
+		if !ok {
+			t.Fatalf("Expected referrerManifest, got %T", capturedManifest)
+		}
+		if refManifest.Subject == nil {
+			t.Fatal("Expected subject to be set")
+		}
+		if !reflect.DeepEqual(refManifest.Subject, subject) {
+			t.Errorf("Subject = %+v, want %+v", *refManifest.Subject, *subject)
+		}
+	})
+
+	t.Run("zero digest rejected", func(t *testing.T) {
+		capturedManifest = nil
+		subject := &v1.Descriptor{
+			MediaType: types.OCIManifestSchema1,
+			Size:      456,
+		}
+
+		err := WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, WithSubjectDescriptor(subject))
+		if err == nil {
+			t.Fatal("Expected error for subject descriptor without digest")
+		}
+		if capturedManifest != nil {
+			t.Error("Expected no manifest upload for subject descriptor without digest")
+		}
+	})
+
+	t.Run("digest mismatch rejected", func(t *testing.T) {
+		capturedManifest = nil
+		subject := &v1.Descriptor{
+			MediaType: types.OCIManifestSchema1,
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: "feedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedfacefeedface"},
+			Size:      789,
+		}
+
+		err := WriteAttestationNewBundleFormat(digest, bundleBytes, predicateType, WithSubjectDescriptor(subject))
+		if err == nil {
+			t.Fatal("Expected error for mismatched subject digest")
+		}
+		if capturedManifest != nil {
+			t.Error("Expected no manifest upload on digest mismatch")
+		}
+	})
 }
 
 func TestWriteAttestationsReferrer(t *testing.T) {
