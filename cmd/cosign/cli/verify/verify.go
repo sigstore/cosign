@@ -17,18 +17,13 @@ package verify
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
-	cosignError "github.com/sigstore/cosign/v3/cmd/cosign/errors"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/oci"
@@ -48,36 +43,24 @@ type VerifyCommand struct {
 	options.CommonVerifyOptions
 	CheckClaims                  bool
 	KeyRef                       string
-	CertRef                      string
 	CertGithubWorkflowTrigger    string
 	CertGithubWorkflowSha        string
 	CertGithubWorkflowName       string
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
-	CAIntermediates              string
-	CARoots                      string
-	CertChain                    string
 	CertOidcProvider             string
 	IgnoreSCT                    bool
-	SCTRef                       string
 	Sk                           bool
 	Slot                         string
 	Output                       string
-	RekorURL                     string
-	Attachment                   string
 	Annotations                  sigs.AnnotationsMap
-	SignatureRef                 string
-	PayloadRef                   string
-	HashAlgorithm                crypto.Hash
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	Offline                      bool
-	TSACertChainPath             string
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
-	ExperimentalOCI11            bool
-	NewBundleFormat              bool
+	AllowCertificateChain        bool
 }
 
 // Exec runs the verification command
@@ -86,22 +69,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return flag.ErrHelp
 	}
 
-	switch c.Attachment {
-	case "sbom":
-		fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
-	case "":
-		break
-	default:
-		return flag.ErrHelp
-	}
-
-	// c.HashAlgorithm may be 0 (unset) here, in which case LoadVerifierFromKeyOrCert
-	// picks the digest algorithm that matches the provided key, rather than assuming
-	// SHA256 for keys that require a different algorithm (e.g. P-521 ECDSA keys).
-
 	// key and cert identity are mutually exclusive
 	if options.NOf(c.KeyRef, c.CertIdentity, c.CertIdentityRegexp) > 1 {
 		return &options.KeyAndIdentityParseError{}
+	}
+
+	// Key and sk are mutually exclusive
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.PubKeyParseError{}
 	}
 
 	var identities []cosign.Identity
@@ -119,7 +94,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if c.AllowHTTPRegistry || c.AllowInsecure {
 		c.NameOptions = append(c.NameOptions, name.Insecure)
 	}
-	if c.AllowCertificateChain {
+	if c.AllowCertificateChain || c.CommonVerifyOptions.AllowCertificateChain {
 		ociremoteOpts = append(ociremoteOpts, ociremote.WithBundleOptions(sgbundle.AllowCertificateChain()))
 	}
 
@@ -132,82 +107,34 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRepository: c.CertGithubWorkflowRepository,
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
-		SignatureRef:                 c.SignatureRef,
-		PayloadRef:                   c.PayloadRef,
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
-		ExperimentalOCI11:            c.ExperimentalOCI11,
-		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat,
-		AllowCertificateChain:        c.AllowCertificateChain,
+		UseSignedTimestamps:          c.UseSignedTimestamps,
+		AllowCertificateChain:        c.AllowCertificateChain || c.CommonVerifyOptions.AllowCertificateChain,
+		NewBundleFormat:              true,
 	}
-	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, "", c.Sk, co)
 
-	// Auto-detect bundle format for local images
-	if c.LocalImage {
-		hasBundles, err := cosign.HasLocalBundles(images[0])
-		if err != nil {
-			return fmt.Errorf("checking local image format: %w", err)
-		}
-		co.NewBundleFormat = hasBundles
-	} else {
-		ref, err := name.ParseReference(images[0], c.NameOptions...)
-		if err == nil && (c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat) {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
-			if len(newBundles) == 0 || err != nil {
-				co.NewBundleFormat = false
-			}
-		}
-	}
-
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, c.CertChain, c.CARoots, c.CAIntermediates, c.TSACertChainPath, vOfflineKey, co)
+	err = SetTrustedMaterial(ctx, c.TrustedRootPath, "", "", "", "", vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
 
-	if err = CheckSigstoreBundleUnsupportedOptions(*c, vOfflineKey, co); err != nil {
-		return err
-	}
-
 	if c.CheckClaims {
-		if co.NewBundleFormat {
-			co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
-		} else {
-			co.ClaimVerifier = cosign.SimpleClaimVerifier
-		}
+		co.ClaimVerifier = cosign.IntotoSubjectClaimVerifier
 	}
 
-	err = SetLegacyClientsAndKeys(ctx, c.IgnoreTlog, shouldVerifySCT(c.IgnoreSCT, c.KeyRef, c.Sk), keylessVerification(c.KeyRef, c.Sk), c.RekorURL, c.TSACertChainPath, c.CertChain, c.CARoots, c.CAIntermediates, co)
-	if err != nil {
-		return fmt.Errorf("setting up clients and keys: %w", err)
-	}
-
-	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
-	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
-	// after initializing trust material in order to verify certificate chain.
+	// User provides a key. Otherwise, verification requires a Fulcio certificate
+	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
-	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	co.SigVerifier, closeSV, err = LoadVerifierFromKey(ctx, c.KeyRef, c.Slot, c.Sk)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
 	defer closeSV()
 
-	if c.CertRef != "" && c.SCTRef != "" {
-		sct, err := os.ReadFile(filepath.Clean(c.SCTRef))
-		if err != nil {
-			return fmt.Errorf("reading sct from file: %w", err)
-		}
-		co.SCT = sct
-	}
-
-	// NB: There are only 2 kinds of verification right now:
-	// 1. You gave us the public key explicitly to verify against so co.SigVerifier is non-nil or,
-	// 2. We’re going to find an x509 certificate on the signature and verify against
-	//    Fulcio root trust (or user supplied root trust)
-	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
-	// was performed so we don't need to use this fragile logic here.
 	fulcioVerified := (co.SigVerifier == nil)
 
 	for _, img := range images {
@@ -215,16 +142,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		var bundleVerified bool
 
 		if c.LocalImage {
-			if co.NewBundleFormat {
-				verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
-				if err != nil {
-					return err
-				}
-			} else {
-				verified, bundleVerified, err = cosign.VerifyLocalImageSignatures(ctx, img, co)
-				if err != nil {
-					return err
-				}
+			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
+			if err != nil {
+				return err
 			}
 			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
 			PrintVerification(ctx, verified, c.Output)
@@ -234,27 +154,15 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				return fmt.Errorf("parsing reference: %w", err)
 			}
 
-			if co.NewBundleFormat {
-				// OCI bundle always contains attestation
-				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co, c.NameOptions...)
-				if err != nil {
-					return err
-				}
+			// OCI bundle always contains attestation
+			verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co, c.NameOptions...)
+			if err != nil {
+				return err
+			}
 
-				verifiedOutput, err := transformOutput(verified, ref.Name())
-				if err == nil {
-					verified = verifiedOutput
-				}
-			} else {
-				ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
-				if err != nil {
-					return fmt.Errorf("resolving attachment type %s for image %s: %w", c.Attachment, img, err)
-				}
-
-				verified, bundleVerified, err = cosign.VerifyImageSignatures(ctx, ref, co)
-				if err != nil {
-					return cosignError.WrapError(err)
-				}
+			verifiedOutput, err := transformOutput(verified, ref.Name())
+			if err == nil {
+				verified = verifiedOutput
 			}
 
 			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)

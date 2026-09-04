@@ -30,38 +30,41 @@ func AttestBlob() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attest-blob",
 		Short: "Attest the supplied blob",
-		Example: `  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
+		Example: `  cosign attest-blob [--key <key path>|<kms uri>] [--predicate <path>] [--yes] --bundle <bundle.json> <BLOB uri>
+
+  # attach an attestation to a blob using keyless signing and write the bundle to a file
+  cosign attest-blob --predicate <FILE> --type <TYPE> --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a local key pair file and write the bundle to a file
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <path> <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Azure Key Vault
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in AWS KMS
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Google Cloud KMS
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY]/versions/[VERSION] --bundle <bundle.json> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Hashicorp Vault
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <BLOB>
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key hashivault://[KEY] --bundle <bundle.json> <BLOB>
 
   # supply attestation via stdin
-  echo <PAYLOAD> | cosign attest-blob --predicate - --yes`,
+  echo <PAYLOAD> | cosign attest-blob --predicate - --bundle <bundle.json> --yes`,
 
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if o.NewBundleFormat && o.BundlePath == "" {
-				return fmt.Errorf("must specify --bundle with --new-bundle-format")
+			if o.BundlePath == "" {
+				return fmt.Errorf("please specify --bundle")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
-				"", o.OutputAttestation, o.OutputCertificate, "", o.OutputSignature, o.RFC3161TimestampPath); err != nil {
+			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.Offline,
+				"", o.Fulcio.URL, o.OIDC.Issuer, "",
+				true, true, o.BundlePath, o.Key, o.IssueCertificate,
+				"", "", "", "", "", ""); err != nil {
 				return err
 			}
 
@@ -78,12 +81,8 @@ func AttestBlob() *cobra.Command {
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
-				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
-				RekorURL:                       o.Rekor.URL,
-				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
@@ -94,30 +93,22 @@ func AttestBlob() *cobra.Command {
 				TSAClientKey:                   o.TSAClientKey,
 				TSAClientCert:                  o.TSAClientCert,
 				TSAServerName:                  o.TSAServerName,
-				TSAServerURL:                   o.TSAServerURL,
-				RFC3161TimestampPath:           o.RFC3161TimestampPath,
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				BundlePath:                     o.BundlePath,
-				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.Offline, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 
 			v := attest.AttestBlobCommand{
-				KeyOpts:           ko,
-				CertPath:          o.Cert,
-				CertChainPath:     o.CertChain,
-				ArtifactHash:      o.Hash,
-				TlogUpload:        o.TlogUpload,
-				PredicateType:     o.Predicate.Type,
-				PredicatePath:     o.Predicate.Path,
-				StatementPath:     o.Predicate.Statement,
-				OutputSignature:   o.OutputSignature,
-				OutputAttestation: o.OutputAttestation,
-				OutputCertificate: o.OutputCertificate,
-				Timeout:           ro.Timeout,
-				RekorEntryType:    o.RekorEntryType,
+				KeyOpts:       ko,
+				CertPath:      o.Cert,
+				CertChainPath: o.CertChain,
+				ArtifactHash:  o.Hash,
+				PredicateType: o.Predicate.Type,
+				PredicatePath: o.Predicate.Path,
+				StatementPath: o.Predicate.Statement,
+				Timeout:       ro.Timeout,
 			}
 			var artifactPath string
 			if len(args) == 1 {

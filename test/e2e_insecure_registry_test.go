@@ -59,8 +59,6 @@ func TestInsecureRegistry(t *testing.T) {
 
 	useOCI11 := os.Getenv("oci11Var") != ""
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -69,9 +67,9 @@ func TestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig,
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -80,8 +78,7 @@ func TestInsecureRegistry(t *testing.T) {
 
 	// Sign without bundle format
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 	}
 	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
@@ -94,7 +91,7 @@ func TestInsecureRegistry(t *testing.T) {
 		}
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, false), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
 		CheckClaims: true,
@@ -102,9 +99,6 @@ func TestInsecureRegistry(t *testing.T) {
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
 		},
-	}
-	if useOCI11 {
-		cmd.ExperimentalOCI11 = true
 	}
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 
@@ -114,9 +108,7 @@ func TestInsecureRegistry(t *testing.T) {
 	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
 	defer cleanup2()
 
-	so.NewBundleFormat = true
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	cmd.NewBundleFormat = true
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
 
