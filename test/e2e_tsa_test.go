@@ -89,49 +89,6 @@ func TestTSAMTLS(t *testing.T) {
 	must(verifyCmd.Exec(context.Background(), []string{imgName}), t)
 }
 
-func TestSignBlobTSAMTLS(t *testing.T) {
-	td := t.TempDir()
-	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
-	blobPath := mkfile(blob, td, t)
-	timestampPath := filepath.Join(td, "timestamp.txt")
-	bundlePath := filepath.Join(td, "cosign.bundle")
-
-	_, privKey, pubKey := keypair(t, td)
-
-	// Set up TSA server with TLS
-	timestampCACert, timestampServerCert, timestampServerKey, timestampClientCert, timestampClientKey := generateMTLSKeys(t, td)
-	timestampServerURL, timestampChainFile, tsaCleanup := setUpTSAServerWithTLS(t, td, timestampCACert, timestampServerKey, timestampServerCert)
-	t.Cleanup(tsaCleanup)
-
-	signingKO := options.KeyOpts{
-		KeyRef:               privKey,
-		PassFunc:             passFunc,
-		TSAServerURL:         timestampServerURL,
-		TSAClientCACert:      timestampCACert,
-		TSAClientCert:        timestampClientCert,
-		TSAClientKey:         timestampClientKey,
-		TSAServerName:        "server.example.com",
-		RFC3161TimestampPath: timestampPath,
-		BundlePath:           bundlePath,
-	}
-	sig, err := sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
-	must(err, t)
-
-	verifyKO := options.KeyOpts{
-		KeyRef:               pubKey,
-		TSACertChainPath:     timestampChainFile,
-		RFC3161TimestampPath: timestampPath,
-		BundlePath:           bundlePath,
-	}
-
-	verifyCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:    verifyKO,
-		SigRef:     string(sig),
-		IgnoreTlog: true,
-	}
-	must(verifyCmd.Exec(context.Background(), blobPath), t)
-}
-
 func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	td := t.TempDir()
 	blob := time.Now().Format("Mon Jan 2 15:04:05 MST 2006")
@@ -210,7 +167,7 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 		TrustedMaterial: trustedRoot,
 		NewBundleFormat: true,
 	}
-	_, err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
+	err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "")
 	must(err, t)
 
 	verifyKO := options.KeyOpts{
