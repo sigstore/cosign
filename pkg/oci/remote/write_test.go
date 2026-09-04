@@ -16,16 +16,22 @@
 package remote
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 	cosignstatic "github.com/sigstore/cosign/v3/pkg/oci/static"
@@ -627,5 +633,113 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 	}
 	if !strings.Contains(string(manifestBytes), `"artifactType"`) {
 		t.Errorf("Expected manifest JSON to contain artifactType field, got: %s", string(manifestBytes))
+	}
+}
+
+// stubSignedImageIndex is a SignedImageIndex with no image, signatures, or attestations,
+// so WriteSignedImageIndexImages only exercises the bundle-referrer path.
+type stubSignedImageIndex struct{}
+
+func (stubSignedImageIndex) MediaType() (types.MediaType, error) { return empty.Index.MediaType() }
+func (stubSignedImageIndex) Digest() (v1.Hash, error)            { return empty.Index.Digest() }
+func (stubSignedImageIndex) Size() (int64, error)                { return empty.Index.Size() }
+func (stubSignedImageIndex) IndexManifest() (*v1.IndexManifest, error) {
+	return empty.Index.IndexManifest()
+}
+func (stubSignedImageIndex) RawManifest() ([]byte, error)      { return empty.Index.RawManifest() }
+func (stubSignedImageIndex) Image(h v1.Hash) (v1.Image, error) { return empty.Index.Image(h) }
+func (stubSignedImageIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
+	return empty.Index.ImageIndex(h)
+}
+func (stubSignedImageIndex) SignedImageIndex(v1.Hash) (oci.SignedImageIndex, error) {
+	return nil, nil
+}
+func (stubSignedImageIndex) SignedImage(v1.Hash) (oci.SignedImage, error) { return nil, nil }
+func (stubSignedImageIndex) Signatures() (oci.Signatures, error)          { return nil, nil }
+func (stubSignedImageIndex) Attestations() (oci.Signatures, error)        { return nil, nil }
+func (stubSignedImageIndex) Attachment(string) (oci.File, error)          { return nil, nil }
+
+func TestWriteSignedImageIndexImages_BundleUploadOrder(t *testing.T) {
+	origWriteLayer := remoteWriteLayer
+	origPut := remotePut
+	t.Cleanup(func() {
+		remoteWriteLayer = origWriteLayer
+		remotePut = origPut
+	})
+
+	subjectDigest := v1.Hash{Algorithm: "sha256", Hex: "ef637aabc052029acfd192d8ed6674a5249a8783e551c08db71e321ca11b421d"}
+	bundleBytes := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
+	bundleLayer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
+	layerDigest, err := bundleLayer.Digest()
+	if err != nil {
+		t.Fatalf("bundleLayer.Digest() = %v", err)
+	}
+
+	manifest := &v1.Manifest{
+		SchemaVersion: 2,
+		MediaType:     types.OCIManifestSchema1,
+		Config: v1.Descriptor{
+			MediaType: types.MediaType("application/vnd.oci.empty.v1+json"),
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"},
+			Size:      2,
+		},
+		Layers: []v1.Descriptor{{
+			MediaType: types.MediaType(bundle.BundleV03MediaType),
+			Digest:    layerDigest,
+			Size:      int64(len(bundleBytes)),
+		}},
+		Subject: &v1.Descriptor{Digest: subjectDigest},
+		Annotations: map[string]string{
+			BundlePredicateType: "https://sigstore.dev/cosign/sign/v1",
+		},
+	}
+	manifestBytes, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("json.Marshal() = %v", err)
+	}
+	manifestDigest, _, err := v1.SHA256(strings.NewReader(string(manifestBytes)))
+	if err != nil {
+		t.Fatalf("v1.SHA256() = %v", err)
+	}
+
+	dir := t.TempDir()
+	blobDir := filepath.Join(dir, "blobs", "sha256")
+	if err := os.MkdirAll(blobDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(blobDir, layerDigest.Hex), bundleBytes, 0o644); err != nil {
+		t.Fatalf("WriteFile(layer) = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(blobDir, manifestDigest.Hex), manifestBytes, 0o644); err != nil {
+		t.Fatalf("WriteFile(manifest) = %v", err)
+	}
+
+	var callOrder []string
+	remoteWriteLayer = func(_ name.Repository, _ v1.Layer, _ ...remote.Option) error {
+		callOrder = append(callOrder, "layer")
+		return nil
+	}
+	remotePut = func(_ name.Reference, _ remote.Taggable, _ ...remote.Option) error {
+		callOrder = append(callOrder, "manifest")
+		return nil
+	}
+
+	ref, err := name.NewDigest("gcr.io/test/image@sha256:ef637aabc052029acfd192d8ed6674a5249a8783e551c08db71e321ca11b421d")
+	if err != nil {
+		t.Fatalf("name.NewDigest() = %v", err)
+	}
+	if err := WriteSignedImageIndexImages(ref, stubSignedImageIndex{}, dir); err != nil {
+		t.Fatalf("WriteSignedImageIndexImages() = %v", err)
+	}
+
+	// Expect config layer + bundle layer, then manifest.
+	want := []string{"layer", "layer", "manifest"}
+	if len(callOrder) != len(want) {
+		t.Fatalf("call order = %v, want %v", callOrder, want)
+	}
+	for i, step := range want {
+		if callOrder[i] != step {
+			t.Fatalf("call order = %v, want %v", callOrder, want)
+		}
 	}
 }

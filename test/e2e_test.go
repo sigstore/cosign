@@ -43,6 +43,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,6 +51,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/theupdateframework/go-tuf/v2/metadata"
@@ -4090,6 +4092,141 @@ func TestSaveLoad(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSaveLoadCrossRegistry verifies that cosign load uploads bundle layer blobs
+// before manifest PUT when loading to a registry that does not already contain them.
+// This reproduces sigstore/cosign#5030, which is masked when save and load use the
+// same registry (bundle blobs already exist from signing).
+//
+// The destination uses a wrapper around registry.New() that rejects manifest PUTs
+// referencing missing blobs (like AWS ECR), since the stock fake registry does not.
+func TestSaveLoadCrossRegistry(t *testing.T) {
+	if os.Getenv("COSIGN_TEST_REPO") != "" { //nolint: forbidigo
+		t.Skip("cross-registry test requires isolated fake registries")
+	}
+
+	keysDir := t.TempDir()
+	_, privKeyPath, pubKeyPath := keypair(t, keysDir)
+
+	src := httptest.NewServer(registry.New())
+	defer src.Close()
+	dst := httptest.NewServer(blobEnforcingRegistry(registry.New()))
+	defer dst.Close()
+
+	srcURL, err := url.Parse(src.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dstURL, err := url.Parse(dst.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	srcRepo := path.Join(srcURL.Host, "cross-registry-src")
+	dstRepo := path.Join(dstURL.Host, "cross-registry-dst")
+	imgName := path.Join(srcRepo, "image")
+
+	_, _, cleanup := mkimage(t, imgName)
+	defer cleanup()
+
+	ctx := context.Background()
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         passFunc,
+		RekorURL:         rekorURL,
+		SkipConfirmation: true,
+	}
+	so := options.SignOptions{
+		Upload:          true,
+		TlogUpload:      false,
+		NewBundleFormat: true,
+	}
+	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
+
+	imageDir := t.TempDir()
+	must(cli.SaveCmd(ctx, options.SaveOptions{Directory: imageDir}, imgName), t)
+
+	imgName2 := path.Join(dstRepo, "image")
+	must(cli.LoadCmd(ctx, options.LoadOptions{Directory: imageDir}, imgName2), t)
+
+	// Key-based verify without tlog/Fulcio — LoadCmd succeeding is the #5030 regression
+	// guard; verify confirms the loaded bundle is usable.
+	cmd := cliverify.VerifyCommand{
+		KeyRef:          pubKeyPath,
+		NewBundleFormat: true,
+		IgnoreTlog:      true,
+	}
+	must(cmd.Exec(ctx, []string{imgName2}), t)
+}
+
+// blobEnforcingRegistry wraps a registry handler and rejects manifest PUTs that
+// reference blobs that have not been uploaded yet (BLOB_UPLOAD_UNKNOWN).
+func blobEnforcingRegistry(next http.Handler) http.Handler {
+	var blobs sync.Map // digest string -> struct{}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut && strings.Contains(r.URL.Path, "/blobs/uploads/") {
+			digest := r.URL.Query().Get("digest")
+			rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(rw, r)
+			if digest != "" && rw.status >= 200 && rw.status < 300 {
+				blobs.Store(digest, struct{}{})
+			}
+			return
+		}
+
+		if r.Method == http.MethodPut && strings.Contains(r.URL.Path, "/manifests/") {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+
+			var mf struct {
+				Config *struct {
+					Digest string `json:"digest"`
+				} `json:"config"`
+				Layers []struct {
+					Digest string `json:"digest"`
+				} `json:"layers"`
+			}
+			if err := json.Unmarshal(body, &mf); err == nil && mf.Config != nil {
+				var missing []string
+				if _, ok := blobs.Load(mf.Config.Digest); !ok && mf.Config.Digest != "" {
+					missing = append(missing, mf.Config.Digest)
+				}
+				for _, layer := range mf.Layers {
+					if _, ok := blobs.Load(layer.Digest); !ok && layer.Digest != "" {
+						missing = append(missing, layer.Digest)
+					}
+				}
+				if len(missing) > 0 {
+					w.WriteHeader(http.StatusNotFound)
+					_ = json.NewEncoder(w).Encode(map[string]any{
+						"errors": []map[string]string{{
+							"code":    "BLOB_UPLOAD_UNKNOWN",
+							"message": fmt.Sprintf("Layers with digests '%v' do not exist", missing),
+						}},
+					})
+					return
+				}
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
 }
 
 // TestSaveLoadAutoDetectFormat verifies that local image verification auto-detects
