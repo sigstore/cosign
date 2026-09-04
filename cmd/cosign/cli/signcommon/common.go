@@ -42,7 +42,6 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -468,9 +467,9 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 }
 
 // ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
-func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
+func ValidateSigningOptions(ctx context.Context, offline bool,
 	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string,
+	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
 	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
 	if newBundleFormat && outputSignature != "" {
@@ -492,43 +491,54 @@ func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingC
 		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
 
-	// If a signing config is used, then service URLs cannot be specified
-	if (useSigningConfig || signingConfigPath != "") &&
-		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
-			(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
-			(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
-			tsaServerURL != "") {
-		return fmt.Errorf("cannot specify service URLs and use signing config")
+	serviceURLsSpecified := (rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
+		(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
+		(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
+		tsaServerURL != ""
+	if offline {
+		if keyRef == "" {
+			return fmt.Errorf("offline signing requires a private key")
+		}
+		if issueCertificate {
+			return fmt.Errorf("cannot issue certificate when offline")
+		}
+		if serviceURLsSpecified {
+			return fmt.Errorf("cannot specify service URLs when signing offline")
+		}
+		return nil
 	}
-	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config with --signing-config without a transparency log service, which can be created with `cosign signing-config create` or `curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)'` for the public instance")
+	if serviceURLsSpecified {
+		return fmt.Errorf("cannot specify service URLs when using a signing config")
+	}
+	if !tlogUpload {
+		return fmt.Errorf("--tlog-upload=false is not supported with a signing config. Provide a --signing-config without transparency log services, or use --offline if signing without network services")
 	}
 	// Signing config requires a bundle as output for verification materials since sigstore-go is used
-	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
-		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
+	if !newBundleFormat && bundlePath == "" {
+		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with a signing config")
 	}
 
 	return nil
 }
 
 // LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, offline bool, signingConfigPath, trustedRootPath string) error {
+	if offline {
+		// An empty signing config prevents any network calls during signing
+		ko.SigningConfig = NewEmptySigningConfig()
+		return nil
+	}
+
 	var err error
-	// Fetch a trusted root when:
-	// * requesting a certificate and no CT log key is provided to verify an SCT
-	// * using a signing config
-	if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
-		(useSigningConfig || signingConfigPath != "") {
-		if trustedRootPath != "" {
-			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
-			if err != nil {
-				return fmt.Errorf("loading trusted root: %w", err)
-			}
-		} else {
-			ko.TrustedMaterial, err = cosign.TrustedRoot()
-			if err != nil {
-				ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-			}
+	if trustedRootPath != "" {
+		ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+	} else {
+		ko.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 		}
 	}
 	if signingConfigPath != "" {
@@ -536,7 +546,7 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error reading signing config from file: %w", err)
 		}
-	} else if useSigningConfig {
+	} else {
 		ko.SigningConfig, err = cosign.SigningConfig()
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
@@ -646,6 +656,17 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 	}
 
 	return json.Marshal(signedPayload)
+}
+
+// NewEmptySigningConfig returns a signing config with no services configured.
+func NewEmptySigningConfig() *root.SigningConfig {
+	sc, _ := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil, nil, nil,
+		root.ServiceConfiguration{},
+		nil, root.ServiceConfiguration{},
+	)
+	return sc
 }
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
