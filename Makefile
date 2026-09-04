@@ -125,6 +125,7 @@ ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw
                     --image-label io.artifacthub.package.name=cosign \
                     --image-label org.opencontainers.image.created=$(BUILD_DATE) \
                     --image-label org.opencontainers.image.description="Container signing verification and storage in an OCI registry" \
+                    --image-label org.opencontainers.image.source=https://github.com/sigstore/cosign \
                     --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
 
 define create_kocache_path
