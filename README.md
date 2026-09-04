@@ -68,7 +68,7 @@ Here is how to install and use cosign inside a Dockerfile through the ghcr.io/si
 ```shell
 FROM ghcr.io/sigstore/cosign/cosign:v2.4.1 as cosign-bin
 
-# Source: https://github.com/chainguard-images/static
+# Source: https://github.com/chainguard-images/images/tree/main/images/static
 FROM cgr.dev/chainguard/static:latest
 COPY --from=cosign-bin /ko-app/cosign /usr/local/bin/cosign
 ENTRYPOINT [ "cosign" ]
@@ -420,7 +420,7 @@ That looks like:
 **Note:** This can be generated for an image reference using `cosign generate $IMAGE_URI_DIGEST`.
 
 I'm happy to switch this format to something else if it makes sense.
-See https://github.com/notaryproject/nv2/issues/40 for one option.
+See https://github.com/notaryproject/notation/issues/40 for one option.
 
 #### Registry Details
 
