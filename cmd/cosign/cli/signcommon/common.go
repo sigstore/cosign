@@ -42,7 +42,6 @@ import (
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -102,7 +101,6 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 			DisableProviders: ko.OIDCDisableProviders,
 			Provider:         ko.OIDCProvider,
 			AuthFlow:         ko.FulcioAuthFlow,
-			SkipConfirm:      ko.SkipConfirmation,
 			OIDCServices:     ko.SigningConfig.OIDCProviderURLs(),
 			ClientID:         ko.OIDCClientID,
 			ClientSecret:     ko.OIDCClientSecret,
@@ -118,68 +116,13 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 }
 
 // ShouldUploadToTlog determines whether the user wants to upload the entry to Rekor.
-func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
-	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
-	var statementErr error
-	// Only warn about the public good instance's data retention policy when
-	// actually uploading to it
-	if upload && hasPublicGoodRekorURL(ko.SigningConfig) {
-		privacy.StatementOnce.Do(func() {
-			ui.Infof(ctx, privacy.Statement)
-			ui.Infof(ctx, privacy.StatementConfirmation)
-			if !ko.SkipConfirmation {
-				if err := ui.ConfirmContinue(ctx); err != nil {
-					statementErr = err
-				}
-			}
-		})
-	}
-	return upload, statementErr
-}
-
-// publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
-// as part of the sigstore public good instance (production and staging). A literal
-// comparison against options.DefaultRekorURL is not sufficient because the public
-// good instance is served from multiple region- and year-specific hostnames.
-var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
-
-// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
-// points at the sigstore public good instance (production or staging), which is the
-// only case where the data-retention privacy statement applies.
-func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
-	if sc == nil {
-		return false
-	}
-	for _, s := range sc.RekorLogURLs() {
-		if isPublicGoodRekorURL(s.URL) {
-			return true
-		}
-	}
-	return false
-}
-
-// isPublicGoodRekorURL reports whether a rekor URL points at the sigstore public good
-// instance (production or staging).
-func isPublicGoodRekorURL(rekorURL string) bool {
-	if rekorURL == "" {
-		return false
-	}
-	parsed, err := url.Parse(rekorURL)
-	if err != nil || parsed.Hostname() == "" {
-		return false
-	}
-	host := strings.ToLower(parsed.Hostname())
-	for _, suffix := range publicGoodRekorHostSuffixes {
-		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
+func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
 	// return false if not uploading to the tlog has been requested
 	if !tlogUpload {
+		return false
+	}
+
+	if ko.SigningConfig != nil && len(ko.SigningConfig.RekorLogURLs()) == 0 {
 		return false
 	}
 
@@ -201,6 +144,83 @@ func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		}
 	}
 	return true
+}
+
+// ConfirmPrivacyStatement prompts the user with the Sigstore privacy statement
+// if the operation will record data to a public transparency log.
+func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRekor bool) error {
+	isKeyless := (ko.KeyRef == "" && !ko.Sk) || ko.IssueCertificateForExistingKey
+	// The privacy statement applies when publishing to the public Rekor
+	// transparency log or the public Fulcio Certificate Transparency (CT) log.
+	if (uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig)) ||
+		(isKeyless && hasPublicGoodFulcioURL(ko.SigningConfig)) {
+		var statementErr error
+		privacy.StatementOnce.Do(func() {
+			ui.Infof(ctx, privacy.Statement)
+			ui.Infof(ctx, privacy.StatementConfirmation)
+			if !ko.SkipConfirmation {
+				if err := ui.ConfirmContinue(ctx); err != nil {
+					statementErr = err
+				}
+			}
+		})
+		return statementErr
+	}
+	return nil
+}
+
+// publicGoodHostSuffixes are the hostname suffixes of services operated as part
+// of the sigstore public good instance (production and staging). A literal
+// comparison against options.DefaultRekorURL or options.DefaultFulcioURL is not
+// sufficient because the public good instance is served from multiple region-
+// and year-specific hostnames.
+var publicGoodHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
+
+// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
+// points at the sigstore public good instance (production or staging).
+func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.RekorLogURLs() {
+		if isPublicGoodURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasPublicGoodFulcioURL reports whether a signing config contains a fulcio URL that
+// points at the sigstore public good instance (production or staging).
+func hasPublicGoodFulcioURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.FulcioCertificateAuthorityURLs() {
+		if isPublicGoodURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicGoodURL reports whether a URL points at the sigstore public good
+// instance (production or staging).
+func isPublicGoodURL(rawURL string) bool {
+	if rawURL == "" {
+		return false
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, suffix := range publicGoodHostSuffixes {
+		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath string, ko options.KeyOpts) (*SignerVerifier, bool, error) {
@@ -468,9 +488,9 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 }
 
 // ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
-func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
+func ValidateSigningOptions(ctx context.Context, offline bool,
 	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string,
+	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
 	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
 	if newBundleFormat && outputSignature != "" {
@@ -492,43 +512,54 @@ func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingC
 		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
 
-	// If a signing config is used, then service URLs cannot be specified
-	if (useSigningConfig || signingConfigPath != "") &&
-		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
-			(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
-			(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
-			tsaServerURL != "") {
-		return fmt.Errorf("cannot specify service URLs and use signing config")
+	serviceURLsSpecified := (rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
+		(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
+		(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
+		tsaServerURL != ""
+	if offline {
+		if keyRef == "" {
+			return fmt.Errorf("offline signing requires a private key")
+		}
+		if issueCertificate {
+			return fmt.Errorf("cannot issue certificate when offline")
+		}
+		if serviceURLsSpecified {
+			return fmt.Errorf("cannot specify service URLs when signing offline")
+		}
+		return nil
 	}
-	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config with --signing-config without a transparency log service, which can be created with `cosign signing-config create` or `curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)'` for the public instance")
+	if serviceURLsSpecified {
+		return fmt.Errorf("cannot specify service URLs when using a signing config")
+	}
+	if !tlogUpload {
+		return fmt.Errorf("--tlog-upload=false is not supported with a signing config. Provide a --signing-config without transparency log services, or use --offline if signing without network services")
 	}
 	// Signing config requires a bundle as output for verification materials since sigstore-go is used
-	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
-		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
+	if !newBundleFormat && bundlePath == "" {
+		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with a signing config")
 	}
 
 	return nil
 }
 
 // LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, offline bool, signingConfigPath, trustedRootPath string) error {
+	if offline {
+		// An empty signing config prevents any network calls during signing
+		ko.SigningConfig = NewEmptySigningConfig()
+		return nil
+	}
+
 	var err error
-	// Fetch a trusted root when:
-	// * requesting a certificate and no CT log key is provided to verify an SCT
-	// * using a signing config
-	if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
-		(useSigningConfig || signingConfigPath != "") {
-		if trustedRootPath != "" {
-			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
-			if err != nil {
-				return fmt.Errorf("loading trusted root: %w", err)
-			}
-		} else {
-			ko.TrustedMaterial, err = cosign.TrustedRoot()
-			if err != nil {
-				ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-			}
+	if trustedRootPath != "" {
+		ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+	} else {
+		ko.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 		}
 	}
 	if signingConfigPath != "" {
@@ -536,7 +567,7 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error reading signing config from file: %w", err)
 		}
-	} else if useSigningConfig {
+	} else {
 		ko.SigningConfig, err = cosign.SigningConfig()
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
@@ -646,6 +677,20 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 	}
 
 	return json.Marshal(signedPayload)
+}
+
+// NewEmptySigningConfig returns a signing config with no services configured.
+func NewEmptySigningConfig() *root.SigningConfig {
+	sc, _ := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+	)
+	return sc
 }
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
