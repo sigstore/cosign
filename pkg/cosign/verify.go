@@ -1843,8 +1843,9 @@ func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error
 		return nil, nil, fmt.Errorf("getting index manifest: %w", err)
 	}
 
-	// Find the target image digest from the index manifest. The saved entity
-	// may be a single image or a multi-arch image index, annotated accordingly.
+	// Find the target digest from the index manifest. The saved entity may be
+	// a single image (annotated dev.cosignproject.cosign/image) or a
+	// multi-arch image index (annotated dev.cosignproject.cosign/imageIndex).
 	var targetDigest v1.Hash
 	for _, m := range manifest.Manifests {
 		if val, ok := m.Annotations["kind"]; ok && (val == "dev.cosignproject.cosign/image" || val == "dev.cosignproject.cosign/imageIndex") {

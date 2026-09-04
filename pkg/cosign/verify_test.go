@@ -2461,7 +2461,7 @@ func TestHasLocalSigstoreBundles_ImageIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	referrerManifest.Subject = &v1.Descriptor{
-		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		MediaType: "application/vnd.oci.image.index.v1+json",
 		Digest:    targetDigest,
 		Size:      0,
 	}
