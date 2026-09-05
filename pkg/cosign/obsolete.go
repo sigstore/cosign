@@ -26,8 +26,8 @@ import (
 // ObsoletePayload returns the implied payload that some commands expect to match
 // the signature if no payload is provided by the user.
 // DO NOT ADD ANY NEW CALLERS OF THIS.
-func ObsoletePayload(ctx context.Context, digestedImage name.Digest) ([]byte, error) {
-	blob, err := (&payload.Cosign{Image: digestedImage}).MarshalJSON()
+func ObsoletePayload(ctx context.Context, digestedImage name.Digest, annotations map[string]interface{}) ([]byte, error) {
+	blob, err := (&payload.Cosign{Image: digestedImage, Annotations: annotations}).MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
