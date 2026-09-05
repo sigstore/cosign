@@ -17,11 +17,15 @@ package remote
 
 import (
 	"fmt"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
@@ -581,14 +585,18 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 		}, nil
 	}
 
-	// Mock remoteWriteLayer to succeed
-	remoteWriteLayer = func(name.Repository, v1.Layer, ...remote.Option) error {
+	// Mock remoteWriteLayer to capture the destination repository
+	var capturedRepositories []name.Repository
+	remoteWriteLayer = func(repo name.Repository, _ v1.Layer, _ ...remote.Option) error {
+		capturedRepositories = append(capturedRepositories, repo)
 		return nil
 	}
 
 	// Mock remotePut to capture the manifest
+	var capturedReference name.Reference
 	var capturedManifest remote.Taggable
-	remotePut = func(_ name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+	remotePut = func(ref name.Reference, manifest remote.Taggable, _ ...remote.Option) error {
+		capturedReference = ref
 		capturedManifest = manifest
 		return nil
 	}
@@ -601,6 +609,17 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 	// Verify that a manifest was uploaded
 	if capturedManifest == nil {
 		t.Fatal("Expected manifest to be uploaded, but none was captured")
+	}
+	if got := len(capturedRepositories); got != 2 {
+		t.Fatalf("layer writes = %d, want 2", got)
+	}
+	for _, repo := range capturedRepositories {
+		if repo.String() != digest.Repository.String() {
+			t.Errorf("layer repository = %q, want %q", repo, digest.Repository)
+		}
+	}
+	if capturedReference.Context().String() != digest.Repository.String() {
+		t.Errorf("manifest repository = %q, want %q", capturedReference.Context(), digest.Repository)
 	}
 
 	// Verify it's a referrerManifest (not a taggableManifest)
@@ -627,5 +646,90 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 	}
 	if !strings.Contains(string(manifestBytes), `"artifactType"`) {
 		t.Errorf("Expected manifest JSON to contain artifactType field, got: %s", string(manifestBytes))
+	}
+
+	targetRepository := name.MustParseReference("gcr.io/target/image").Context()
+	capturedRepositories = nil
+	capturedReference = nil
+	if err := WriteSignaturesExperimentalOCI(digest, si, WithTargetRepository(targetRepository)); err != nil {
+		t.Fatalf("WriteSignaturesExperimentalOCI() with target repository = %v", err)
+	}
+	if got := len(capturedRepositories); got != 2 {
+		t.Fatalf("layer writes = %d, want 2", got)
+	}
+	for _, repo := range capturedRepositories {
+		if repo.String() != targetRepository.String() {
+			t.Errorf("layer repository = %q, want %q", repo, targetRepository)
+		}
+	}
+	if capturedReference.Context().String() != targetRepository.String() {
+		t.Errorf("manifest repository = %q, want %q", capturedReference.Context(), targetRepository)
+	}
+}
+
+func TestWriteSignaturesExperimentalOCIWithTargetRepository(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	if err != nil {
+		t.Fatalf("url.Parse() = %v", err)
+	}
+	sourceRef, err := name.ParseReference(fmt.Sprintf("%s/source-repo:tag", u.Host))
+	if err != nil {
+		t.Fatalf("name.ParseReference(source) = %v", err)
+	}
+	targetRef, err := name.ParseReference(fmt.Sprintf("%s/target-repo", u.Host))
+	if err != nil {
+		t.Fatalf("name.ParseReference(target) = %v", err)
+	}
+	targetRepo := targetRef.Context()
+	if err := remote.Write(sourceRef, empty.Image); err != nil {
+		t.Fatalf("remote.Write() = %v", err)
+	}
+	desc, err := remote.Head(sourceRef)
+	if err != nil {
+		t.Fatalf("remote.Head() = %v", err)
+	}
+	sourceDigest := sourceRef.Context().Digest(desc.Digest.String())
+
+	si := signed.Image(empty.Image)
+	sig, err := cosignstatic.NewSignature(nil, "test-sig")
+	if err != nil {
+		t.Fatalf("static.NewSignature() = %v", err)
+	}
+	si, err = mutate.AttachSignatureToImage(si, sig)
+	if err != nil {
+		t.Fatalf("AttachSignatureToImage() = %v", err)
+	}
+
+	if err := WriteSignaturesExperimentalOCI(sourceDigest, si, WithTargetRepository(targetRepo)); err != nil {
+		t.Fatalf("WriteSignaturesExperimentalOCI() = %v", err)
+	}
+
+	targetDigest := targetRepo.Digest(desc.Digest.String())
+	targetReferrers, err := remote.Referrers(targetDigest)
+	if err != nil {
+		t.Fatalf("remote.Referrers(target) = %v", err)
+	}
+	targetManifest, err := targetReferrers.IndexManifest()
+	if err != nil {
+		t.Fatalf("targetReferrers.IndexManifest() = %v", err)
+	}
+	if got := len(targetManifest.Manifests); got != 1 {
+		t.Fatalf("target referrers = %d, want 1", got)
+	}
+
+	sourceReferrers, err := remote.Referrers(sourceDigest)
+	if err != nil {
+		t.Fatalf("remote.Referrers(source) = %v", err)
+	}
+	sourceManifest, err := sourceReferrers.IndexManifest()
+	if err != nil {
+		t.Fatalf("sourceReferrers.IndexManifest() = %v", err)
+	}
+	if got := len(sourceManifest.Manifests); got != 0 {
+		t.Fatalf("source referrers = %d, want 0", got)
 	}
 }
