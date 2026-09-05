@@ -70,7 +70,7 @@ jobs:
     - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
     - name: Install yq
-      uses: mikefarah/yq@1b9b4ac5187171d2e5e3129be0cfa827c7f9d53d # v4.53.3
+      uses: mikefarah/yq@c14f446382944492701b16c1ddb48bb9dbe683e3 # v4.53.6
 
     - name: build cosign
       run: |
@@ -181,7 +181,7 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@f0be69916b439d0fcced2451b23d0f27cd46d545 # v1.6.26
+      uses: chainguard-dev/actions/kind-diag@7bd1e94b2a1b7faa891392757de7d89489070c5c # v1.6.32
 
     - name: Create vuln attestation for it
       run: |
