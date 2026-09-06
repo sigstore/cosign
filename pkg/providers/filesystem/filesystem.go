@@ -31,22 +31,37 @@ type filesystem struct{}
 var _ providers.Interface = (*filesystem)(nil)
 
 const (
-	// FilesystemTokenPath is the path to where we read an OIDC
-	// token from the filesystem.
+	// FilesystemTokenPath is the default path to where we read an OIDC
+	// token from the filesystem. Used when FilesystemTokenFileEnvVar is unset.
 	// nolint
 	FilesystemTokenPath = "/var/run/sigstore/cosign/oidc-token"
+
+	// FilesystemTokenFileEnvVar, when set, overrides FilesystemTokenPath with
+	// any user-writable location. This allows the filesystem provider to be
+	// used on desktop / dev workstations without the one-time sudo step
+	// required to create /var/run/sigstore/cosign.
+	FilesystemTokenFileEnvVar = "SIGSTORE_OIDC_TOKEN_FILE"
 )
+
+// tokenPath returns the path the filesystem provider reads the OIDC token
+// from: SIGSTORE_OIDC_TOKEN_FILE if set, else the historical default.
+func tokenPath() string {
+	if p := os.Getenv(FilesystemTokenFileEnvVar); p != "" {
+		return p
+	}
+	return FilesystemTokenPath
+}
 
 // Enabled implements providers.Interface
 func (ga *filesystem) Enabled(_ context.Context) bool {
 	// If we can stat the file without error then this is enabled.
-	_, err := os.Stat(FilesystemTokenPath)
+	_, err := os.Stat(tokenPath())
 	return err == nil
 }
 
 // Provide implements providers.Interface
 func (ga *filesystem) Provide(ctx context.Context, audience string) (string, error) { //nolint: revive
-	b, err := os.ReadFile(FilesystemTokenPath)
+	b, err := os.ReadFile(tokenPath())
 	if err != nil {
 		return "", err
 	}
