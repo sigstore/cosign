@@ -16,6 +16,7 @@
 package options
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -82,11 +83,9 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.Sk, "sk", false,
 		"whether to use a hardware security key")
 
-	slots := []string{"authentication", "signature", "card-authentication", "key-management"}
 	cmd.Flags().StringVar(&o.Slot, "slot", "signature",
-		"security key slot to use for generated key ("+
-			strings.Join(slots, "|")+")")
-	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(slots, cobra.ShellCompDirectiveNoFileComp))
+		fmt.Sprintf("security key slot to use for generated key (%s)", strings.Join(securityKeySlots, "|")))
+	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
 
 	cmd.MarkFlagsMutuallyExclusive("bundle", "certificate")
 	cmd.MarkFlagsMutuallyExclusive("bundle", "signature")

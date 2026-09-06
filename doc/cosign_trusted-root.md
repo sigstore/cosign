@@ -22,6 +22,6 @@ Tools for interacting with a Sigstore protobuf trusted root
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 * [cosign trusted-root create](cosign_trusted-root_create.md)	 - Create a Sigstore protobuf trusted root
 

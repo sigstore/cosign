@@ -107,6 +107,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.TSAServerName, "timestamp-server-name", "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server")
+	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-name", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
 		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
@@ -130,6 +131,7 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")
+	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file")

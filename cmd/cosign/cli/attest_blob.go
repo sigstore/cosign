@@ -29,11 +29,11 @@ func AttestBlob() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "attest-blob",
-		Short: "Attest the supplied blob.",
+		Short: "Attest the supplied blob",
 		Example: `  cosign attest-blob --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--f] [--r] <BLOB uri>
 
-  # attach an attestation to a blob with a local key pair file and print the attestation
-  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --output-attestation <path> <BLOB>
+  # attach an attestation to a blob with a local key pair file and write the bundle to a file
+  cosign attest-blob --predicate <FILE> --type <TYPE> --key cosign.key --bundle <path> <BLOB>
 
   # attach an attestation to a blob with a key pair stored in Azure Key Vault
   cosign attest-blob --predicate <FILE> --type <TYPE> --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <BLOB>
@@ -58,6 +58,13 @@ func AttestBlob() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
+				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
+				"", o.OutputAttestation, o.OutputCertificate, "", o.OutputSignature, o.RFC3161TimestampPath); err != nil {
+				return err
+			}
+
 			if o.Predicate.Statement == "" && len(args) != 1 {
 				return cobra.ExactArgs(1)(cmd, args)
 			}
@@ -80,6 +87,7 @@ func AttestBlob() *cobra.Command {
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
+				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				OIDCProvider:                   o.OIDC.Provider,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAClientCACert:                o.TSAClientCACert,
@@ -92,10 +100,7 @@ func AttestBlob() *cobra.Command {
 				BundlePath:                     o.BundlePath,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
-				o.NewBundleFormat, o.BundlePath, o.Key, o.IssueCertificate,
-				"", o.OutputAttestation, o.OutputCertificate, "", o.OutputSignature, o.RFC3161TimestampPath); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 

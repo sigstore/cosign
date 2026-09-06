@@ -34,7 +34,7 @@ func Debug() *cobra.Command {
 func debugProviders() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "providers",
-		Short: "Show enabled/disabled OIDC providers.",
+		Short: "Show enabled/disabled OIDC providers",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return debug.ProviderCmd(cmd.Context(), cmd.OutOrStdout())
 		},

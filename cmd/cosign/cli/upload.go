@@ -43,7 +43,7 @@ func uploadBlob() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "blob",
-		Short: "Upload one or more blobs to the supplied container image address.",
+		Short: "Upload one or more blobs to the supplied container image address",
 		Example: `  cosign upload blob -f <blob ref> <image uri>
 
   # upload a blob named foo to the location specified by <IMAGE>

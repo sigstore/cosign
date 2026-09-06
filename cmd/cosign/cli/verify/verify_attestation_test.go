@@ -17,6 +17,7 @@ package verify
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -108,5 +109,20 @@ func TestVerifyAttestationMutuallyExclusiveFlags(t *testing.T) {
 				t.Fatalf("expected %T, got: %T, %v", tt.expectedError, err, err)
 			}
 		})
+	}
+}
+
+func TestVerifyAttestationSkWithoutIdentities(t *testing.T) {
+	ctx := context.Background()
+	verifyAttestation := VerifyAttestationCommand{
+		Sk: true,
+	}
+
+	err := verifyAttestation.Exec(ctx, []string{"foo"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "opening piv token") {
+		t.Fatalf("expected PIV error, got: %v", err)
 	}
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 func TestOptions(t *testing.T) {
@@ -119,6 +120,17 @@ func TestOptions(t *testing.T) {
 			SBOMSuffix:        SBOMTagSuffix,
 			TargetRepository:  repo,
 			ROpt:              append(append([]remote.Option{}, otherROpt...), moreROpt...),
+		},
+	}, {
+		name: "bundle options option",
+		opts: []Option{WithBundleOptions(sgbundle.AllowCertificateChain())},
+		want: &options{
+			SignatureSuffix:   SignatureTagSuffix,
+			AttestationSuffix: AttestationTagSuffix,
+			SBOMSuffix:        SBOMTagSuffix,
+			TargetRepository:  repo,
+			ROpt:              defaultOptions,
+			BundleOpts:        []sgbundle.Option{sgbundle.AllowCertificateChain()},
 		},
 	}}
 
@@ -216,6 +228,9 @@ func optionsEqual(o1, o2 *options) bool {
 		return false
 	}
 	if !slicesEqual(o1.OriginalOptions, o2.OriginalOptions) {
+		return false
+	}
+	if len(o1.BundleOpts) != len(o2.BundleOpts) {
 		return false
 	}
 	return true

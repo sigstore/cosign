@@ -16,6 +16,9 @@
 package options
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -33,5 +36,6 @@ func (o *SecurityKeyOptions) AddFlags(cmd *cobra.Command) {
 		"whether to use a hardware security key")
 
 	cmd.Flags().StringVar(&o.Slot, "slot", "",
-		"security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)")
+		fmt.Sprintf("security key slot to use for generated key (default: signature) (%s)", strings.Join(securityKeySlots, "|")))
+	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
 }

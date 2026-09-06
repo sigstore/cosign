@@ -22,7 +22,7 @@ Tools for interacting with a Sigstore protobuf bundle
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 * [cosign bundle create](cosign_bundle_create.md)	 - Create a Sigstore protobuf bundle
 * [cosign bundle inspect](cosign_bundle_inspect.md)	 - Inspect a Sigstore protobuf bundle
 * [cosign bundle upgrade](cosign_bundle_upgrade.md)	 - Upgrade a Sigstore protobuf bundle

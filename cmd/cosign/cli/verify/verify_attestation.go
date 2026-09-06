@@ -32,7 +32,9 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign/cue"
 	"github.com/sigstore/cosign/v3/pkg/cosign/rego"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/policy"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 // VerifyAttestationCommand verifies a signature on a supplied container image
@@ -81,10 +83,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		return &options.KeyAndIdentityParseError{}
 	}
 
-	// always default to sha256 if the algorithm hasn't been explicitly set
-	if c.HashAlgorithm == 0 {
-		c.HashAlgorithm = crypto.SHA256
-	}
+	// c.HashAlgorithm may be 0 (unset) here, in which case LoadVerifierFromKeyOrCert
+	// picks the digest algorithm that matches the provided key, rather than assuming
+	// SHA256 for keys that require a different algorithm (e.g. P-521 ECDSA keys).
 
 	// We can't have both a key and a security key
 	if options.NOf(c.KeyRef, c.Sk) > 1 {
@@ -92,7 +93,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 
 	var identities []cosign.Identity
-	if c.KeyRef == "" {
+	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()
 		if err != nil {
 			return err
@@ -105,6 +106,9 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 	if c.AllowHTTPRegistry || c.AllowInsecure {
 		c.NameOptions = append(c.NameOptions, name.Insecure)
+	}
+	if c.AllowCertificateChain {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithBundleOptions(sgbundle.AllowCertificateChain()))
 	}
 
 	co := &cosign.CheckOpts{
@@ -121,6 +125,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat,
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 

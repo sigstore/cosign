@@ -416,6 +416,33 @@ func TestVerifyBundleWithSigVerifier(t *testing.T) {
 	}
 }
 
+func TestCheckOptsBundleOptions(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		allowCertificateChain bool
+		wantOpts              int
+	}{
+		{
+			name:                  "default returns no options",
+			allowCertificateChain: false,
+			wantOpts:              0,
+		},
+		{
+			name:                  "AllowCertificateChain adds option",
+			allowCertificateChain: true,
+			wantOpts:              1,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			co := &CheckOpts{AllowCertificateChain: tc.allowCertificateChain}
+			if got := len(co.BundleOptions()); got != tc.wantOpts {
+				t.Errorf("expected %d options, got %d", tc.wantOpts, got)
+			}
+		})
+	}
+}
+
 type mockSignedEntity struct {
 	verify.SignedEntity
 	tlogEntries []*tlog.Entry

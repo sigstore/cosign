@@ -109,6 +109,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.PayloadPath, "payload", "",
 		"path to a payload file to use rather than generating one")
 	// _ = cmd.MarkFlagFilename("payload") // no typical extensions
+	_ = cmd.Flags().MarkDeprecated("payload", "payload will always be generated automatically in future versions")
 
 	cmd.Flags().BoolVarP(&o.Recursive, "recursive", "r", false,
 		"if a multi-arch image is specified, additionally sign each discrete image")
@@ -162,6 +163,7 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")
+	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file")

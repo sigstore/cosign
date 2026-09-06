@@ -118,6 +118,13 @@ COPY --from=prepare /app /app`,
 			expected: []string{"gcr.io/someorg/coolimage", "gcr.io/someorg/someimage"},
 		},
 		{
+			name: "from-references-previous-stage",
+			fileContents: `FROM gcr.io/someorg/baseimage AS base_image
+			RUN customize
+			FROM base_image`,
+			expected: []string{"gcr.io/someorg/baseimage"},
+		},
+		{
 			name: "gauntlet",
 			fileContents: `FROM gcr.io/${TEST_IMAGE_REPO_PATH}/one AS one
 RUN script1
@@ -149,6 +156,33 @@ CMD bin`,
 			}
 			if !reflect.DeepEqual(tc.expected, got) {
 				t.Errorf("getImagesFromDockerfile returned %v, wanted %v", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestGetImagesFromDockerfileInvalidFromLines(t *testing.T) {
+	testCases := []struct {
+		name         string
+		fileContents string
+	}{
+		{
+			name: "unresolvable-build-arg",
+			fileContents: `ARG BASE_IMAGE
+FROM ${BASE_IMAGE}`,
+		},
+		{
+			name:         "missing-stage-name-after-as",
+			fileContents: `FROM gcr.io/test/image AS`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fc := newFinderCache()
+			ctx := context.Background()
+			got, err := fc.getImagesFromDockerfile(ctx, strings.NewReader(tc.fileContents))
+			if err == nil {
+				t.Errorf("getImagesFromDockerfile returned %v, wanted an error", got)
 			}
 		})
 	}

@@ -93,9 +93,15 @@ func (fc *finderCache) getImagesFromDockerfile(ctx context.Context, dockerfile i
 		lineUpper := strings.ToUpper(line)
 		switch {
 		case strings.HasPrefix(lineUpper, "FROM"):
-			switch image := fc.getImageFromLine(line); image {
-			case "scratch":
+			image, err := fc.getImageFromLine(line)
+			if err != nil {
+				return nil, err
+			}
+			switch {
+			case image == "scratch":
 				ui.Infof(ctx, "- scratch image ignored")
+			case fc.isStage(image):
+				ui.Infof(ctx, "- stage reference ignored: %s", image)
 			default:
 				images = append(images, image)
 			}
@@ -113,7 +119,8 @@ func (fc *finderCache) getImagesFromDockerfile(ctx context.Context, dockerfile i
 	return images, nil
 }
 
-func (fc *finderCache) getImageFromLine(line string) string {
+func (fc *finderCache) getImageFromLine(line string) (string, error) {
+	original := line
 	line = strings.TrimPrefix(line, "FROM")          // Remove "FROM" prefix
 	line = os.Expand(line, func(key string) string { // Substitute templated vars
 		if val, ok := fc.Env[key]; ok {
@@ -130,12 +137,18 @@ func (fc *finderCache) getImageFromLine(line string) string {
 	for i := len(fields) - 1; i > 0; i-- {
 		// Remove the "AS" portion of line
 		if strings.EqualFold(fields[i], "AS") {
+			if i == len(fields)-1 {
+				return "", fmt.Errorf("expected stage name after \"AS\" in line %q", original)
+			}
 			fc.Stages = append(fc.Stages, fields[i+1])
 			fields = fields[:i]
 			break
 		}
 	}
-	return fields[len(fields)-1] // The image should be the last portion of the line that remains
+	if len(fields) == 0 {
+		return "", fmt.Errorf("no image found in line %q (is a build arg missing from the environment?)", original)
+	}
+	return fields[len(fields)-1], nil // The image should be the last portion of the line that remains
 }
 
 func (fc *finderCache) getImageFromCopyLine(line string) string {

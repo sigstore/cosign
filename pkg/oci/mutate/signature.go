@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -189,6 +190,9 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 		certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(so.cert))
 		if err != nil {
 			return nil, err
+		}
+		if len(certs) == 0 {
+			return nil, errors.New("no certificates found in the provided certificate PEM")
 		}
 		newAnn[static.CertificateAnnotationKey] = string(so.cert)
 		cert = certs[0]

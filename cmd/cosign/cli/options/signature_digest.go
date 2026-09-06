@@ -57,19 +57,20 @@ var _ Interface = (*SignatureDigestOptions)(nil)
 func (o *SignatureDigestOptions) AddFlags(cmd *cobra.Command) {
 	validSignatureDigestAlgorithms := strings.Join(supportedSignatureAlgorithmNames(), "|")
 
-	cmd.Flags().StringVar(&o.AlgorithmName, "signature-digest-algorithm", "sha256",
+	cmd.Flags().StringVar(&o.AlgorithmName, "signature-digest-algorithm", "",
 		fmt.Sprintf("digest algorithm to use when processing a signature (%s)", validSignatureDigestAlgorithms))
 	_ = cmd.Flags().MarkDeprecated("signature-digest-algorithm", "please use --bundle, which already includes the digest algorithm")
 }
 
 // HashAlgorithm converts the algorithm's name - provided as a string - into a crypto.Hash algorithm.
-// Returns an error if the algorithm name doesn't match a supported algorithm, and defaults to SHA256
-// in the event that the given algorithm is invalid.
+// Returns an error if the algorithm name doesn't match a supported algorithm. Returns 0 if the
+// algorithm hasn't been explicitly set, so that callers can fall back to a key-specific default
+// instead of always assuming SHA256.
 func (o *SignatureDigestOptions) HashAlgorithm() (crypto.Hash, error) {
 	normalizedAlgo := strings.ToLower(strings.TrimSpace(o.AlgorithmName))
 
 	if normalizedAlgo == "" {
-		return crypto.SHA256, nil
+		return 0, nil
 	}
 
 	algo, exists := supportedSignatureAlgorithms[normalizedAlgo]

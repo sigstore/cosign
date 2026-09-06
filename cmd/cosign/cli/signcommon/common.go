@@ -25,7 +25,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"net/http"
 	"time"
@@ -75,24 +77,24 @@ func (c *SignerVerifier) Close() {
 // For an ephemeral key, it also uses the key to fetch an OIDC token, the pair of which are later used to get a Fulcio cert.
 //
 // Ensure the returned SignerVerifier is closed via calling SignerVerifier.Close.
-func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, []byte, string, error) {
+func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain string) (sign.Keypair, []byte, []byte, string, error) {
 	var keypair sign.Keypair
 	var ephemeralKeypair bool
 	var idToken string
 	var sv *SignerVerifier
-	var certBytes []byte
 	var err error
 
 	sv, ephemeralKeypair, err = signerFromKeyOpts(ctx, cert, certChain, ko)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("getting signer: %w", err)
+		return nil, nil, nil, "", fmt.Errorf("getting signer: %w", err)
 	}
 	keypair, err = key.NewSignerVerifierKeypair(sv, ko.DefaultLoadOptions)
 	if err != nil {
 		sv.Close()
-		return nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
+		return nil, nil, nil, "", fmt.Errorf("creating signerverifier keypair: %w", err)
 	}
-	certBytes = sv.Cert
+	certBytes := sv.Cert
+	chainBytes := sv.Chain
 
 	if ephemeralKeypair || ko.IssueCertificateForExistingKey {
 		idToken, err = auth.RetrieveIDToken(ctx, auth.IDTokenConfig{
@@ -108,18 +110,20 @@ func GetKeypairAndToken(ctx context.Context, ko options.KeyOpts, cert, certChain
 		})
 		if err != nil {
 			sv.Close()
-			return nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
+			return nil, nil, nil, "", fmt.Errorf("retrieving ID token: %w", err)
 		}
 	}
 
-	return keypair, certBytes, idToken, nil
+	return keypair, certBytes, chainBytes, idToken, nil
 }
 
 // ShouldUploadToTlog determines whether the user wants to upload the entry to Rekor.
 func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) (bool, error) {
 	upload := shouldUploadToTlog(ctx, ko, ref, tlogUpload)
 	var statementErr error
-	if upload {
+	// Only warn about the public good instance's data retention policy when
+	// actually uploading to it
+	if upload && hasPublicGoodRekorURL(ko.SigningConfig) {
 		privacy.StatementOnce.Do(func() {
 			ui.Infof(ctx, privacy.Statement)
 			ui.Infof(ctx, privacy.StatementConfirmation)
@@ -131,6 +135,46 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 		})
 	}
 	return upload, statementErr
+}
+
+// publicGoodRekorHostSuffixes are the hostname suffixes of Rekor instances operated
+// as part of the sigstore public good instance (production and staging). A literal
+// comparison against options.DefaultRekorURL is not sufficient because the public
+// good instance is served from multiple region- and year-specific hostnames.
+var publicGoodRekorHostSuffixes = []string{".sigstore.dev", ".sigstage.dev"}
+
+// hasPublicGoodRekorURL reports whether a signing config contains a rekor URL that
+// points at the sigstore public good instance (production or staging), which is the
+// only case where the data-retention privacy statement applies.
+func hasPublicGoodRekorURL(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	for _, s := range sc.RekorLogURLs() {
+		if isPublicGoodRekorURL(s.URL) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPublicGoodRekorURL reports whether a rekor URL points at the sigstore public good
+// instance (production or staging).
+func isPublicGoodRekorURL(rekorURL string) bool {
+	if rekorURL == "" {
+		return false
+	}
+	parsed, err := url.Parse(rekorURL)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := strings.ToLower(parsed.Hostname())
+	for _, suffix := range publicGoodRekorHostSuffixes {
+		if host == suffix[1:] || strings.HasSuffix(host, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func shouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Reference, tlogUpload bool) bool {
@@ -362,10 +406,10 @@ type CommonBundleOpts struct {
 }
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
-func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, string, pb_go_v1.HashAlgorithm, error) {
-	keypair, certBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
+func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, pb_go_v1.HashAlgorithm, error) {
+	keypair, certBytes, chainBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
+		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
 	}
 	if closer, ok := keypair.(interface{ Close() }); ok {
 		defer closer.Close()
@@ -380,22 +424,17 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
 		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
 		if err != nil {
-			return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
+			return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
-	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, signingConfig, trustedMaterial, signOpts)
+	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
+		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
 	}
 
-	pubKeyPem, err := keypair.GetPublicKeyPem()
-	if err != nil {
-		return nil, nil, "", pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting public key pem: %w", err)
-	}
-
-	return bundle, keypair.GetPublicKey(), pubKeyPem, keypair.GetHashAlgorithm(), nil
+	return bundle, keypair.GetPublicKey(), keypair.GetHashAlgorithm(), nil
 }
 
 type BundleComponents struct {
@@ -428,12 +467,31 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
 }
 
-// LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath string,
-	rekorURL, fulcioURL, oidcIssuer, tsaServerURL, trustedRootPath string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string, keyRef string, issueCertificate bool,
+// ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
+func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
+	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
+	tlogUpload bool, newBundleFormat bool, bundlePath string,
 	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
-	var err error
+	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
+	if newBundleFormat && outputSignature != "" {
+		ui.Warnf(ctx, "--output-signature is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputAttestation != "" {
+		ui.Warnf(ctx, "--output-attestation is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputCertificate != "" {
+		ui.Warnf(ctx, "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputPayload != "" {
+		ui.Warnf(ctx, "--output-payload is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && outputTimestamp != "" {
+		ui.Warnf(ctx, "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
+	}
+	if newBundleFormat && output != "" {
+		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
+	}
+
 	// If a signing config is used, then service URLs cannot be specified
 	if (useSigningConfig || signingConfigPath != "") &&
 		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
@@ -449,10 +507,17 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
 		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
 	}
+
+	return nil
+}
+
+// LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
+func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+	var err error
 	// Fetch a trusted root when:
 	// * requesting a certificate and no CT log key is provided to verify an SCT
 	// * using a signing config
-	if ((keyRef == "" || issueCertificate) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+	if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
 		(useSigningConfig || signingConfigPath != "") {
 		if trustedRootPath != "" {
 			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
@@ -476,26 +541,6 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
 		}
-	}
-
-	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
-	if newBundleFormat && outputSignature != "" {
-		ui.Warnf(context.Background(), "--output-signature is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputAttestation != "" {
-		ui.Warnf(context.Background(), "--output-attestation is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputCertificate != "" {
-		ui.Warnf(context.Background(), "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputPayload != "" {
-		ui.Warnf(context.Background(), "--output-payload is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputTimestamp != "" {
-		ui.Warnf(context.Background(), "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && output != "" {
-		ui.Warnf(context.Background(), "--output is deprecated when using --new-bundle-format and will be ignored")
 	}
 
 	return nil
@@ -586,7 +631,7 @@ func RekorBundleFromProtoTlogEntry(entry *protorekor.TransparencyLogEntry) *cbun
 }
 
 // NewLegacyBundleFromProtoBundleComponents creates a legacy bundle from a protobuf bundle.
-func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents, pubKeyPem string) ([]byte, error) {
+func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, error) {
 	signedPayload := cosign.LocalSignedPayload{
 		Base64Signature: base64.StdEncoding.EncodeToString(bc.Signature),
 	}
@@ -594,8 +639,6 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents, pubKeyPem st
 	if len(bc.Certificates) > 0 {
 		certPem, _ := EncodeCertificatesToPEM(bc.Certificates)
 		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
-	} else if pubKeyPem != "" {
-		signedPayload.Cert = base64.StdEncoding.EncodeToString([]byte(pubKeyPem))
 	}
 
 	if len(bc.RekorEntries) > 0 {
@@ -607,7 +650,7 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents, pubKeyPem st
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
 // This only supports Rekor v1. Rekor v2 requires a user-provided signing config.
-func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.SigningConfig, error) {
+func NewSigningConfigFromKeyOpts(ko options.KeyOpts) (*root.SigningConfig, error) {
 	var fulcioServices []root.Service
 	if ko.FulcioURL != "" {
 		fulcioServices = append(fulcioServices, root.Service{
@@ -628,7 +671,7 @@ func NewSigningConfigFromKeyOpts(ko options.KeyOpts, tlogUpload bool) (*root.Sig
 
 	var rekorServices []root.Service
 	var rekorConfig root.ServiceConfiguration
-	if ko.RekorURL != "" && tlogUpload {
+	if ko.RekorURL != "" {
 		rekorServices = append(rekorServices, root.Service{
 			URL:                 ko.RekorURL,
 			MajorAPIVersion:     1,

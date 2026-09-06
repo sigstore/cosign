@@ -18,16 +18,22 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign/privacy"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -201,5 +207,361 @@ func Test_ParseOCIReference(t *testing.T) {
 		} else {
 			assert.Empty(t, stderr, "expected no warning")
 		}
+	}
+}
+
+func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
+	t.Helper()
+	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{RekorURL: rekorURL})
+	if err != nil {
+		t.Fatalf("creating signing config: %v", err)
+	}
+	return sc
+}
+
+func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		wantWarning   bool
+	}{
+		{"custom Rekor URL skips public instance statement", mustSigningConfig(t, "http://localhost:3000"), false},
+		{"region-specific public good URL shows public instance statement", mustSigningConfig(t, "https://rekor.us-central1.sigstore.dev"), true},
+		{"staging public good signing config shows public instance statement", mustSigningConfig(t, "https://rekor.sigstage.dev"), true},
+		{"nil signing config skips public instance statement", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			privacy.StatementOnce = sync.Once{}
+			ko := options.KeyOpts{
+				SigningConfig:    tt.signingConfig,
+				SkipConfirmation: true,
+			}
+			var upload bool
+			var err error
+			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+			})
+			assert.NoError(t, err)
+			assert.True(t, upload)
+			if tt.wantWarning {
+				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
+			} else {
+				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
+			}
+		})
+	}
+}
+
+func TestHasPublicGoodRekorURL(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		want          bool
+	}{
+		{"nil signing config returns false", nil, false},
+		{"empty signing config returns false", mustSigningConfig(t, ""), false},
+		{"custom Rekor URL returns false", mustSigningConfig(t, "http://localhost:3000"), false},
+		{"public good Rekor URL returns true", mustSigningConfig(t, options.DefaultRekorURL), true},
+		{"signing config with cleared Rekor URLs returns false", mustSigningConfig(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, hasPublicGoodRekorURL(tt.signingConfig))
+		})
+	}
+}
+
+func TestIsPublicGoodRekorURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		rekorURL string
+		want     bool
+	}{
+		{"empty is not public good", "", false},
+		{"default production URL", options.DefaultRekorURL, true},
+		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
+		{"staging URL", "https://rekor.sigstage.dev", true},
+		{"region-specific staging URL", "https://rekor.us-central1.sigstage.dev", true},
+		{"custom self-hosted URL", "http://localhost:3000", false},
+		{"uppercase hostname is still public good", "https://REKOR.SIGSTORE.DEV", true},
+		{"lookalike domain is not public good", "https://sigstore.dev.evil.example.com", false},
+		{"lookalike suffix without dot boundary is not public good", "https://notsigstore.dev", false},
+		{"unparseable URL", "://bad-url", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isPublicGoodRekorURL(tt.rekorURL))
+		})
+	}
+}
+
+func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
+	t.Run("without certificates leaves cert field empty", func(t *testing.T) {
+		bc := &BundleComponents{
+			Signature: []byte("signature"),
+		}
+		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
+		assert.NoError(t, err)
+
+		var payload cosign.LocalSignedPayload
+		err = json.Unmarshal(bundleBytes, &payload)
+		assert.NoError(t, err)
+		assert.Empty(t, payload.Cert, "expected empty cert field when BundleComponents has no certificates")
+	})
+
+	t.Run("with certificates populates cert field", func(t *testing.T) {
+		rootCert, _, _ := test.GenerateRootCa()
+		bc := &BundleComponents{
+			Signature:    []byte("signature"),
+			Certificates: []*pb_go_v1.X509Certificate{{RawBytes: rootCert.Raw}},
+		}
+		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
+		assert.NoError(t, err)
+
+		var payload cosign.LocalSignedPayload
+		err = json.Unmarshal(bundleBytes, &payload)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, payload.Cert, "expected non-empty cert field when BundleComponents has certificates")
+	})
+}
+
+func TestValidateSigningOptions(t *testing.T) {
+	tests := []struct {
+		name              string
+		useSigningConfig  bool
+		signingConfigPath string
+		rekorURL          string
+		fulcioURL         string
+		oidcIssuer        string
+		tsaServerURL      string
+		tlogUpload        bool
+		newBundleFormat   bool
+		bundlePath        string
+		output            string
+		outputAttestation string
+		outputCertificate string
+		outputPayload     string
+		outputSignature   string
+		outputTimestamp   string
+		wantErr           bool
+		wantErrSubstr     string
+		wantWarningSubstr string
+	}{
+		{
+			name:            "valid default online signing flags",
+			rekorURL:        options.DefaultRekorURL,
+			fulcioURL:       options.DefaultFulcioURL,
+			oidcIssuer:      options.DefaultOIDCIssuerURL,
+			tlogUpload:      true,
+			newBundleFormat: true,
+			wantErr:         false,
+		},
+		{
+			name:             "valid signing config from TUF",
+			useSigningConfig: true,
+			rekorURL:         options.DefaultRekorURL,
+			fulcioURL:        options.DefaultFulcioURL,
+			oidcIssuer:       options.DefaultOIDCIssuerURL,
+			tlogUpload:       true,
+			newBundleFormat:  true,
+			wantErr:          false,
+		},
+		{
+			name:              "valid signing config from file",
+			signingConfigPath: "/path/to/signing_config.json",
+			rekorURL:          options.DefaultRekorURL,
+			fulcioURL:         options.DefaultFulcioURL,
+			oidcIssuer:        options.DefaultOIDCIssuerURL,
+			tlogUpload:        true,
+			newBundleFormat:   true,
+			wantErr:           false,
+		},
+		{
+			name:             "use signing config with custom rekor URL",
+			useSigningConfig: true,
+			rekorURL:         "http://localhost:3000",
+			tlogUpload:       true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot specify service URLs and use signing config",
+		},
+		{
+			name:             "use signing config with custom fulcio URL",
+			useSigningConfig: true,
+			fulcioURL:        "http://localhost:5555",
+			tlogUpload:       true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot specify service URLs and use signing config",
+		},
+		{
+			name:             "use signing config with custom OIDC issuer",
+			useSigningConfig: true,
+			oidcIssuer:       "http://localhost:8080",
+			tlogUpload:       true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot specify service URLs and use signing config",
+		},
+		{
+			name:             "use signing config with custom TSA server URL",
+			useSigningConfig: true,
+			tsaServerURL:     "http://localhost:3001",
+			tlogUpload:       true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot specify service URLs and use signing config",
+		},
+		{
+			name:              "signing config path with custom service URLs",
+			signingConfigPath: "/path/to/signing_config.json",
+			rekorURL:          "http://localhost:3000",
+			tlogUpload:        true,
+			wantErr:           true,
+			wantErrSubstr:     "cannot specify service URLs and use signing config",
+		},
+		{
+			name:             "use signing config with tlog upload false",
+			useSigningConfig: true,
+			rekorURL:         options.DefaultRekorURL,
+			fulcioURL:        options.DefaultFulcioURL,
+			oidcIssuer:       options.DefaultOIDCIssuerURL,
+			tlogUpload:       false,
+			newBundleFormat:  true,
+			wantErr:          true,
+			wantErrSubstr:    "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
+		},
+		{
+			name:              "signing config path with tlog upload false",
+			signingConfigPath: "/path/to/signing_config.json",
+			rekorURL:          options.DefaultRekorURL,
+			fulcioURL:         options.DefaultFulcioURL,
+			oidcIssuer:        options.DefaultOIDCIssuerURL,
+			tlogUpload:        false,
+			newBundleFormat:   true,
+			wantErr:           true,
+			wantErrSubstr:     "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
+		},
+		{
+			name:             "missing bundle output with use signing config",
+			useSigningConfig: true,
+			rekorURL:         options.DefaultRekorURL,
+			fulcioURL:        options.DefaultFulcioURL,
+			oidcIssuer:       options.DefaultOIDCIssuerURL,
+			tlogUpload:       true,
+			newBundleFormat:  false,
+			bundlePath:       "",
+			wantErr:          true,
+			wantErrSubstr:    "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
+		},
+		{
+			name:              "missing bundle output with signing config path",
+			signingConfigPath: "/path/to/signing_config.json",
+			rekorURL:          options.DefaultRekorURL,
+			fulcioURL:         options.DefaultFulcioURL,
+			oidcIssuer:        options.DefaultOIDCIssuerURL,
+			tlogUpload:        true,
+			newBundleFormat:   false,
+			bundlePath:        "",
+			wantErr:           true,
+			wantErrSubstr:     "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
+		},
+		{
+			name:             "legacy bundle format with explicit bundle path is valid with use signing config",
+			useSigningConfig: true,
+			rekorURL:         options.DefaultRekorURL,
+			fulcioURL:        options.DefaultFulcioURL,
+			oidcIssuer:       options.DefaultOIDCIssuerURL,
+			tlogUpload:       true,
+			newBundleFormat:  false,
+			bundlePath:       "/tmp/bundle.json",
+			wantErr:          false,
+		},
+		{
+			name:              "legacy bundle format with explicit bundle path is valid with signing config path",
+			signingConfigPath: "/path/to/signing_config.json",
+			rekorURL:          options.DefaultRekorURL,
+			fulcioURL:         options.DefaultFulcioURL,
+			oidcIssuer:        options.DefaultOIDCIssuerURL,
+			tlogUpload:        true,
+			newBundleFormat:   false,
+			bundlePath:        "/tmp/bundle.json",
+			wantErr:           false,
+		},
+		{
+			name:            "custom service URLs without signing config is valid",
+			rekorURL:        "http://localhost:3000",
+			tlogUpload:      true,
+			newBundleFormat: true,
+			wantErr:         false,
+		},
+		{
+			name:            "tlog upload false without signing config is valid",
+			tlogUpload:      false,
+			newBundleFormat: true,
+			wantErr:         false,
+		},
+		{
+			name:              "deprecated output-signature warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			outputSignature:   "sig.sig",
+			wantWarningSubstr: "--output-signature is deprecated when using --new-bundle-format",
+		},
+		{
+			name:              "deprecated output-attestation warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			outputAttestation: "att.att",
+			wantWarningSubstr: "--output-attestation is deprecated when using --new-bundle-format",
+		},
+		{
+			name:              "deprecated output-certificate warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			outputCertificate: "cert.crt",
+			wantWarningSubstr: "--output-certificate is deprecated when using --new-bundle-format",
+		},
+		{
+			name:              "deprecated output-payload warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			outputPayload:     "payload.json",
+			wantWarningSubstr: "--output-payload is deprecated when using --new-bundle-format",
+		},
+		{
+			name:              "deprecated rfc3161-timestamp warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			outputTimestamp:   "ts.tsr",
+			wantWarningSubstr: "--rfc3161-timestamp is deprecated when using --new-bundle-format",
+		},
+		{
+			name:              "deprecated output warning with new bundle format",
+			newBundleFormat:   true,
+			tlogUpload:        true,
+			output:            "out.sig",
+			wantWarningSubstr: "--output is deprecated when using --new-bundle-format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+				err = ValidateSigningOptions(ctx, tt.useSigningConfig, tt.signingConfigPath,
+					tt.rekorURL, tt.fulcioURL, tt.oidcIssuer, tt.tsaServerURL,
+					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath,
+					tt.output, tt.outputAttestation, tt.outputCertificate, tt.outputPayload, tt.outputSignature, tt.outputTimestamp)
+			})
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrSubstr != "" {
+					assert.Contains(t, err.Error(), tt.wantErrSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.wantWarningSubstr != "" {
+				assert.Contains(t, stderr, tt.wantWarningSubstr)
+			}
+		})
 	}
 }

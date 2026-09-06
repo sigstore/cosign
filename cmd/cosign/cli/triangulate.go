@@ -29,7 +29,7 @@ func Triangulate() *cobra.Command {
 	cmd := &cobra.Command{
 		Deprecated:       "triangulate will be removed in v4.0.0 (see https://github.com/sigstore/cosign/issues/4696). Instead, please use `oras discover` or `cosign tree` to show referring artifacts",
 		Use:              "triangulate",
-		Short:            "Outputs the located cosign image reference. This is the location where cosign stores the specified artifact type.",
+		Short:            "Outputs the located cosign image reference. This is the location where cosign stores the specified artifact type",
 		Example:          "  cosign triangulate <IMAGE>",
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {

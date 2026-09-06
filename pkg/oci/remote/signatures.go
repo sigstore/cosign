@@ -28,7 +28,9 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/empty"
 	"github.com/sigstore/cosign/v3/pkg/oci/internal/signature"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const maxLayers = 1000
@@ -81,8 +83,11 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	b := &sgbundle.Bundle{}
-	err = b.UnmarshalJSON(bundleBytes)
+	pb := &protobundle.Bundle{}
+	if err := protojson.Unmarshal(bundleBytes, pb); err != nil {
+		return nil, err
+	}
+	b, err := sgbundle.NewBundle(pb, o.BundleOpts...)
 	if err != nil {
 		return nil, err
 	}

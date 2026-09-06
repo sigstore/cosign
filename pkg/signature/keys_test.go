@@ -15,14 +15,21 @@
 package signature
 
 import (
+	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/sha512"
 	"errors"
 	"os"
 	"testing"
 
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
@@ -165,5 +172,61 @@ func TestVerifierForKeyRefError(t *testing.T) {
 func pass(s string) cosign.PassFunc {
 	return func(_ bool) ([]byte, error) {
 		return []byte(s), nil
+	}
+}
+
+func TestPublicKeyFromKeyRefAutoDetectAlgorithm(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	ctx := context.Background()
+
+	msg := []byte("test message payload")
+
+	curves := []struct {
+		curve  elliptic.Curve
+		digest func([]byte) []byte
+	}{
+		{elliptic.P256(), func(b []byte) []byte { h := sha256.Sum256(b); return h[:] }},
+		{elliptic.P384(), func(b []byte) []byte { h := sha512.Sum384(b); return h[:] }},
+		{elliptic.P521(), func(b []byte) []byte { h := sha512.Sum512(b); return h[:] }},
+	}
+
+	for _, tc := range curves {
+		priv, err := ecdsa.GenerateKey(tc.curve, rand.Reader)
+		if err != nil {
+			t.Fatalf("failed to generate key: %v", err)
+		}
+		pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
+		if err != nil {
+			t.Fatalf("failed to marshal pub key: %v", err)
+		}
+		tmpPubFile, err := os.CreateTemp(tmpDir, "cosign_test_*.pub")
+		if err != nil {
+			t.Fatalf("failed to create temp file: %v", err)
+		}
+		if _, err := tmpPubFile.Write(pemBytes); err != nil {
+			t.Fatalf("failed to write pub file: %v", err)
+		}
+		tmpPubFile.Close()
+
+		refVerifier, err := PublicKeyFromKeyRef(ctx, tmpPubFile.Name())
+		if err != nil {
+			t.Fatalf("PublicKeyFromKeyRef failed for curve %s: %v", tc.curve.Params().Name, err)
+		}
+		rawVerifier, err := LoadPublicKeyRaw(pemBytes, 0)
+		if err != nil {
+			t.Fatalf("LoadPublicKeyRaw failed for curve %s: %v", tc.curve.Params().Name, err)
+		}
+
+		sig, err := ecdsa.SignASN1(rand.Reader, priv, tc.digest(msg))
+		if err != nil {
+			t.Fatalf("failed to sign message for curve %s: %v", tc.curve.Params().Name, err)
+		}
+		if err := refVerifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
+			t.Fatalf("ref verifier failed to verify signature for curve %s: %v", tc.curve.Params().Name, err)
+		}
+		if err := rawVerifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
+			t.Fatalf("raw verifier failed to verify signature for curve %s: %v", tc.curve.Params().Name, err)
+		}
 	}
 }

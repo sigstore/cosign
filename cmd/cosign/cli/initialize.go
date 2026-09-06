@@ -26,7 +26,7 @@ func Initialize() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "initialize",
-		Short: "Initializes SigStore root to retrieve trusted certificate and key targets for verification.",
+		Short: "Initializes SigStore root to retrieve trusted certificate and key targets for verification",
 		Long: `Initializes SigStore root to retrieve trusted certificate and key targets for verification.
 
 The following options are used by default:

@@ -25,7 +25,7 @@ Cosign supports:
 
 `Cosign` is developed as part of the [`sigstore`](https://sigstore.dev) project.
 We also use a [slack channel](https://sigstore.slack.com)!
-Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-2ub0ztl5z-PkWb_Ldwef5d6nb~oryaTA) for the invite link.
+Click [here](https://join.slack.com/t/sigstore/shared_invite/zt-47srvpyn6-j8Ek5hGBwKN32IjLw8BvYA) for the invite link.
 
 ## Installation
 
@@ -519,6 +519,8 @@ The proposed mechanism is flexible enough to support signing arbitrary things.
 
 `cosign` supports using a KMS provider to generate and sign keys.
 Right now cosign supports Hashicorp Vault, AWS KMS, GCP KMS, Azure Key Vault and we are hoping to support more in the future!
+
+Additional KMS providers are available as external plugins, such as [OVHcloud KMS](https://github.com/ovh/sigstore-kms-ovhcloud).
 
 See the [KMS docs](https://docs.sigstore.dev/cosign/key_management/overview/) for more details.
 

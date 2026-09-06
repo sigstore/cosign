@@ -37,7 +37,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
-	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 
@@ -70,14 +69,14 @@ type VerifyBlobCmd struct {
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	HashAlgorithm                crypto.Hash
+	AllowCertificateChain        bool
 }
 
 // nolint
 func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
-	// always default to sha256 if the algorithm hasn't been explicitly set
-	if c.HashAlgorithm == 0 {
-		c.HashAlgorithm = crypto.SHA256
-	}
+	// c.HashAlgorithm may be 0 (unset) here, in which case LoadVerifierFromKeyOrCert
+	// picks the digest algorithm that matches the provided key, rather than assuming
+	// SHA256 for keys that require a different algorithm (e.g. P-521 ECDSA keys).
 
 	// Require a certificate/key OR a local bundle file that has the cert.
 	if options.NOf(c.KeyRef, c.CertRef, c.Sk, c.BundlePath) == 0 {
@@ -96,7 +95,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 
 	var identities []cosign.Identity
 	var err error
-	if c.KeyRef == "" {
+	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()
 		if err != nil {
 			return err
@@ -114,8 +113,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath),
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
+	co.NewBundleFormat = c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath, co.BundleOptions()...)
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
 	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
@@ -138,7 +138,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	if co.NewBundleFormat {
-		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath)
+		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
 		if err != nil {
 			return err
 		}
@@ -189,26 +189,14 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		if err != nil {
 			return err
 		}
-		// A certificate is required in the bundle unless we specified with
-		//  --key, --sk, or --certificate.
-		if b.Cert == "" && co.SigVerifier == nil && cert == nil {
-			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
-		}
-		// We have to condition on this because sign-blob may not output the signing
-		// key to the bundle when there is no tlog upload.
 		if b.Cert != "" {
-			// b.Cert can either be a certificate or public key
 			certBytes := []byte(b.Cert)
 			if isb64(certBytes) {
 				certBytes, _ = base64.StdEncoding.DecodeString(b.Cert)
 			}
 			bundleCert, err := loadCertFromPEM(certBytes)
 			if err != nil {
-				// check if cert is actually a public key
-				co.SigVerifier, err = sigs.LoadPublicKeyRaw(certBytes, crypto.SHA256)
-				if err != nil {
-					return fmt.Errorf("loading verifier from bundle: %w", err)
-				}
+				return fmt.Errorf("loading verifier certificate from bundle: %w", err)
 			}
 			// if a cert was passed in, make sure it matches the cert in the bundle
 			if cert != nil && !cert.Equal(bundleCert) {
@@ -216,6 +204,12 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			}
 			cert = bundleCert
 		}
+		// A verifier must come either from a certificate from the bundle,
+		// or provided via --key, --sk, or --certificate.
+		if co.SigVerifier == nil && cert == nil {
+			return fmt.Errorf("bundle does not contain cert for verification, please provide public key")
+		}
+
 		opts = append(opts, static.WithBundle(b.Bundle))
 	}
 	if c.RFC3161TimestampPath != "" {

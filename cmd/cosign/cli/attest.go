@@ -30,7 +30,7 @@ func Attest() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "attest",
-		Short: "Attest the supplied container image.",
+		Short: "Attest the supplied container image",
 		Example: `  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
 
   # attach an attestation to a container image Google sign-in
@@ -68,13 +68,23 @@ func Attest() *cobra.Command {
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
-		PreRunE: func(_ *cobra.Command, _ []string) error {
+		PreRunE: func(_ *cobra.Command, args []string) error {
 			if o.NewBundleFormat && o.NoUpload && o.BundlePath == "" {
 				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			}
+			if o.BundlePath != "" && len(args) > 1 {
+				return fmt.Errorf("cannot use --bundle when attesting multiple images")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
+				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
+				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
+				"", "", "", "", "", ""); err != nil {
+				return err
+			}
+
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -94,6 +104,7 @@ func Attest() *cobra.Command {
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
+				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				OIDCProvider:                   o.OIDC.Provider,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAClientCACert:                o.TSAClientCACert,
@@ -105,10 +116,7 @@ func Attest() *cobra.Command {
 				BundlePath:                     o.BundlePath,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL, o.TrustedRootPath, o.TlogUpload,
-				o.NewBundleFormat, "", o.Key, o.IssueCertificate,
-				"", "", "", "", "", ""); err != nil {
+			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 

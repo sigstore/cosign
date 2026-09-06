@@ -71,12 +71,15 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.AuthConfig.Username, "registry-username", "",
 		"registry basic auth username")
+	_ = cmd.RegisterFlagCompletionFunc("registry-username", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.AuthConfig.Password, "registry-password", "",
 		"registry basic auth password")
+	_ = cmd.RegisterFlagCompletionFunc("registry-password", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.AuthConfig.RegistryToken, "registry-token", "",
 		"registry bearer auth token")
+	_ = cmd.RegisterFlagCompletionFunc("registry-token", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.RegistryCACert, "registry-cacert", "",
 		"path to the X.509 CA certificate file in PEM format to be used for the connection to the registry")
@@ -92,6 +95,7 @@ func (o *RegistryOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.RegistryServerName, "registry-server-name", "",
 		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry")
+	_ = cmd.RegisterFlagCompletionFunc("registry-server-name", cobra.NoFileCompletions)
 
 	o.RefOpts.AddFlags(cmd)
 }

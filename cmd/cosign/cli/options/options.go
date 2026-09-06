@@ -23,7 +23,7 @@ type Interface interface {
 }
 
 var bundleExts = []string{
-	"bundle",
+	"sigstore.json", "bundle",
 }
 var certificateExts = []string{
 	"cert",
@@ -59,4 +59,11 @@ var wasmExts = []string{
 var rekorEntryTypes = []string{
 	"dsse", // first one is the default
 	"intoto",
+}
+
+var securityKeySlots = []string{
+	"authentication",
+	"signature",
+	"card-authentication",
+	"key-management",
 }

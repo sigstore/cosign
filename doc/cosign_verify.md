@@ -59,6 +59,7 @@ cosign verify [flags]
 ### Options
 
 ```
+      --allow-certificate-chain                         allow X.509 certificate chains in bundle verification material for v0.3+ bundles
       --allow-http-registry                             whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
       --allow-insecure-registry                         whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                             extra key=value pairs to sign
@@ -80,7 +81,6 @@ cosign verify [flags]
       --local-image                                     whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
   -o, --output string                                   output format for the signing image information (json|text) (default "json")
-      --payload string                                  payload path or remote URL
       --registry-cacert string                          path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                     path to the X.509 certificate file in PEM format to be used for the connection to the registry
       --registry-client-key string                      path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
@@ -104,5 +104,5 @@ cosign verify [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

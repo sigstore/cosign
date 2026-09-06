@@ -1,9 +1,19 @@
 ## cosign piv-tool set-puk
 
-sets the PUK on a hardware token
+Set the PUK on a hardware token
 
 ```
 cosign piv-tool set-puk [flags]
+```
+
+### Examples
+
+```
+  # set a new PUK interactively (uses defaults if flags omitted)
+  cosign piv-tool set-puk
+
+  # set a specific PUK
+  cosign piv-tool set-puk --old-puk <old-puk> --new-puk <new-puk>
 ```
 
 ### Options

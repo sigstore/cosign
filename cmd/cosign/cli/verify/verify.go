@@ -32,9 +32,11 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
@@ -93,10 +95,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return flag.ErrHelp
 	}
 
-	// always default to sha256 if the algorithm hasn't been explicitly set
-	if c.HashAlgorithm == 0 {
-		c.HashAlgorithm = crypto.SHA256
-	}
+	// c.HashAlgorithm may be 0 (unset) here, in which case LoadVerifierFromKeyOrCert
+	// picks the digest algorithm that matches the provided key, rather than assuming
+	// SHA256 for keys that require a different algorithm (e.g. P-521 ECDSA keys).
 
 	// key and cert identity are mutually exclusive
 	if options.NOf(c.KeyRef, c.CertIdentity, c.CertIdentityRegexp) > 1 {
@@ -104,7 +105,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 
 	var identities []cosign.Identity
-	if c.KeyRef == "" {
+	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()
 		if err != nil {
 			return err
@@ -117,6 +118,9 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	}
 	if c.AllowHTTPRegistry || c.AllowInsecure {
 		c.NameOptions = append(c.NameOptions, name.Insecure)
+	}
+	if c.AllowCertificateChain {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithBundleOptions(sgbundle.AllowCertificateChain()))
 	}
 
 	co := &cosign.CheckOpts{
@@ -136,7 +140,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		MaxWorkers:                   c.MaxWorkers,
 		ExperimentalOCI11:            c.ExperimentalOCI11,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
-		NewBundleFormat:              c.NewBundleFormat,
+		NewBundleFormat:              c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat,
+		AllowCertificateChain:        c.AllowCertificateChain,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
@@ -149,7 +154,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		co.NewBundleFormat = hasBundles
 	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
-		if err == nil && c.NewBundleFormat {
+		if err == nil && (c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat) {
 			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false

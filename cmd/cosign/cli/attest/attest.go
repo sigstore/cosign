@@ -135,13 +135,16 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	if c.SigningConfig == nil {
-		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts, c.TlogUpload)
+		c.SigningConfig, err = signcommon.NewSigningConfigFromKeyOpts(c.KeyOpts)
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
+		if !c.TlogUpload {
+			c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
+		}
 	}
 
-	bundleBytes, pubKey, pubKeyPem, hashAlgProto, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	bundleBytes, pubKey, hashAlgProto, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	if err != nil {
 		return fmt.Errorf("creating bundle: %w", err)
 	}
@@ -172,7 +175,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		return fmt.Errorf("extracting components from bundle: %w", err)
 	}
 
-	legacyBundleBytes, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents, pubKeyPem)
+	legacyBundleBytes, err := signcommon.NewLegacyBundleFromProtoBundleComponents(bundleComponents)
 	if err != nil {
 		return fmt.Errorf("creating legacy bundle: %w", err)
 	}

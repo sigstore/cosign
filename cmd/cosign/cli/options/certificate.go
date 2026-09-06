@@ -51,33 +51,43 @@ func (o *CertVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(&o.CertIdentity, "certificate-identity", "",
 		"The identity expected in a valid Fulcio certificate. Valid values include email address, DNS names, IP addresses, and URIs. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-identity", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertIdentityRegexp, "certificate-identity-regexp", "",
 		"A regular expression alternative to --certificate-identity. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-identity-regexp", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertOidcIssuer, "certificate-oidc-issuer", "",
 		"The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-oidc-issuer", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertOidcIssuerRegexp, "certificate-oidc-issuer-regexp", "",
 		"A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-oidc-issuer-regexp", cobra.NoFileCompletions)
 
 	// -- Cert extensions begin --
 	// Source: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
 	cmd.Flags().StringVar(&o.CertGithubWorkflowTrigger, "certificate-github-workflow-trigger", "",
 		"contains the event_name claim from the GitHub OIDC Identity token that contains the name of the event that triggered the workflow run")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-github-workflow-trigger", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertGithubWorkflowSha, "certificate-github-workflow-sha", "",
 		"contains the sha claim from the GitHub OIDC Identity token that contains the commit SHA that the workflow run was based upon.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-github-workflow-sha", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertGithubWorkflowName, "certificate-github-workflow-name", "",
 		"contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-github-workflow-name", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertGithubWorkflowRepository, "certificate-github-workflow-repository", "",
 		"contains the repository claim from the GitHub OIDC Identity token that contains the repository that the workflow run was based upon")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-github-workflow-repository", cobra.NoFileCompletions)
 
 	cmd.Flags().StringVar(&o.CertGithubWorkflowRef, "certificate-github-workflow-ref", "",
 		"contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.")
+	_ = cmd.RegisterFlagCompletionFunc("certificate-github-workflow-ref", cobra.NoFileCompletions)
 	// -- Cert extensions end --
+
 	cmd.Flags().StringVar(&o.CAIntermediates, "ca-intermediates", "",
 		"path to a file of intermediate CA certificates in PEM format which will be needed "+
 			"when building the certificate chains for the signing certificate. "+

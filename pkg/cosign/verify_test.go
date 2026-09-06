@@ -2410,6 +2410,83 @@ func TestHasLocalSigstoreBundles_OCIReferrers(t *testing.T) {
 	assert.True(t, hasBundles, "expected true for OCI referrers with bundle layers")
 }
 
+func TestHasLocalSigstoreBundles_ImageIndex(t *testing.T) {
+	// Create a layout with an image index and OCI referrers pointing to it with bundle layers
+	tmp := t.TempDir()
+
+	// Create base image index
+	idx, err := random.Index(100, 3, 2)
+	require.NoError(t, err)
+	sii := signed.ImageIndex(idx)
+
+	// Write the signed image index with proper annotations
+	if err := layout.WriteSignedImageIndex(tmp, sii); err != nil {
+		t.Fatalf("WriteSignedImageIndex() = %v", err)
+	}
+
+	// Get the layout and root image index
+	p, err := ggcrlayout.FromPath(tmp)
+	require.NoError(t, err)
+
+	ii, err := p.ImageIndex()
+	require.NoError(t, err)
+
+	manifest, err := ii.IndexManifest()
+	require.NoError(t, err)
+
+	// Find the target digest for the imageIndex entry
+	var targetDigest v1.Hash
+	for _, m := range manifest.Manifests {
+		if m.Annotations["kind"] == "dev.cosignproject.cosign/imageIndex" {
+			targetDigest = m.Digest
+			break
+		}
+	}
+	require.NotEmpty(t, targetDigest.String(), "target digest should be found for imageIndex")
+
+	// Create a bundle layer with the sigstore bundle media type
+	bundleContent := []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
+	bundleLayer := stream.NewLayer(io.NopCloser(bytes.NewReader(bundleContent)),
+		stream.WithMediaType("application/vnd.dev.sigstore.bundle.v0.3+json"))
+
+	// Build the referrer manifest
+	referrerImg := empty.Image
+	referrerImg, err = gcrMutate.AppendLayers(referrerImg, bundleLayer)
+	require.NoError(t, err)
+
+	// Append image to materialize stream layers before calling Manifest()
+	err = p.AppendImage(referrerImg)
+	require.NoError(t, err)
+
+	// Get the manifest and add Subject field pointing to the image index
+	referrerManifest, err := referrerImg.Manifest()
+	require.NoError(t, err)
+
+	referrerManifest.Subject = &v1.Descriptor{
+		MediaType: "application/vnd.oci.image.index.v1+json",
+		Digest:    targetDigest,
+		Size:      0,
+	}
+
+	// Write the referrer manifest to blobs/sha256
+	blobsDir := tmp + "/blobs/sha256"
+	err = os.MkdirAll(blobsDir, 0755)
+	require.NoError(t, err)
+
+	manifestBytes, err := json.Marshal(referrerManifest)
+	require.NoError(t, err)
+
+	manifestHash := v1.Hash{Algorithm: "sha256", Hex: fmt.Sprintf("%x", sha256.Sum256(manifestBytes))}
+	manifestPath := filepath.Join(blobsDir, manifestHash.Hex)
+	err = os.WriteFile(manifestPath, manifestBytes, 0644)
+	require.NoError(t, err)
+
+	// Test that hasLocalSigstoreBundles detects the referrer
+	hasBundles, err := hasLocalSigstoreBundles(tmp)
+	require.NoError(t, err)
+	assert.True(t, hasBundles, "expected true for OCI referrers with bundle layers")
+}
+
 func TestHasLocalSigstoreBundles_NoBlobsDir(t *testing.T) {
 	// Create a layout without blobs/sha256 directory
 	tmp := t.TempDir()

@@ -152,13 +152,19 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					name:         "cert chain matches key",
 					keyref:       keyRef,
 					certref:      certRef,
-					certchainref: chainRef,
+					certchainref: subCertPem,
 				},
 				{
 					name:         "cert chain partial",
 					keyref:       keyRef,
 					certref:      certRef,
 					certchainref: subCertPem,
+				},
+				{
+					name:         "cert chain includes root",
+					keyref:       keyRef,
+					certref:      certRef,
+					certchainref: chainRef,
 				},
 				{
 					name:         "fail: cert chain bad",

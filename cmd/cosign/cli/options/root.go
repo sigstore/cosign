@@ -51,6 +51,7 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.PersistentFlags().DurationVarP(&o.Timeout, "timeout", "t", DefaultTimeout,
 		"timeout for commands")
+	_ = cmd.RegisterFlagCompletionFunc("timeout", cobra.NoFileCompletions)
 }
 
 func BindViper(cmd *cobra.Command, args []string) {

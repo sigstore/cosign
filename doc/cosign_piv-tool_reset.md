@@ -1,9 +1,15 @@
 ## cosign piv-tool reset
 
-reset resets the hardware token completely
+Reset the hardware token completely
 
 ```
 cosign piv-tool reset [flags]
+```
+
+### Examples
+
+```
+  cosign piv-tool reset
 ```
 
 ### Options

@@ -32,6 +32,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -449,4 +450,19 @@ func TestTransformOutputSuccess(t *testing.T) {
 	assert.Equal(t, "sha256:deadbeef", sci.Critical.Image.DockerManifestDigest, "digest mismatch")
 	assert.Equal(t, "https://slsa.dev/provenance/v0.2", sci.Critical.Type, "type mismatch")
 	assert.Equal(t, map[string]any{"foo": "bar"}, sci.Optional, "missing annotation")
+}
+
+func TestVerifySkWithoutIdentities(t *testing.T) {
+	ctx := context.Background()
+	verifyCommand := VerifyCommand{
+		Sk: true,
+	}
+
+	err := verifyCommand.Exec(ctx, []string{"foo"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "opening piv token") {
+		t.Fatalf("expected PIV error, got: %v", err)
+	}
 }

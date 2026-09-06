@@ -1,6 +1,6 @@
 ## cosign sign
 
-Sign the supplied container image.
+Sign the supplied container image
 
 ### Synopsis
 
@@ -18,7 +18,7 @@ cosign sign [flags]
 ### Examples
 
 ```
-  cosign sign --key <key path>|<kms uri> [--payload <path>] [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -85,7 +85,6 @@ cosign sign [flags]
       --oidc-disable-ambient-providers                  Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-provider string                            Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                        OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
-      --payload string                                  path to a payload file to use rather than generating one
   -r, --recursive                                       if a multi-arch image is specified, additionally sign each discrete image
       --registry-cacert string                          path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                     path to the X.509 certificate file in PEM format to be used for the connection to the registry
@@ -104,7 +103,6 @@ cosign sign [flags]
       --timestamp-server-name string                    SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --trusted-root string                             optional path to a TrustedRoot JSON file to verify a signature after signing
       --upload                                          whether to upload the signature (default true)
-      --use-signing-config                              whether to use a TUF-provided signing config for the service URLs (default true)
   -y, --yes                                             skip confirmation prompts for non-destructive operations
 ```
 
@@ -118,5 +116,5 @@ cosign sign [flags]
 
 ### SEE ALSO
 
-* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry.
+* [cosign](cosign.md)	 - A tool for Container Signing, Verification and Storage in an OCI registry
 

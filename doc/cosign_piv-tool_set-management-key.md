@@ -1,9 +1,22 @@
 ## cosign piv-tool set-management-key
 
-sets the management key of a hardware token
+Set the management key of a hardware token
 
 ```
 cosign piv-tool set-management-key [flags]
+```
+
+### Examples
+
+```
+  # set a new management key interactively (uses defaults if flags omitted)
+  cosign piv-tool set-management-key
+
+  # set a random management key
+  cosign piv-tool set-management-key --random-management-key
+
+  # set a specific new management key
+  cosign piv-tool set-management-key --old-key <old-key> --new-key <new-key>
 ```
 
 ### Options

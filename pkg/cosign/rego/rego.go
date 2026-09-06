@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -30,19 +29,6 @@ import (
 // * Provides no Bindings. Do not use a query that sets a variable, e.g. x := data.signature.allow
 // * Queries for a single value.
 const QUERY = "data.signature.allow"
-
-// CosignRegoPackageName defines the expected package name of a provided rego module
-const CosignRegoPackageName = "sigstore"
-
-// CosignEvaluationRule defines the expected evaluation role of a provided rego module
-const CosignEvaluationRule = "isCompliant"
-
-// CosignRuleResult defines a expected result object when wrapping the custom messages of the result of our cosign rego rule
-type CosignRuleResult struct {
-	Warning string `json:"warning,omitempty"`
-	Error   string `json:"error,omitempty"`
-	Result  bool   `json:"result,omitempty"`
-}
 
 func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 	ctx := context.Background()
@@ -89,78 +75,4 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 		errs = append(errs, fmt.Errorf("result is undefined for query '%s'", QUERY))
 	}
 	return errs
-}
-
-// ValidateJSONWithModuleInput takes the body of the results to evaluate and the defined module
-// in a policy to validate against the input data
-func ValidateJSONWithModuleInput(jsonBody []byte, moduleInput string) (warnings error, errors error) {
-	ctx := context.Background()
-	query := fmt.Sprintf("%s = data.%s.%s", CosignEvaluationRule, CosignRegoPackageName, CosignEvaluationRule)
-	module := fmt.Sprintf("%s.rego", CosignRegoPackageName)
-
-	r := rego.New(
-		rego.Query(query),
-		rego.Module(module, moduleInput),
-		rego.SetRegoVersion(ast.RegoV0),
-	)
-
-	evalQuery, err := r.PrepareForEval(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var input interface{}
-	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
-	dec.UseNumber()
-	if err := dec.Decode(&input); err != nil {
-		return nil, err
-	}
-
-	rs, err := evalQuery.Eval(ctx, rego.EvalInput(input))
-	if err != nil {
-		return nil, err
-	}
-
-	for _, result := range rs {
-		switch response := result.Bindings[CosignEvaluationRule].(type) {
-		case []interface{}:
-			return evaluateRegoEvalMapResult(query, response)
-		case bool:
-			if response {
-				return nil, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("policy is not compliant for query '%s'", query)
-}
-
-func evaluateRegoEvalMapResult(query string, response []interface{}) (warning error, retErr error) {
-	retErr = fmt.Errorf("policy is not compliant for query %q", query) //nolint: revive
-	for _, r := range response {
-		rMap, ok := r.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("policy is not compliant for query '%s': unexpected result type %T", query, r)
-		}
-		mapBytes, err := json.Marshal(rMap)
-		if err != nil {
-			return nil, fmt.Errorf("policy is not compliant for query '%s' due to parsing errors: %w", query, err)
-		}
-		var resultObject CosignRuleResult
-		err = json.Unmarshal(mapBytes, &resultObject)
-		if err != nil {
-			return nil, fmt.Errorf("policy is not compliant for query '%s' due to parsing errors: %w", query, err)
-		}
-
-		// Check if it is complaint
-		if resultObject.Result {
-			if resultObject.Warning == "" {
-				return nil, nil
-			}
-			return fmt.Errorf("warning: %s", resultObject.Warning), nil
-		}
-		warning = errors.New(resultObject.Warning)
-		retErr = fmt.Errorf("policy is not compliant for query '%s' with errors: %s", query, resultObject.Error) //nolint: revive
-	}
-	return warning, retErr
 }

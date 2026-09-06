@@ -33,7 +33,7 @@ func Save() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:              "save",
-		Short:            "Save the container image and associated signatures to disk at the specified directory.",
+		Short:            "Save the container image and associated signatures to disk at the specified directory",
 		Long:             "Save the container image and associated signatures to disk at the specified directory.",
 		Example:          `  cosign save --dir <path to directory> <IMAGE>`,
 		Args:             cobra.ExactArgs(1),

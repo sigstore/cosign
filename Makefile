@@ -32,16 +32,20 @@ endif
 PROJECT_ID ?= projectsigstore
 RUNTIME_IMAGE ?= gcr.io/distroless/static
 GIT_TAG ?= dirty-tag
-GIT_VERSION ?= $(shell git describe --tags --always --dirty)
-GIT_HASH ?= $(shell git rev-parse HEAD)
+IS_GIT_REPO := $(shell git rev-parse --is-inside-work-tree 2>/dev/null)
+GIT_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+GIT_HASH ?= $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 DATE_FMT = +%Y-%m-%dT%H:%M:%SZ
-SOURCE_DATE_EPOCH ?= $(shell git log -1 --no-show-signature --pretty=%ct)
+SOURCE_DATE_EPOCH ?= $(shell git log -1 --no-show-signature --pretty=%ct 2>/dev/null)
 ifdef SOURCE_DATE_EPOCH
     BUILD_DATE ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u -r "$(SOURCE_DATE_EPOCH)" "$(DATE_FMT)" 2>/dev/null || date -u "$(DATE_FMT)")
 else
     BUILD_DATE ?= $(shell date "$(DATE_FMT)")
 endif
 GIT_TREESTATE = "clean"
+ifeq ($(IS_GIT_REPO),)
+    GIT_TREESTATE = "unknown"
+endif
 DIFF = $(shell git diff --quiet >/dev/null 2>&1; if [ $$? -eq 1 ]; then echo "1"; fi)
 ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
@@ -56,9 +60,6 @@ LDFLAGS=-buildid= -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION)
         -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 
 SRCS = $(shell find cmd -iname "*.go") $(shell find pkg -iname "*.go")
-
-GOLANGCI_LINT_DIR = $(shell pwd)/bin
-GOLANGCI_LINT_BIN = $(GOLANGCI_LINT_DIR)/golangci-lint
 
 KO_PREFIX ?= gcr.io/projectsigstore
 export KO_DOCKER_REPO=$(KO_PREFIX)
@@ -101,13 +102,13 @@ cross:
 # lint / test section
 #####################
 
-golangci-lint:
-	rm -f $(GOLANGCI_LINT_BIN) || :
-	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GOEXE) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2  ;\
-
-lint: golangci-lint ## Run golangci-lint linter
-	$(GOLANGCI_LINT_BIN) run -n
+lint:
+	docker run -t --rm -v $(PWD):/app -w /app \
+		--user $(shell id -u):$(shell id -g) \
+		-v $(shell go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $(shell go env GOMODCACHE):/go/pkg/mod -e GOMODCACHE=/go/pkg/mod \
+		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
 
 test:
 	$(GOEXE) test $(shell $(GOEXE) list ./... | grep -v third_party/)
@@ -124,6 +125,7 @@ ARTIFACT_HUB_LABELS=--image-label io.artifacthub.package.readme-url="https://raw
                     --image-label io.artifacthub.package.name=cosign \
                     --image-label org.opencontainers.image.created=$(BUILD_DATE) \
                     --image-label org.opencontainers.image.description="Container signing verification and storage in an OCI registry" \
+                    --image-label org.opencontainers.image.source=https://github.com/sigstore/cosign \
                     --image-label io.artifacthub.package.alternative-locations="oci://ghcr.io/sigstore/cosign/cosign"
 
 define create_kocache_path
