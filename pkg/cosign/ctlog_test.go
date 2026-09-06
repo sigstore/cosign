@@ -31,6 +31,7 @@ Nmo7M3bN7+dQddw9Ibc2R3SV8tzBZw0rST8FKcn4apJepcKM4qUpYUeNfw==
 )
 
 func TestGetCTLogPubKeys(t *testing.T) {
+	t.Setenv("TUF_ROOT", t.TempDir())
 	keys, err := GetCTLogPubs(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error calling GetCTLogPubs, expected nil: %v", err)
