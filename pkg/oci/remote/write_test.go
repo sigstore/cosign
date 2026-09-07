@@ -457,6 +457,7 @@ func TestWriteAttestationsReferrerPreservesAnnotations(t *testing.T) {
 		"dev.sigstore.cosign/certificate",
 		"dev.sigstore.cosign/chain",
 		"predicateType",
+		"org.opencontainers.image.title",
 	}
 	for _, key := range expectedKeys {
 		if _, exists := layerAnnotations[key]; !exists {
