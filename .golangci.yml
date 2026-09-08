@@ -84,6 +84,10 @@ linters:
         # NewEntry used for Rekor v1, will update to NewTlogEntry for Rekor v2 support
         text: SA1019
       - linters:
+          - staticcheck
+        # Newly deprecated packages in github.com/sigstore/sigstore v1.10.9 awaiting migration to sigstore-go
+        text: "SA1019: github.com/sigstore/sigstore/pkg/(tuf|fulcioroots|cryptoutils/goodkey) is deprecated"
+      - linters:
           - revive
         path: cmd/cosign/errors/
         # Allow 'errors' package name in cmd/cosign/errors - it doesn't conflict with std lib
