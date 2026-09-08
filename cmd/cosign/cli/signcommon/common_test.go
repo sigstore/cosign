@@ -210,7 +210,7 @@ func Test_ParseOCIReference(t *testing.T) {
 	}
 }
 
-func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
+func mustSigningConfigWithRekor(t *testing.T, rekorURL string) *root.SigningConfig {
 	t.Helper()
 	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{RekorURL: rekorURL})
 	if err != nil {
@@ -219,36 +219,147 @@ func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
 	return sc
 }
 
-func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+func mustSigningConfigWithFulcio(t *testing.T, fulcioURL string) *root.SigningConfig {
+	t.Helper()
+	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: fulcioURL})
+	if err != nil {
+		t.Fatalf("creating signing config: %v", err)
+	}
+	return sc
+}
+
+func TestConfirmPrivacyStatement(t *testing.T) {
 	tests := []struct {
 		name          string
 		signingConfig *root.SigningConfig
+		keyRef        string
+		sk            bool
+		uploadToRekor bool
 		wantWarning   bool
 	}{
-		{"custom Rekor URL skips public instance statement", mustSigningConfig(t, "http://localhost:3000"), false},
-		{"region-specific public good URL shows public instance statement", mustSigningConfig(t, "https://rekor.us-central1.sigstore.dev"), true},
-		{"staging public good signing config shows public instance statement", mustSigningConfig(t, "https://rekor.sigstage.dev"), true},
-		{"nil signing config skips public instance statement", nil, false},
+		{
+			name:          "custom Rekor URL with key skips public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "http://localhost:3000"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   false,
+		},
+		{
+			name:          "region-specific public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.us-central1.sigstore.dev"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   true,
+		},
+		{
+			name:          "staging public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.sigstage.dev"),
+			keyRef:        "cosign.key",
+			uploadToRekor: true,
+			wantWarning:   true,
+		},
+		{
+			name:          "public good Rekor URL without tlog upload and with key skips statement",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL),
+			keyRef:        "cosign.key",
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "keyless with public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			uploadToRekor: false,
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with staging public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "https://fulcio.sigstage.dev"),
+			uploadToRekor: false,
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with custom Fulcio URL skips public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "http://localhost:5555"),
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "public good Fulcio URL with key and without tlog upload skips statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			keyRef:        "cosign.key",
+			uploadToRekor: false,
+			wantWarning:   false,
+		},
+		{
+			name:          "nil signing config skips public instance statement",
+			signingConfig: nil,
+			uploadToRekor: true,
+			wantWarning:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			privacy.StatementOnce = sync.Once{}
 			ko := options.KeyOpts{
+				KeyRef:           tt.keyRef,
+				Sk:               tt.sk,
 				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
-			var upload bool
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+				err = ConfirmPrivacyStatement(ctx, ko, tt.uploadToRekor)
 			})
 			assert.NoError(t, err)
-			assert.True(t, upload)
 			if tt.wantWarning {
 				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
 			} else {
 				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
 			}
+		})
+	}
+}
+
+func TestShouldUploadToTlog(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		tlogUpload    bool
+		wantUpload    bool
+	}{
+		{
+			name:          "tlogUpload false returns false",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL),
+			tlogUpload:    false,
+			wantUpload:    false,
+		},
+		{
+			name:          "signing config with no Rekor URLs returns false",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL).WithRekorLogURLs(),
+			tlogUpload:    true,
+			wantUpload:    false,
+		},
+		{
+			name:          "tlogUpload true with Rekor URL returns true",
+			signingConfig: mustSigningConfigWithRekor(t, "http://localhost:3000"),
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+		{
+			name:          "nil signing config with tlogUpload true returns true",
+			signingConfig: nil,
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ko := options.KeyOpts{
+				SigningConfig:    tt.signingConfig,
+				SkipConfirmation: true,
+			}
+			upload := ShouldUploadToTlog(context.Background(), ko, nil, tt.tlogUpload)
+			assert.Equal(t, tt.wantUpload, upload)
 		})
 	}
 }
@@ -260,10 +371,10 @@ func TestHasPublicGoodRekorURL(t *testing.T) {
 		want          bool
 	}{
 		{"nil signing config returns false", nil, false},
-		{"empty signing config returns false", mustSigningConfig(t, ""), false},
-		{"custom Rekor URL returns false", mustSigningConfig(t, "http://localhost:3000"), false},
-		{"public good Rekor URL returns true", mustSigningConfig(t, options.DefaultRekorURL), true},
-		{"signing config with cleared Rekor URLs returns false", mustSigningConfig(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
+		{"empty signing config returns false", mustSigningConfigWithRekor(t, ""), false},
+		{"custom Rekor URL returns false", mustSigningConfigWithRekor(t, "http://localhost:3000"), false},
+		{"public good Rekor URL returns true", mustSigningConfigWithRekor(t, options.DefaultRekorURL), true},
+		{"signing config with cleared Rekor URLs returns false", mustSigningConfigWithRekor(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -272,16 +383,38 @@ func TestHasPublicGoodRekorURL(t *testing.T) {
 	}
 }
 
-func TestIsPublicGoodRekorURL(t *testing.T) {
+func TestHasPublicGoodFulcioURL(t *testing.T) {
 	tests := []struct {
-		name     string
-		rekorURL string
-		want     bool
+		name          string
+		signingConfig *root.SigningConfig
+		want          bool
+	}{
+		{"nil signing config returns false", nil, false},
+		{"empty signing config returns false", mustSigningConfigWithFulcio(t, ""), false},
+		{"custom Fulcio URL returns false", mustSigningConfigWithFulcio(t, "http://localhost:5555"), false},
+		{"public good Fulcio URL returns true", mustSigningConfigWithFulcio(t, options.DefaultFulcioURL), true},
+		{"staging public good Fulcio URL returns true", mustSigningConfigWithFulcio(t, "https://fulcio.sigstage.dev"), true},
+		{"signing config with cleared Fulcio URLs returns false", mustSigningConfigWithFulcio(t, options.DefaultFulcioURL).WithFulcioCertificateAuthorityURLs(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, hasPublicGoodFulcioURL(tt.signingConfig))
+		})
+	}
+}
+
+func TestIsPublicGoodURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
 	}{
 		{"empty is not public good", "", false},
-		{"default production URL", options.DefaultRekorURL, true},
+		{"default Rekor production URL", options.DefaultRekorURL, true},
+		{"default Fulcio production URL", options.DefaultFulcioURL, true},
 		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
-		{"staging URL", "https://rekor.sigstage.dev", true},
+		{"staging Rekor URL", "https://rekor.sigstage.dev", true},
+		{"staging Fulcio URL", "https://fulcio.sigstage.dev", true},
 		{"region-specific staging URL", "https://rekor.us-central1.sigstage.dev", true},
 		{"custom self-hosted URL", "http://localhost:3000", false},
 		{"uppercase hostname is still public good", "https://REKOR.SIGSTORE.DEV", true},
@@ -291,7 +424,7 @@ func TestIsPublicGoodRekorURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isPublicGoodRekorURL(tt.rekorURL))
+			assert.Equal(t, tt.want, isPublicGoodURL(tt.url))
 		})
 	}
 }

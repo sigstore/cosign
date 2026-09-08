@@ -59,7 +59,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	ctx, cancel := context.WithTimeout(ctx, ro.Timeout)
 	defer cancel()
 
-	var shouldUpload bool
+	var uploadToTlog bool
 	var err error
 
 	if ko.SigningConfig == nil {
@@ -67,20 +67,19 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		if err != nil {
 			return nil, fmt.Errorf("creating signing config: %w", err)
 		}
-		shouldUpload, err = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
-		if err != nil {
-			return nil, fmt.Errorf("upload to tlog: %w", err)
-		}
-	} else {
-		shouldUpload = len(ko.SigningConfig.RekorLogURLs()) > 0
 	}
+	uploadToTlog = signcommon.ShouldUploadToTlog(ctx, ko, nil, tlogUpload)
 
-	if !shouldUpload {
+	if !uploadToTlog {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
 		// To maintain backwards compatibility with older cosign versions,
 		// we do not use ed25519ph for ed25519 keys when the signatures are not
 		// uploaded to the Tlog.
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
+	}
+
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, uploadToTlog); err != nil {
+		return nil, err
 	}
 
 	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, certPath, certChainPath)
@@ -98,7 +97,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 	}
 	defer closePayload()
 
-	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (shouldUpload || (!ko.Sk && ko.KeyRef == "")) {
+	if hashFunction != crypto.SHA256 && !ko.NewBundleFormat && (uploadToTlog || (!ko.Sk && ko.KeyRef == "")) {
 		ui.Infof(ctx, "Non SHA256 hash function is not supported for old bundle format. Use --new-bundle-format to use the new bundle format or use different signing key/algorithm.")
 		if !ko.SkipConfirmation {
 			if err := ui.ConfirmContinue(ctx); err != nil {
