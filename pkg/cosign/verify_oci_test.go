@@ -18,8 +18,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -85,6 +87,59 @@ func TestGetBundles_Empty(t *testing.T) {
 	assert.ErrorAs(t, err, &noMatchErr)
 	assert.Len(t, bundles, 0)
 	assert.Nil(t, hash)
+}
+
+func TestVerifyImageAttestationsWithBundles_NoRegistryRequests(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	var requests atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		requests.Add(1)
+		r.ServeHTTP(w, req)
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	desc, err := remote.Head(ref)
+	assert.NoError(t, err)
+	digestRef := ref.Context().Digest(desc.Digest.String())
+
+	// Write valid test attestation
+	err = ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1")
+	assert.NoError(t, err)
+
+	// Fetch the bundles once, as the CLI's bundle-format auto-detect does.
+	bundles, hash, err := GetBundles(context.Background(), ref, []ociremote.Option{})
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.NotNil(t, hash)
+
+	trustedRoot, err := root.NewTrustedRootFromJSON(testTrustedRootPGI)
+	assert.NoError(t, err)
+
+	co := &CheckOpts{
+		TrustedMaterial: trustedRoot,
+		NewBundleFormat: true,
+		Identities: []Identity{
+			{
+				IssuerRegExp:  ".*",
+				SubjectRegExp: ".*",
+			},
+		},
+	}
+
+	// Verifying already-fetched bundles must not touch the registry.
+	requests.Store(0)
+	atts, bundleVerified, err := VerifyImageAttestationsWithBundles(context.Background(), bundles, hash, co)
+	assert.NoError(t, err)
+	assert.True(t, bundleVerified)
+	assert.Len(t, atts, 1)
+	assert.Equal(t, int32(0), requests.Load())
 }
 
 func TestGetBundles_Valid(t *testing.T) {
