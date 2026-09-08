@@ -203,11 +203,11 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 			return fmt.Errorf("creating signing config: %w", err)
 		}
 	}
-	shouldUpload := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-	if !shouldUpload {
+	uploadToTlog := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
+	if !uploadToTlog {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
 	}
-	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, shouldUpload); err != nil {
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, uploadToTlog); err != nil {
 		return err
 	}
 
@@ -264,11 +264,11 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 			return fmt.Errorf("creating signing config: %w", err)
 		}
 	}
-	shouldUpload := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-	if !shouldUpload {
+	uploadToTlog := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
+	if !uploadToTlog {
 		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
 	}
-	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, shouldUpload); err != nil {
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, uploadToTlog); err != nil {
 		return err
 	}
 
