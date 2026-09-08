@@ -64,6 +64,16 @@ builds:
         - apt-get update
         - apt-get -y install --no-install-recommends libpcsclite-dev
     env:
+      - CC=zig cc -target x86_64-linux-gnu.2.34
+      - CXX=zig c++ -target x86_64-linux-gnu.2.34
+      # -idirafter: zig cc does not search /usr/include, but libpcsclite's headers
+      # are included as <PCSC/winscard.h> so the parent dir must be on the path.
+      # It must come *after* zig's own headers, otherwise Debian's glibc headers
+      # shadow zig's and conflict when building runtime/cgo.
+      # -fno-sanitize=undefined: zig cc enables UBSan by default, but its runtime
+      # is not linked in, leaving __ubsan_handle_* undefined at link time.
+      - CGO_CFLAGS=-idirafter /usr/include -fno-sanitize=undefined
+      - CGO_LDFLAGS=-L/usr/lib/x86_64-linux-gnu
       - PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig/
 
   - id: linux-pivkey-pkcs11key-arm64
@@ -88,15 +98,24 @@ builds:
         - apt-get update
         - apt-get install -y --no-install-recommends libpcsclite-dev:arm64
     env:
-      - CC=aarch64-linux-gnu-gcc
+      - CC=zig cc -target aarch64-linux-gnu.2.34
+      - CXX=zig c++ -target aarch64-linux-gnu.2.34
+      # See the notes on the amd64 build above for why these flags are needed.
+      - CGO_CFLAGS=-idirafter /usr/include -fno-sanitize=undefined
+      - CGO_LDFLAGS=-L/usr/lib/aarch64-linux-gnu
       - PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig/
 
   - id: darwin-amd64
     binary: cosign-darwin-amd64
     no_unique_dist_dir: true
     env:
-      - CC=o64-clang
-      - CXX=o64-clang++
+      - CC=zig cc -target x86_64-macos
+      - CXX=zig c++ -target x86_64-macos
+      # zig does not auto-attach the macOS SDK, so point it at the one the image
+      # ships. -isystem/-iframework (rather than -I/-F) mark the SDK as system
+      # headers, which suppresses warnings zig cc otherwise promotes to errors.
+      - CGO_CFLAGS=-isysroot {{ .Env.OSX_SDK_PATH }} -isystem {{ .Env.OSX_SDK_PATH }}/usr/include -iframework {{ .Env.OSX_SDK_PATH }}/System/Library/Frameworks -mmacosx-version-min=11.0
+      - CGO_LDFLAGS=-isysroot {{ .Env.OSX_SDK_PATH }} -L{{ .Env.OSX_SDK_PATH }}/usr/lib -F{{ .Env.OSX_SDK_PATH }}/System/Library/Frameworks
     main: ./cmd/cosign
     flags:
       - -trimpath
@@ -106,6 +125,9 @@ builds:
     goarch:
       - amd64
     ldflags:
+      # -s -w skips dsymutil, which is not shipped in the zig builder image
+      - -s
+      - -w
       - "{{ .Env.LDFLAGS }}"
     tags:
       - pivkey
@@ -115,8 +137,13 @@ builds:
     binary: cosign-darwin-arm64
     no_unique_dist_dir: true
     env:
-      - CC=aarch64-apple-darwin23-clang
-      - CXX=aarch64-apple-darwin23-clang++
+      - CC=zig cc -target aarch64-macos
+      - CXX=zig c++ -target aarch64-macos
+      # zig does not auto-attach the macOS SDK, so point it at the one the image
+      # ships. -isystem/-iframework (rather than -I/-F) mark the SDK as system
+      # headers, which suppresses warnings zig cc otherwise promotes to errors.
+      - CGO_CFLAGS=-isysroot {{ .Env.OSX_SDK_PATH }} -isystem {{ .Env.OSX_SDK_PATH }}/usr/include -iframework {{ .Env.OSX_SDK_PATH }}/System/Library/Frameworks -mmacosx-version-min=11.0
+      - CGO_LDFLAGS=-isysroot {{ .Env.OSX_SDK_PATH }} -L{{ .Env.OSX_SDK_PATH }}/usr/lib -F{{ .Env.OSX_SDK_PATH }}/System/Library/Frameworks
     main: ./cmd/cosign
     flags:
       - -trimpath
@@ -128,14 +155,17 @@ builds:
       - pivkey
       - pkcs11key
     ldflags:
+      # -s -w skips dsymutil, which is not shipped in the zig builder image
+      - -s
+      - -w
       - "{{.Env.LDFLAGS}}"
 
   - id: windows-amd64
     binary: cosign-windows-amd64
     no_unique_dist_dir: true
     env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
+      - CC=zig cc -target x86_64-windows-gnu
+      - CXX=zig c++ -target x86_64-windows-gnu
     main: ./cmd/cosign
     mod_timestamp: '{{ .CommitTimestamp }}'
     flags:
