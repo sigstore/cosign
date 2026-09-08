@@ -329,8 +329,7 @@ func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
 func TestValidateSigningOptions(t *testing.T) {
 	tests := []struct {
 		name              string
-		useSigningConfig  bool
-		signingConfigPath string
+		offline           bool
 		rekorURL          string
 		fulcioURL         string
 		oidcIssuer        string
@@ -338,6 +337,8 @@ func TestValidateSigningOptions(t *testing.T) {
 		tlogUpload        bool
 		newBundleFormat   bool
 		bundlePath        string
+		keyRef            string
+		issueCertificate  bool
 		output            string
 		outputAttestation string
 		outputCertificate string
@@ -350,6 +351,7 @@ func TestValidateSigningOptions(t *testing.T) {
 	}{
 		{
 			name:            "valid default online signing flags",
+			offline:         false,
 			rekorURL:        options.DefaultRekorURL,
 			fulcioURL:       options.DefaultFulcioURL,
 			oidcIssuer:      options.DefaultOIDCIssuerURL,
@@ -358,144 +360,100 @@ func TestValidateSigningOptions(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name:             "valid signing config from TUF",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  true,
-			wantErr:          false,
-		},
-		{
-			name:              "valid signing config from file",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   true,
-			wantErr:           false,
-		},
-		{
-			name:             "use signing config with custom rekor URL",
-			useSigningConfig: true,
-			rekorURL:         "http://localhost:3000",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom fulcio URL",
-			useSigningConfig: true,
-			fulcioURL:        "http://localhost:5555",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom OIDC issuer",
-			useSigningConfig: true,
-			oidcIssuer:       "http://localhost:8080",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom TSA server URL",
-			useSigningConfig: true,
-			tsaServerURL:     "http://localhost:3001",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:              "signing config path with custom service URLs",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          "http://localhost:3000",
-			tlogUpload:        true,
-			wantErr:           true,
-			wantErrSubstr:     "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with tlog upload false",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       false,
-			newBundleFormat:  true,
-			wantErr:          true,
-			wantErrSubstr:    "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
-		},
-		{
-			name:              "signing config path with tlog upload false",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        false,
-			newBundleFormat:   true,
-			wantErr:           true,
-			wantErrSubstr:     "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
-		},
-		{
-			name:             "missing bundle output with use signing config",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  false,
-			bundlePath:       "",
-			wantErr:          true,
-			wantErrSubstr:    "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
-		},
-		{
-			name:              "missing bundle output with signing config path",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   false,
-			bundlePath:        "",
-			wantErr:           true,
-			wantErrSubstr:     "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
-		},
-		{
-			name:             "legacy bundle format with explicit bundle path is valid with use signing config",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  false,
-			bundlePath:       "/tmp/bundle.json",
-			wantErr:          false,
-		},
-		{
-			name:              "legacy bundle format with explicit bundle path is valid with signing config path",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   false,
-			bundlePath:        "/tmp/bundle.json",
-			wantErr:           false,
-		},
-		{
-			name:            "custom service URLs without signing config is valid",
-			rekorURL:        "http://localhost:3000",
-			tlogUpload:      true,
+			name:            "valid offline signing flags",
+			offline:         true,
+			keyRef:          "cosign.key",
+			tlogUpload:      false,
 			newBundleFormat: true,
 			wantErr:         false,
 		},
 		{
-			name:            "tlog upload false without signing config is valid",
+			name:          "offline missing key",
+			offline:       true,
+			keyRef:        "",
+			wantErr:       true,
+			wantErrSubstr: "offline signing requires a private key",
+		},
+		{
+			name:             "offline with issue certificate",
+			offline:          true,
+			keyRef:           "cosign.key",
+			issueCertificate: true,
+			wantErr:          true,
+			wantErrSubstr:    "cannot issue certificate when offline",
+		},
+		{
+			name:          "offline with custom service URLs",
+			offline:       true,
+			keyRef:        "cosign.key",
+			rekorURL:      "http://localhost:3000",
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when signing offline",
+		},
+		{
+			name:          "online with custom rekor URL",
+			offline:       false,
+			rekorURL:      "http://localhost:3000",
+			tlogUpload:    true,
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when using a signing config",
+		},
+		{
+			name:          "online with custom fulcio URL",
+			offline:       false,
+			fulcioURL:     "http://localhost:5555",
+			tlogUpload:    true,
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when using a signing config",
+		},
+		{
+			name:          "online with custom OIDC issuer",
+			offline:       false,
+			oidcIssuer:    "http://localhost:8080",
+			tlogUpload:    true,
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when using a signing config",
+		},
+		{
+			name:          "online with custom TSA server URL",
+			offline:       false,
+			tsaServerURL:  "http://localhost:3001",
+			tlogUpload:    true,
+			wantErr:       true,
+			wantErrSubstr: "cannot specify service URLs when using a signing config",
+		},
+		{
+			name:            "online with tlog upload false without offline",
+			offline:         false,
+			rekorURL:        options.DefaultRekorURL,
+			fulcioURL:       options.DefaultFulcioURL,
+			oidcIssuer:      options.DefaultOIDCIssuerURL,
 			tlogUpload:      false,
 			newBundleFormat: true,
+			wantErr:         true,
+			wantErrSubstr:   "--tlog-upload=false is not supported with a signing config",
+		},
+		{
+			name:            "missing bundle output with signing config",
+			offline:         false,
+			rekorURL:        options.DefaultRekorURL,
+			fulcioURL:       options.DefaultFulcioURL,
+			oidcIssuer:      options.DefaultOIDCIssuerURL,
+			tlogUpload:      true,
+			newBundleFormat: false,
+			bundlePath:      "",
+			wantErr:         true,
+			wantErrSubstr:   "must provide --new-bundle-format or --bundle",
+		},
+		{
+			name:            "legacy bundle format with explicit bundle path is valid",
+			offline:         false,
+			rekorURL:        options.DefaultRekorURL,
+			fulcioURL:       options.DefaultFulcioURL,
+			oidcIssuer:      options.DefaultOIDCIssuerURL,
+			tlogUpload:      true,
+			newBundleFormat: false,
+			bundlePath:      "/tmp/bundle.json",
 			wantErr:         false,
 		},
 		{
@@ -546,9 +504,9 @@ func TestValidateSigningOptions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				err = ValidateSigningOptions(ctx, tt.useSigningConfig, tt.signingConfigPath,
+				err = ValidateSigningOptions(ctx, tt.offline,
 					tt.rekorURL, tt.fulcioURL, tt.oidcIssuer, tt.tsaServerURL,
-					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath,
+					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath, tt.keyRef, tt.issueCertificate,
 					tt.output, tt.outputAttestation, tt.outputCertificate, tt.outputPayload, tt.outputSignature, tt.outputTimestamp)
 			})
 			if tt.wantErr {
@@ -564,4 +522,39 @@ func TestValidateSigningOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLoadTrustedMaterialAndSigningConfig(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("offline signing bypasses TUF and sets empty signing config", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		var ko options.KeyOpts
+		err := LoadTrustedMaterialAndSigningConfig(ctx, &ko, true, "", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		// Verify TUF directory remained empty and was not populated
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing offline")
+	})
+
+	t.Run("online signing attempts to contact TUF and fails when mirror is invalid", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		var ko options.KeyOpts
+		var err error
+		_ = ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
+			err = LoadTrustedMaterialAndSigningConfig(ctx, &ko, false, "", "")
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error getting signing config from TUF")
+	})
 }
