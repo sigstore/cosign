@@ -362,7 +362,9 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			Annotations() (map[string]string, error)
 		}); ok {
 			if ann, err := al.Annotations(); err == nil && len(ann) > 0 {
-				layerDescriptors[i].Annotations = ann
+				for k, v := range ann {
+					layerDescriptors[i].Annotations[k] = v
+				}
 			}
 		}
 	}
