@@ -16,6 +16,7 @@
 package attach
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -147,16 +148,25 @@ const (
 
 func signatureBytes(sigRef string) ([]byte, error) {
 	// sigRef can be "-", a string or a file.
+	var sig []byte
+	var err error
 	switch signatureType(sigRef) {
 	case StdinSignature:
-		return io.ReadAll(os.Stdin)
+		sig, err = io.ReadAll(os.Stdin)
 	case RawSignature:
 		return []byte(sigRef), nil
 	case FileSignature:
-		return os.ReadFile(filepath.Clean(sigRef))
+		sig, err = os.ReadFile(filepath.Clean(sigRef))
 	default:
 		return nil, errors.New("unknown signature arg type")
 	}
+	if err != nil {
+		return nil, err
+	}
+	// Files and stdin commonly carry a trailing newline (e.g. from `jq -r ... >
+	// file` or `echo`). Strip surrounding whitespace so it isn't stored verbatim
+	// as part of the signature annotation value.
+	return bytes.TrimSpace(sig), nil
 }
 
 func signatureType(sigRef string) SignatureArgType {
