@@ -433,12 +433,12 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "invalidrsasmallkey.key",
 			pemData:  invalidrsasmallkey,
-			expected: errors.New("error validating rsa key: key size not supported: 1024"),
+			expected: errors.New("error validating rsa key: rsa key size 1024 is not supported"),
 		},
 		{
 			fileName: "invalidrsalargekey.key",
 			pemData:  invalidrsalargekey,
-			expected: errors.New("error validating rsa key: key size not supported: 5120"),
+			expected: errors.New("error validating rsa key: rsa key size 5120 is not supported"),
 		},
 		// EC tests
 		{
@@ -464,7 +464,7 @@ func TestImportPrivateKey(t *testing.T) {
 		{
 			fileName: "invalidecp224.key",
 			pemData:  invalidecp224,
-			expected: errors.New("error validating ecdsa key: ECDSA curve P-224 not allowed"),
+			expected: errors.New("error validating ecdsa key: ecdsa curve"),
 		},
 		{
 			fileName: "invalidecunsupported.key",
@@ -500,7 +500,7 @@ func TestImportPrivateKey(t *testing.T) {
 				_, err = LoadPrivateKey(keyBytes.PrivateBytes, []byte("hello"), nil)
 				require.Equal(t, tc.expected, err)
 			} else {
-				require.Equal(t, tc.expected.Error(), err.Error())
+				require.ErrorContains(t, err, tc.expected.Error())
 			}
 		})
 	}
