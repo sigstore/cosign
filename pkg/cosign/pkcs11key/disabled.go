@@ -33,36 +33,38 @@ type empty struct{} //nolint
 
 type Key struct{}
 
+var errUnimplemented = errors.New("unimplemented")
+
 func GetKeyWithURIConfig(config *Pkcs11UriConfig, askForPinIfNeeded bool) (*Key, error) { //nolint: revive
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Certificate() (*x509.Certificate, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) { //nolint: revive
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error { //nolint: revive
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) Verifier() (signature.Verifier, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Sign(ctx context.Context, rawPayload []byte) ([]byte, []byte, error) { //nolint: revive
-	return nil, nil, errors.New("unimplemented")
+	return nil, nil, errUnimplemented
 }
 
 func (k *Key) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) { //nolint: revive
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) SignerVerifier() (signature.SignerVerifier, error) { //nolint: revive
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Close() {

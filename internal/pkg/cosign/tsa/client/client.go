@@ -75,7 +75,6 @@ func GetHTTPTransport(cacertFilename, certFilename, keyFilename, serverName stri
 		DialContext: (&net.Dialer{
 			Timeout:   timeout,
 			KeepAlive: 30 * time.Second,
-			DualStack: true,
 		}).DialContext,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,

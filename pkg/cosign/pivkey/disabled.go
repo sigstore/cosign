@@ -30,12 +30,14 @@ type empty struct{} //nolint
 
 type Key struct{}
 
+var errUnimplemented = errors.New("unimplemented")
+
 func GetKey() (*Key, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func GetKeyWithSlot(slot string) (*Key, error) { //nolint: revive
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Close() {}
@@ -45,45 +47,45 @@ func (k *Key) Authenticate(pin string) {} //nolint: revive
 func (k *Key) SetSlot(slot string) {} //nolint: revive
 
 func (k *Key) Attest() (*x509.Certificate, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) GetAttestationCertificate() (*x509.Certificate, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) SetManagementKey(old, new [24]byte) error { //nolint: revive
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) SetPIN(old, new string) error { //nolint: revive
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) SetPUK(old, new string) error { //nolint: revive
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) Reset() error {
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) Unblock(puk, newPIN string) error { //nolint: revive
-	return errors.New("unimplemented")
+	return errUnimplemented
 }
 
 func (k *Key) GenerateKey(mgmtKey [24]byte, slot *empty, opts *empty) (*empty, error) { //nolint
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Verifier() (signature.Verifier, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) Certificate() (*x509.Certificate, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
 
 func (k *Key) SignerVerifier() (signature.SignerVerifier, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errUnimplemented
 }
