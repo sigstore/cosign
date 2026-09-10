@@ -46,6 +46,11 @@ const (
 	// https://github.com/openvex/spec and the attestation spec is found here:
 	// https://github.com/openvex/spec/blob/main/ATTESTING.md
 	OpenVexNamespace = "https://openvex.dev/ns"
+
+	// SyftPredicateType specifies the predicate type for Syft JSON SBOMs.
+	// Syft is a tool for generating Software Bill of Materials (SBOM) from container images and filesystems.
+	// More info at https://github.com/anchore/syft
+	SyftPredicateType = "https://anchore.com/syft/sbom/v1"
 )
 
 type Statement struct {
@@ -182,6 +187,8 @@ func GenerateStatement(opts GenerateOpts) (*Statement, error) {
 		return generateSPDXStatement(predicate, opts.Digest, opts.Repo, true)
 	case "cyclonedx":
 		return generateCycloneDXStatement(predicate, opts.Digest, opts.Repo)
+	case "syft":
+		return generateSyftStatement(predicate, opts.Digest, opts.Repo)
 	case "link":
 		return generateLinkStatement(predicate, opts.Digest, opts.Repo)
 	case "vuln":
@@ -464,6 +471,31 @@ func generateCycloneDXStatement(rawPayload []byte, digest string, repo string) (
 		Statement: &in_toto_attest.Statement{
 			Type:          in_toto.StatementInTotoV01,
 			PredicateType: in_toto.PredicateCycloneDX,
+			Subject: []*in_toto_attest.ResourceDescriptor{
+				{
+					Name: repo,
+					Digest: map[string]string{
+						"sha256": digest,
+					},
+				},
+			},
+			Predicate: dataObj,
+		}}, nil
+}
+
+func generateSyftStatement(rawPayload []byte, digest string, repo string) (*Statement, error) {
+	var data map[string]any
+	if err := json.Unmarshal(rawPayload, &data); err != nil {
+		return nil, err
+	}
+	dataObj, err := structpb.NewStruct(data)
+	if err != nil {
+		return nil, err
+	}
+	return &Statement{
+		Statement: &in_toto_attest.Statement{
+			Type:          in_toto.StatementInTotoV01,
+			PredicateType: SyftPredicateType,
 			Subject: []*in_toto_attest.ResourceDescriptor{
 				{
 					Name: repo,
