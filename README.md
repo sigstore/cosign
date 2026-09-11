@@ -140,6 +140,22 @@ The following checks were performed on these signatures:
 {"Critical":{"Identity":{"docker-reference":""},"Image":{"Docker-manifest-digest":"sha256:87ef60f558bad79beea6425a3b28989f01dd417164150ab3baab98dcbf04def8"},"Type":"cosign container image signature"},"Optional":null}
 ```
 
+### Sign a container offline with a private key
+
+To sign without contacting Sigstore network services, use the `--offline` flag with a private key:
+
+```shell
+cosign sign --key cosign.key --offline $IMAGE
+```
+
+Similarly, to sign a local file/blob offline:
+
+```shell
+cosign sign-blob --key cosign.key --offline --bundle artifact.sigstore.json artifact
+```
+
+**Note:** Offline signing requires a private key. When signing offline, key usage is not recorded in a transparency log and therefore not auditable.
+
 ### Verify a container in an air-gapped environment
 
 **Note:** This section is out of date.
