@@ -69,6 +69,38 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, c
 	return nil
 }
 
+// LoadVerifierFromKey returns a signature.Verifier from the provided key flags to use for verifying an artifact.
+// In the case of certain types of keys, it returns a close function that must be called by the calling method.
+func LoadVerifierFromKey(ctx context.Context, keyRef, slot string, sk bool) (signature.Verifier, func(), error) {
+	var sigVerifier signature.Verifier
+	var err error
+	switch {
+	case keyRef != "":
+		sigVerifier, err = csignature.PublicKeyFromKeyRef(ctx, keyRef)
+		if err != nil {
+			return nil, nil, fmt.Errorf("loading public key: %w", err)
+		}
+		pkcs11Key, ok := sigVerifier.(*pkcs11key.Key)
+		closeSV := func() {}
+		if ok {
+			closeSV = pkcs11Key.Close
+		}
+		return sigVerifier, closeSV, nil
+	case sk:
+		sk, err := pivkey.GetKeyWithSlot(slot)
+		if err != nil {
+			return nil, nil, fmt.Errorf("opening piv token: %w", err)
+		}
+		sigVerifier, err = sk.Verifier()
+		if err != nil {
+			sk.Close()
+			return nil, nil, fmt.Errorf("initializing piv token verifier: %w", err)
+		}
+		return sigVerifier, sk.Close, nil
+	}
+	return nil, func() {}, nil
+}
+
 // LoadVerifierFromKeyOrCert returns either a signature.Verifier or a certificate from the provided flags to use for verifying an artifact.
 // In the case of certain types of keys, it returns a close function that must be called by the calling method.
 func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certChain string, hashAlgorithm crypto.Hash, sk, withGetCert bool, co *cosign.CheckOpts) (signature.Verifier, *x509.Certificate, func(), error) {
