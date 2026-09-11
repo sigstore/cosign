@@ -131,10 +131,23 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 				}
 			}
 			if predicateType != "" {
-				// Write the empty layer
+				// Write the empty config layer
 				_, _, err := writeEmptyConfigLayer(o)
 				if err != nil {
 					return err
+				}
+
+				// Write bundle layers before the manifest (registries require blobs first)
+				for _, layer := range manifest.Layers {
+					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
+					bundleBytes, err := os.ReadFile(bundlePath)
+					if err != nil {
+						return err
+					}
+					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
+					if err := remoteWriteLayer(o.TargetRepository, layer, o.ROpt...); err != nil {
+						return err
+					}
 				}
 
 				// Write the manifest
@@ -145,20 +158,6 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 				}
 				if err := remotePut(targetRef, m, o.ROpt...); err != nil {
 					return fmt.Errorf("failed to upload manifest: %w", err)
-				}
-
-				// Write bundle layers
-				for _, layer := range manifest.Layers {
-					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
-					bundleBytes, err := os.ReadFile(bundlePath)
-					if err != nil {
-						return err
-					}
-					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
-					err = remoteWriteLayer(o.TargetRepository, layer, o.ROpt...)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
