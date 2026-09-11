@@ -243,7 +243,6 @@ func appendSlices(slices [][]byte) []byte {
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: "issuer",
 		},
@@ -258,7 +257,6 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentity: "identity",
 		},
@@ -306,6 +304,14 @@ func TestVerifyMutuallyExclusiveFlags(t *testing.T) {
 				},
 			},
 			expectedError: &options.KeyAndIdentityParseError{},
+		},
+		{
+			name: "both key and sk",
+			cmd: VerifyCommand{
+				KeyRef: "key.pub",
+				Sk:     true,
+			},
+			expectedError: &options.PubKeyParseError{},
 		},
 	}
 
