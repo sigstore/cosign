@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -28,6 +29,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -204,6 +206,66 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
 }
 
+// ed25519CompatVerifier accepts both Ed25519 signature schemes for one key.
+//
+// A bundle cosign writes for an Ed25519 key carries an Ed25519ph message
+// signature (the only scheme a hashedrekord entry takes) or a pure Ed25519
+// DSSE signature (the scheme sigstore-go verifies envelopes with), and
+// signatures from older versions are pure Ed25519 throughout. A verifier
+// loaded from --key checks one scheme, so it has to be the right one for the
+// bundle in hand; this tries the message-signature scheme first and the other
+// second, the way sigstore-go's compatibility verifier does for certificates.
+type ed25519CompatVerifier struct {
+	verifiers []signature.Verifier
+}
+
+func (v *ed25519CompatVerifier) VerifySignature(sig, message io.Reader, opts ...signature.VerifyOption) error {
+	sigBytes, err := io.ReadAll(sig)
+	if err != nil {
+		return fmt.Errorf("reading signature: %w", err)
+	}
+	messageBytes, err := io.ReadAll(message)
+	if err != nil {
+		return fmt.Errorf("reading message: %w", err)
+	}
+	var errs []error
+	for _, verifier := range v.verifiers {
+		err := verifier.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader(messageBytes), opts...)
+		if err == nil {
+			return nil
+		}
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+func (v *ed25519CompatVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+	return v.verifiers[0].PublicKey(opts...)
+}
+
+// ed25519CompatibleVerifier returns a verifier that accepts Ed25519ph and pure
+// Ed25519 signatures when the key is Ed25519, and the verifier unchanged
+// otherwise.
+func ed25519CompatibleVerifier(verifier signature.Verifier) signature.Verifier {
+	pub, err := verifier.PublicKey()
+	if err != nil {
+		return verifier
+	}
+	edPub, ok := pub.(ed25519.PublicKey)
+	if !ok {
+		return verifier
+	}
+	prehashed, err := signature.LoadED25519phVerifier(edPub)
+	if err != nil {
+		return verifier
+	}
+	pure, err := signature.LoadED25519Verifier(edPub)
+	if err != nil {
+		return verifier
+	}
+	return &ed25519CompatVerifier{verifiers: []signature.Verifier{prehashed, pure}}
+}
+
 // verificationOptions returns the verification options for verifying with sigstore-go.
 func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial, verifierOptions []verify.VerifierOption, policyOptions []verify.PolicyOption, err error) {
 	if co.TrustedMaterial == nil && co.SigVerifier == nil {
@@ -251,7 +313,7 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 	if co.SigVerifier != nil {
 		// We are verifying with a public key
 		policyOptions = append(policyOptions, verify.WithKey())
-		newExpiringKey := root.NewExpiringKey(co.SigVerifier, time.Time{}, time.Time{})
+		newExpiringKey := root.NewExpiringKey(ed25519CompatibleVerifier(co.SigVerifier), time.Time{}, time.Time{})
 		vTrustedMaterial.keyTrustedMaterial = root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
 			return newExpiringKey, nil
 		})
