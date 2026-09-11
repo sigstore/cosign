@@ -1084,156 +1084,23 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
-	// Enforce this up front.
-	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
-		return nil, false, errors.New("one of verifier, root certs, or TrustedMaterial is required")
-	}
-	if co.NewBundleFormat {
-		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co, nameOpts...)
-	}
-
-	// This is a carefully optimized sequence for fetching the attestations of
-	// the entity that minimizes registry requests when supplied with a digest
-	// input.
-	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	bundles, hash, err := GetBundles(ctx, signedImgRef, co.RegistryClientOpts, nameOpts...)
 	if err != nil {
 		return nil, false, err
 	}
-	h, err := v1.NewHash(digest.Identifier())
-	if err != nil {
-		return nil, false, err
-	}
-	st, err := ociremote.AttestationTag(digest, co.RegistryClientOpts...)
-	if err != nil {
-		return nil, false, err
-	}
-	atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
-	if err != nil {
-		return nil, false, err
-	}
-
-	return VerifyImageAttestation(ctx, atts, h, co)
+	return verifyImageAttestationsSigstoreBundles(ctx, bundles, hash, co)
 }
 
 // VerifyLocalImageAttestations verifies attestations from a saved, local image, without any network calls,
 // returning the verified attestations.
 // If there were no valid signatures, we return an error.
 func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
-	// Enforce this up front.
-	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
-		return nil, false, errors.New("one of verifier, root certs, or trusted root is required")
-	}
-
-	// Check for v3 bundles first (if NewBundleFormat is enabled)
-	if co.NewBundleFormat {
-		return verifyLocalImageAttestationsSigstoreBundle(ctx, path, co)
-	}
-
-	se, err := layout.SignedImageIndex(path)
+	bundles, hash, err := GetLocalBundles(path)
 	if err != nil {
 		return nil, false, err
 	}
 
-	var h v1.Hash
-	// Verify either an image index or image.
-	ii, err := se.SignedImageIndex(v1.Hash{})
-	if err != nil {
-		return nil, false, err
-	}
-	i, err := se.SignedImage(v1.Hash{})
-	if err != nil {
-		return nil, false, err
-	}
-	switch {
-	case ii != nil:
-		h, err = ii.Digest()
-		if err != nil {
-			return nil, false, err
-		}
-	case i != nil:
-		h, err = i.Digest()
-		if err != nil {
-			return nil, false, err
-		}
-	default:
-		return nil, false, errors.New("must verify either an image index or image")
-	}
-
-	atts, err := se.Attestations()
-	if err != nil {
-		return nil, false, err
-	}
-	return VerifyImageAttestation(ctx, atts, h, co)
-}
-
-func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
-	bool, error) {
-	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
-}
-
-func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
-	if atts == nil {
-		return nil, false, errors.New("no attestations provided")
-	}
-	sl, err := atts.Get()
-	if err != nil {
-		return nil, false, err
-	}
-
-	attestations := make([]oci.Signature, len(sl))
-	bundlesVerified := make([]bool, len(sl))
-
-	workers := co.MaxWorkers
-	if co.MaxWorkers == 0 {
-		workers = cosign.DefaultMaxWorkers
-	}
-	t := throttler.New(workers, len(sl))
-	for i, att := range sl {
-		go func(att oci.Signature, index int) {
-			att, err := static.Copy(att)
-			if err != nil {
-				t.Done(err)
-				return
-			}
-			if err := func(att oci.Signature) error {
-				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
-				bundlesVerified[index] = verified
-				return err
-			}(att); err != nil {
-				t.Done(err)
-				return
-			}
-
-			attestations[index] = att
-			t.Done(nil)
-		}(att, i)
-
-		// wait till workers are available
-		t.Throttle()
-	}
-
-	for _, a := range attestations {
-		if a != nil {
-			checkedAttestations = append(checkedAttestations, a)
-		}
-	}
-
-	for _, verified := range bundlesVerified {
-		bundleVerified = bundleVerified || verified
-	}
-
-	if len(checkedAttestations) == 0 {
-		var combinedErrors []string
-		for _, err := range t.Errs() {
-			combinedErrors = append(combinedErrors, err.Error())
-		}
-
-		return nil, false, &ErrNoMatchingAttestations{
-			fmt.Errorf("no matching attestations: %s", strings.Join(combinedErrors, "\n ")),
-		}
-	}
-
-	return checkedAttestations, bundleVerified, nil
+	return verifyImageAttestationsSigstoreBundles(ctx, bundles, hash, co)
 }
 
 // CheckExpiry confirms the time provided is within the valid period of the certificate and optionally
@@ -1789,15 +1656,35 @@ func HasLocalBundles(path string) (bool, error) {
 }
 
 // HasLocalAttestationBundles checks if a local OCI layout has v3 sigstore bundles for attestations.
-// For v3, both signatures and attestations use the same bundle format.
 func HasLocalAttestationBundles(path string) (bool, error) {
-	return hasLocalSigstoreBundles(path)
+	descriptors, _, err := getLocalAttestationBundleDescriptors(path)
+	if err != nil {
+		return false, err
+	}
+	return len(descriptors) > 0, nil
 }
 
 // GetLocalBundles retrieves v3 sigstore bundles from a local OCI layout.
 // Returns bundles, target image hash, and error. Invalid bundles are logged and skipped.
 func GetLocalBundles(path string, bundleOpts ...sgbundle.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
-	descriptors, hash, err := getLocalBundleDescriptors(path)
+	return getLocalBundlesHelper(path, false, bundleOpts...)
+}
+
+// GetLocalAttestationBundles retrieves v3 sigstore attestation bundles from a local OCI layout.
+// Returns bundles, target image hash, and error. Invalid bundles are logged and skipped.
+func GetLocalAttestationBundles(path string, bundleOpts ...sgbundle.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	return getLocalBundlesHelper(path, true, bundleOpts...)
+}
+
+func getLocalBundlesHelper(path string, isAttestation bool, bundleOpts ...sgbundle.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	var descriptors []bundleDescriptor
+	var hash *v1.Hash
+	var err error
+	if isAttestation {
+		descriptors, hash, err = getLocalAttestationBundleDescriptors(path)
+	} else {
+		descriptors, hash, err = getLocalBundleDescriptors(path)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1846,7 +1733,15 @@ func hasLocalSigstoreBundles(path string) (bool, error) {
 	return len(descriptors) > 0, nil
 }
 
+func getLocalAttestationBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error) {
+	return getLocalBundleDescriptorsWithFilter(path, true)
+}
+
 func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error) {
+	return getLocalBundleDescriptorsWithFilter(path, false)
+}
+
+func getLocalBundleDescriptorsWithFilter(path string, isAttestation bool) ([]bundleDescriptor, *v1.Hash, error) {
 	p, err := ggcrlayout.FromPath(path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("loading OCI layout from %s: %w", path, err)
@@ -1903,6 +1798,9 @@ func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error
 
 		// Check if this is a referrer manifest pointing to our target
 		if blobManifest.Subject != nil && blobManifest.Subject.Digest == targetDigest {
+			if isAttestation && blobManifest.Annotations != nil && blobManifest.Annotations[ociremote.BundlePredicateType] == types.CosignSignPredicateType {
+				continue
+			}
 			// Collect bundle layer descriptors from this referrer manifest
 			for _, layer := range blobManifest.Layers {
 				if strings.HasPrefix(string(layer.MediaType), "application/vnd.dev.sigstore.bundle") {
@@ -1920,11 +1818,11 @@ func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error
 	return descriptors, &targetDigest, nil
 }
 
-// verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
-func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := GetBundles(ctx, signedImgRef, co.RegistryClientOpts, nameOpts...)
-	if err != nil {
-		return nil, false, err
+// verifyImageAttestationsSigstoreBundles verifies attestations from attached sigstore bundles
+func verifyImageAttestationsSigstoreBundles(ctx context.Context, bundles []*sgbundle.Bundle, hash *v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.SigVerifier == nil && co.TrustedMaterial == nil {
+		return nil, false, errors.New("one of verifier or trusted root is required")
 	}
 
 	digestBytes, err := hex.DecodeString(hash.Hex)
@@ -2004,75 +1902,6 @@ func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef nam
 	if len(checkedAttestations) == 0 {
 		return nil, false, &ErrNoMatchingAttestations{
 			fmt.Errorf("no matching attestations: %w", errors.Join(t.Errs()...)),
-		}
-	}
-
-	return checkedAttestations, atLeastOneBundleVerified, nil
-}
-
-// verifyLocalImageAttestationsSigstoreBundle verifies attestations from local sigstore bundles
-func verifyLocalImageAttestationsSigstoreBundle(ctx context.Context, path string, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
-	bundles, hash, err := GetLocalBundles(path, co.BundleOptions()...)
-	if err != nil {
-		return nil, false, err
-	}
-
-	digestBytes, err := hex.DecodeString(hash.Hex)
-	if err != nil {
-		return nil, false, err
-	}
-
-	artifactPolicyOption := verify.WithArtifactDigest(hash.Algorithm, digestBytes)
-
-	// For local bundles, we verify sequentially (local I/O is fast, no need for parallel throttler)
-	var atLeastOneBundleVerified bool
-	var errs []error
-	for _, bundle := range bundles {
-		_, err := VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
-		if err != nil {
-			// Log error and accumulate for final error message
-			errs = append(errs, err)
-			ui.Warnf(ctx, "Failed to verify bundle: %v", err)
-			continue
-		}
-
-		dsse, ok := bundle.Content.(*protobundle.Bundle_DsseEnvelope)
-		if !ok {
-			err := fmt.Errorf("bundle does not contain a DSSE envelope")
-			errs = append(errs, err)
-			ui.Warnf(ctx, "%v", err)
-			continue
-		}
-
-		payload, err := json.Marshal(dsse.DsseEnvelope)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("marshaling DSSE envelope: %w", err))
-			ui.Warnf(ctx, "Failed to marshal DSSE envelope: %v", err)
-			continue
-		}
-
-		att, err := static.NewAttestation(payload)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("creating attestation: %w", err))
-			ui.Warnf(ctx, "Failed to create attestation: %v", err)
-			continue
-		}
-
-		if co.ClaimVerifier != nil {
-			if err := co.ClaimVerifier(att, *hash, co.Annotations); err != nil {
-				errs = append(errs, fmt.Errorf("claim verification: %w", err))
-				ui.Warnf(ctx, "Claim verification failed: %v", err)
-				continue
-			}
-		}
-
-		checkedAttestations = append(checkedAttestations, att)
-		atLeastOneBundleVerified = true
-	}
-
-	if len(checkedAttestations) == 0 {
-		return nil, false, &ErrNoMatchingAttestations{
-			fmt.Errorf("no matching attestations: %w", errors.Join(errs...)),
 		}
 	}
 
