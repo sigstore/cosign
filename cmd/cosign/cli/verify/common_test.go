@@ -14,12 +14,10 @@
 package verify
 
 import (
-	"context"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 )
@@ -27,46 +25,20 @@ import (
 func TestSetTrustedMaterialNewBundleTUFError(t *testing.T) {
 	setBrokenTrustedRootTUFEnv(t)
 
-	co := &cosign.CheckOpts{NewBundleFormat: true}
-	var err error
-	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-		err = SetTrustedMaterial(ctx, "", "", "", "", "", false, co)
-	})
+	co := &cosign.CheckOpts{}
+	err := SetTrustedMaterial("", false, co)
 
 	if err == nil {
 		t.Fatal("expected trusted root TUF error")
 	}
-	if !strings.Contains(err.Error(), "getting trusted root from TUF for new bundle verification") {
-		t.Fatalf("expected new bundle trusted root error, got %v", err)
+	if !strings.Contains(err.Error(), "getting trusted root from TUF for bundle verification") {
+		t.Fatalf("expected bundle trusted root error, got %v", err)
 	}
 	if !strings.Contains(err.Error(), "error reading root.json given by TUF_ROOT_JSON") {
 		t.Fatalf("expected underlying TUF error, got %v", err)
 	}
 	if co.TrustedMaterial != nil {
 		t.Fatal("expected TrustedMaterial to remain unset")
-	}
-	if stderr != "" {
-		t.Fatalf("expected no warning when returning new bundle error, got %q", stderr)
-	}
-}
-
-func TestSetTrustedMaterialLegacyTUFFallback(t *testing.T) {
-	setBrokenTrustedRootTUFEnv(t)
-
-	co := &cosign.CheckOpts{}
-	var err error
-	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-		err = SetTrustedMaterial(ctx, "", "", "", "", "", false, co)
-	})
-
-	if err != nil {
-		t.Fatalf("expected legacy trusted material fallback, got %v", err)
-	}
-	if co.TrustedMaterial != nil {
-		t.Fatal("expected TrustedMaterial to remain unset")
-	}
-	if !strings.Contains(stderr, "Could not fetch trusted_root.json from the TUF repository") {
-		t.Fatalf("expected legacy fallback warning, got %q", stderr)
 	}
 }
 
