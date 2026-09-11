@@ -17,6 +17,7 @@ package remote
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -145,6 +146,16 @@ func GetEnvTargetRepository() (name.Repository, error) {
 	if ro := env.Getenv(env.VariableRepository); ro != "" {
 		repo, err := name.NewRepository(ro)
 		if err != nil {
+			// A bare registry (e.g. "registry.example.com:5000", with no
+			// repository path) has no '/' to split on, so name.NewRepository
+			// treats the whole value as a repository name and rejects it for
+			// containing '.'/':' characters. That error is misleading: the
+			// real problem is that COSIGN_REPOSITORY must be a full
+			// repository, not just a registry.
+			if !strings.Contains(ro, "/") && (strings.Contains(ro, ".") || strings.Contains(ro, ":")) {
+				return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %q looks like a registry, but "+
+					RepoOverrideEnvKey+" must be a full repository (registry plus path), e.g. %q: %w", ro, ro+"/my-repo", err)
+			}
 			return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
 		}
 		return repo, nil
