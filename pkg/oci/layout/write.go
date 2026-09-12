@@ -16,11 +16,13 @@
 package layout
 
 import (
+	"encoding/json"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 )
 
@@ -87,7 +89,25 @@ func isEmpty(s oci.Signatures) bool {
 }
 
 func appendImage(path layout.Path, img v1.Image, annotation string) error {
-	return path.AppendImage(img, layout.WithAnnotations(
-		map[string]string{kindAnnotation: annotation},
-	))
+	if err := path.WriteImage(img); err != nil {
+		return err
+	}
+	desc, err := partial.Descriptor(img)
+	if err != nil {
+		return err
+	}
+	// partial.Descriptor falls back to config.mediaType for the ArtifactType
+	// field because go-containerregistry's v1.Manifest struct does not expose
+	// the OCI manifest-level artifactType. Parse the raw manifest to read it
+	// directly so OCI artifacts with an explicit artifactType are saved correctly.
+	if raw, rawErr := img.RawManifest(); rawErr == nil {
+		var ociArtifact struct {
+			ArtifactType string `json:"artifactType,omitempty"`
+		}
+		if json.Unmarshal(raw, &ociArtifact) == nil && ociArtifact.ArtifactType != "" {
+			desc.ArtifactType = ociArtifact.ArtifactType
+		}
+	}
+	desc.Annotations = map[string]string{kindAnnotation: annotation}
+	return path.AppendDescriptor(*desc)
 }
