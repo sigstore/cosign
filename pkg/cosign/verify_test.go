@@ -2663,3 +2663,99 @@ func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]b
 
 	return tsaClient.GetTimestampResponse(requestBytes)
 }
+
+func TestBundleHashWithMissingHash(t *testing.T) {
+	// Rekor leaves the entry hash optional in these schemas and unmarshalling
+	// does not populate it, so a body that omits it reaches bundleHash intact.
+	tests := []struct {
+		name string
+		body string
+	}{{
+		name: "rekord v0.0.1 without data.hash",
+		body: `{"apiVersion":"0.0.1","kind":"rekord","spec":{"data":{"content":"YQ=="},"signature":{"format":"x509","content":"YQ==","publicKey":{"content":"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFCi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo="}}}}`,
+	}, {
+		name: "intoto v0.0.2 without content.hash",
+		body: `{"apiVersion":"0.0.2","kind":"intoto","spec":{"content":{"envelope":{"payloadType":"application/vnd.in-toto+json","payload":"","signatures":[{"publicKey":"YQ==","sig":"YQ=="}]}}}}`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := bundleHash(base64.StdEncoding.EncodeToString([]byte(tt.body)), "")
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), "no hash found in bundle entry") {
+				t.Errorf("wanted 'no hash found in bundle entry', got: %v", err)
+			}
+		})
+	}
+}
+
+func TestVerifyImageSignatureWithBundleBodyMissingHash(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sig, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64sig := base64.StdEncoding.EncodeToString(sig)
+	b64leaf := base64.StdEncoding.EncodeToString(pemLeaf)
+
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+
+	// The bundle is read from the registry, so its body is chosen by whoever
+	// published the signature. These bodies carry the real signature and
+	// certificate so that they get past the bundle's signature and public key
+	// comparisons, but omit the entry hash.
+	tests := []struct {
+		name string
+		body string
+	}{{
+		name: "rekord v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"rekord","spec":{"data":{"content":%q},"signature":{"format":"x509","content":%q,"publicKey":{"content":%q}}}}`,
+			base64.StdEncoding.EncodeToString(payload), b64sig, b64leaf),
+	}, {
+		name: "intoto v0.0.2",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.2","kind":"intoto","spec":{"content":{"envelope":{"payloadType":"application/vnd.in-toto+json","payload":"","signatures":[{"publicKey":%q,"sig":%q}]}}}}`,
+			b64leaf, b64sig),
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rekorBundle := &bundle.RekorBundle{
+				SignedEntryTimestamp: []byte("not reached"),
+				Payload: bundle.RekorPayload{
+					Body:           base64.StdEncoding.EncodeToString([]byte(tt.body)),
+					IntegratedTime: 1,
+					LogIndex:       1,
+					LogID:          "deadbeef",
+				},
+			}
+			opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+			ociSig, _ := static.NewSignature(payload, b64sig, opts...)
+
+			_, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+				&CheckOpts{
+					RootCerts:    rootPool,
+					IgnoreSCT:    true,
+					Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+					RekorPubKeys: &rekorPubKeys})
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), "no hash found in bundle entry") {
+				t.Errorf("wanted 'no hash found in bundle entry', got: %v", err)
+			}
+		})
+	}
+}
