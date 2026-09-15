@@ -307,6 +307,14 @@ func TestVerifyMutuallyExclusiveFlags(t *testing.T) {
 			},
 			expectedError: &options.KeyAndIdentityParseError{},
 		},
+		{
+			name: "both key and security key",
+			cmd: VerifyCommand{
+				KeyRef: "key.pub",
+				Sk:     true,
+			},
+			expectedError: &options.PubKeyParseError{},
+		},
 	}
 
 	for _, tt := range tts {
