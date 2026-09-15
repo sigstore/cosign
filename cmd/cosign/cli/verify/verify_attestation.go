@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -129,6 +130,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
+	// Bundles fetched while auto-detecting the bundle format, reused to
+	// verify the first image without fetching them again.
+	var bundles []*sgbundle.Bundle
+	var bundlesHash *v1.Hash
+
 	// Auto-detect bundle format for local images
 	if c.LocalImage {
 		hasBundles, err := cosign.HasLocalAttestationBundles(images[0])
@@ -139,8 +145,11 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && c.NewBundleFormat {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
-			if len(newBundles) == 0 || err != nil {
+			// The fetched bundles double as the bundle-format probe and as
+			// the verification input for the first image, so the bundle
+			// path downloads everything exactly once.
+			bundles, bundlesHash, err = cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
+			if err != nil || len(bundles) == 0 {
 				co.NewBundleFormat = false
 			}
 		}
@@ -189,7 +198,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	// was performed so we don't need to use this fragile logic here.
 	fulcioVerified := (co.SigVerifier == nil)
 
-	for _, imageRef := range images {
+	for i, imageRef := range images {
 		var verified []oci.Signature
 		var bundleVerified bool
 
@@ -204,7 +213,12 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 				return err
 			}
 
-			verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co, c.NameOptions...)
+			if i == 0 && co.NewBundleFormat && len(bundles) > 0 {
+				// Reuse the bundles fetched by the format auto-detect.
+				verified, bundleVerified, err = cosign.VerifyImageAttestationsWithBundles(ctx, bundles, bundlesHash, co)
+			} else {
+				verified, bundleVerified, err = cosign.VerifyImageAttestations(ctx, ref, co, c.NameOptions...)
+			}
 			if err != nil {
 				return err
 			}
