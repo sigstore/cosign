@@ -9,7 +9,7 @@ cosign attest [flags]
 ### Examples
 
 ```
-  cosign attest --key <key path>|<kms uri> [--predicate <path>] [--a key=value] [--no-upload=true|false] [--record-creation-timestamp=true|false] [--f] [--r] <image uri>
+  cosign attest [--key <key path>|<kms uri>] [--predicate <path>] [--no-upload=true|false] [-y] <image uri>
 
   # attach an attestation to a container image Google sign-in
   cosign attest --timeout 90s --predicate <FILE> --type <TYPE> <IMAGE>
@@ -30,7 +30,7 @@ cosign attest [flags]
   cosign attest --predicate <FILE> --type <TYPE> --key hashivault://[KEY] <IMAGE>
 
   # attach an attestation to a container image with a local key pair file, including a certificate and certificate chain
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE>
+  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --certificate cosign.crt --certificate-chain chain.crt <IMAGE>
 
   # attach an attestation to a container image which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign attest --predicate <FILE> --type <TYPE> --key cosign.key legacy-registry.example.com/my/image
@@ -40,9 +40,6 @@ cosign attest [flags]
 
   # write attestation to stdout
   cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --no-upload true <IMAGE>
-
-  # attach an attestation to a container image and honor the creation timestamp of the signature
-  cosign attest --predicate <FILE> --type <TYPE> --key cosign.key --record-creation-timestamp <IMAGE>
 ```
 
 ### Options
@@ -59,6 +56,7 @@ cosign attest [flags]
       --k8s-keychain                     whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                       path to the private key file, KMS URI or Kubernetes Secret
       --no-upload                        do not upload the generated attestation, but send the attestation output to STDOUT
+      --offline                          only allow offline signing with a local key without contacting network services. Key usage is not logged and therefore not auditable
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string   Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers   Disable ambient OIDC providers. When true, ambient credentials will not be read

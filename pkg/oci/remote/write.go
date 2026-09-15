@@ -91,9 +91,11 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 	if atts != nil { // will be nil if there are no associated attestations
 		attsTag, err := AttestationTag(ref, opts...)
 		if err != nil {
-			return fmt.Errorf("sigs tag: %w", err)
+			return fmt.Errorf("atts tag: %w", err)
 		}
-		return remoteWrite(attsTag, atts, o.ROpt...)
+		if err := remoteWrite(attsTag, atts, o.ROpt...); err != nil {
+			return err
+		}
 	}
 
 	// Look for any referring artifacts

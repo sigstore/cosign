@@ -243,7 +243,6 @@ func appendSlices(slices [][]byte) []byte {
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: "issuer",
 		},
@@ -258,7 +257,6 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertRef: "cert.pem",
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentity: "identity",
 		},
