@@ -5754,7 +5754,6 @@ func TestSignVerifyDetachedKeyless(t *testing.T) {
 		TlogUpload:        true,
 		OutputSignature:   sigFile,
 		OutputCertificate: certFile,
-		UseSigningConfig:  false,
 	}
 	must(sign.SignCmd(ctx, ro, ko, so, []string{imgName}), t)
 
