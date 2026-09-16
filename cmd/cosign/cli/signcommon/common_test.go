@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -697,4 +698,139 @@ func TestValidateSigningOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("empty signing config file bypasses TUF and leaves TrustedMaterial nil", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{})
+		assert.NoError(t, err)
+		scBytes, err := sc.MarshalJSON()
+		assert.NoError(t, err)
+
+		scPath := filepath.Join(t.TempDir(), "empty_signing_config.json")
+		assert.NoError(t, os.WriteFile(scPath, scBytes, 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err = LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, scPath, "")
+		assert.NoError(t, err)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing config has no services")
+	})
+
+	t.Run("useSigningConfig false with explicit trusted root loads TrustedMaterial without contacting TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		trPath := filepath.Join(t.TempDir(), "trusted_root.json")
+		trJSON := `{"mediaType":"application/vnd.dev.sigstore.trustedroot+json;version=0.1"}`
+		assert.NoError(t, os.WriteFile(trPath, []byte(trJSON), 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", trPath)
+		assert.NoError(t, err)
+		assert.Nil(t, ko.SigningConfig)
+		assert.NotNil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when explicit trusted root is provided")
+	})
+
+	t.Run("invalid signing config path fails fast without contacting TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "/nonexistent/signing_config.json", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error reading signing config from file")
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing config path is invalid")
+	})
+
+	t.Run("TUF trusted root error logs warning and continues without trusted root", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: ""}
+		var err error
+		stderr := ui.RunWithTestCtx(func(c context.Context, _ ui.WriteFunc) {
+			err = LoadSigningConfigAndTrustedMaterial(c, &ko, false, "", "")
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, ko.TrustedMaterial)
+		assert.Contains(t, stderr, "Could not fetch trusted_root.json from the TUF repository. Continuing without trusted root.")
+	})
+
+	t.Run("useSigningConfig false with no signing config and key ref leaves both nil and bypasses TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", "")
+		assert.NoError(t, err)
+		assert.Nil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty")
+	})
+
+	t.Run("signing config with services triggers TUF fetch", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: "https://fulcio.example.com"})
+		assert.NoError(t, err)
+		scBytes, err := sc.MarshalJSON()
+		assert.NoError(t, err)
+
+		scPath := filepath.Join(t.TempDir(), "signing_config.json")
+		assert.NoError(t, os.WriteFile(scPath, scBytes, 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		var loadErr error
+		stderr := ui.RunWithTestCtx(func(c context.Context, _ ui.WriteFunc) {
+			loadErr = LoadSigningConfigAndTrustedMaterial(c, &ko, false, scPath, "")
+		})
+		assert.NoError(t, loadErr)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Contains(t, stderr, "Could not fetch trusted_root.json from the TUF repository. Continuing without trusted root.")
+	})
+
+	t.Run("invalid trusted root path returns error", func(t *testing.T) {
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", "/nonexistent/trusted_root.json")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "loading trusted root")
+	})
+
+	t.Run("useSigningConfig true fails when TUF signing config cannot be retrieved", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, true, "", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "getting signing config from TUF")
+	})
 }

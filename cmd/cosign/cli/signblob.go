@@ -122,7 +122,7 @@ func SignBlob() *cobra.Command {
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				SigningAlgorithm:               o.SigningAlgorithm,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadSigningConfigAndTrustedMaterial(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 

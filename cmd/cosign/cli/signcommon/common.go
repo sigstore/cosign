@@ -532,26 +532,9 @@ func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingC
 	return nil
 }
 
-// LoadTrustedMaterialAndSigningConfig loads the trusted material and signing config from the given options.
-func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+// LoadSigningConfigAndTrustedMaterial loads the signing config and trusted material from the given options.
+func LoadSigningConfigAndTrustedMaterial(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
 	var err error
-	// Fetch a trusted root when:
-	// * requesting a certificate and no CT log key is provided to verify an SCT
-	// * using a signing config
-	if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
-		(useSigningConfig || signingConfigPath != "") {
-		if trustedRootPath != "" {
-			ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
-			if err != nil {
-				return fmt.Errorf("loading trusted root: %w", err)
-			}
-		} else {
-			ko.TrustedMaterial, err = cosign.TrustedRoot()
-			if err != nil {
-				ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-			}
-		}
-	}
 	if signingConfigPath != "" {
 		ko.SigningConfig, err = root.NewSigningConfigFromPath(signingConfigPath)
 		if err != nil {
@@ -564,7 +547,33 @@ func LoadTrustedMaterialAndSigningConfig(ctx context.Context, ko *options.KeyOpt
 		}
 	}
 
+	// Fetch a trusted root when:
+	// * an explicit --trusted-root path is provided
+	// * requesting a certificate and no CT log key is provided to verify an SCT
+	// * using a signing config with at least one service configured
+	if trustedRootPath != "" {
+		ko.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
+		if err != nil {
+			return fmt.Errorf("loading trusted root: %w", err)
+		}
+	} else if ((ko.KeyRef == "" || ko.IssueCertificateForExistingKey) && env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "") ||
+		signingConfigHasServices(ko.SigningConfig) {
+		ko.TrustedMaterial, err = cosign.TrustedRoot()
+		if err != nil {
+			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing without trusted root. Error from TUF: %v", err)
+		}
+	}
+
 	return nil
+}
+
+func signingConfigHasServices(sc *root.SigningConfig) bool {
+	if sc == nil {
+		return false
+	}
+	return len(sc.FulcioCertificateAuthorityURLs()) > 0 ||
+		len(sc.RekorLogURLs()) > 0 ||
+		len(sc.TimestampAuthorityURLs()) > 0
 }
 
 // ExtractComponentsFromProtoBundle extracts the components from a protobuf bundle.
