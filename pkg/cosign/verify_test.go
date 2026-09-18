@@ -61,6 +61,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/layout"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
@@ -2229,6 +2230,10 @@ func createTestSignedImage(t *testing.T, withBundle, attestation bool) oci.Signe
 // createV3BundleLayout creates a layout directory with a v3 sigstore bundle.
 // V3 bundles are stored as separate images with layers having the sigstore bundle media type.
 func createV3BundleLayout(t *testing.T) string {
+	return createV3BundleLayoutWithAnnotations(t, nil)
+}
+
+func createV3BundleLayoutWithAnnotations(t *testing.T, annotations map[string]string) string {
 	t.Helper()
 	tmp := t.TempDir()
 
@@ -2287,6 +2292,7 @@ func createV3BundleLayout(t *testing.T) string {
 		Digest:    targetDigest,
 		Size:      0,
 	}
+	referrerManifest.Annotations = annotations
 
 	// Write the referrer manifest to blobs/sha256
 	blobsDir := tmp + "/blobs/sha256"
@@ -2323,6 +2329,16 @@ func TestHasLocalAttestationBundles_V3Bundles(t *testing.T) {
 	hasBundles, err := HasLocalAttestationBundles(tmp)
 	require.NoError(t, err)
 	assert.True(t, hasBundles, "expected true for v3 attestations with bundles")
+}
+
+func TestHasLocalAttestationBundles_SignatureBundleOnly(t *testing.T) {
+	tmp := createV3BundleLayoutWithAnnotations(t, map[string]string{
+		ociremote.BundlePredicateType: types.CosignSignPredicateType,
+	})
+
+	hasBundles, err := HasLocalAttestationBundles(tmp)
+	require.NoError(t, err)
+	assert.False(t, hasBundles, "expected false when layout only contains signature bundles")
 }
 
 func TestHasLocalSigstoreBundles_OCIReferrers(t *testing.T) {
