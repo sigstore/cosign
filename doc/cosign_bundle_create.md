@@ -31,6 +31,8 @@ cosign bundle create [flags]
       --ignore-tlog                ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log.
       --key string                 path to the public key file, KMS URI or Kubernetes Secret
       --out string                 path to output bundle
+      --piv-key-sha256 string      select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)
+      --piv-serial string          select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)
       --rfc3161-timestamp string   path to RFC3161 timestamp FILE
       --signature string           path to base64-encoded signature over attestation in DSSE format
       --sk                         whether to use a hardware security key
