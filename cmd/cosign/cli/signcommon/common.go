@@ -678,6 +678,20 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 	return json.Marshal(signedPayload)
 }
 
+// NewEmptySigningConfig returns a signing config with no services configured.
+func NewEmptySigningConfig() *root.SigningConfig {
+	sc, _ := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+	)
+	return sc
+}
+
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
 // This only supports Rekor v1. Rekor v2 requires a user-provided signing config.
 func NewSigningConfigFromKeyOpts(ko options.KeyOpts) (*root.SigningConfig, error) {
