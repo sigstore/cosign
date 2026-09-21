@@ -1541,9 +1541,6 @@ func extractEntryImpl(bundleBody string) (rekor_types.EntryImpl, error) {
 	return rekor_types.UnmarshalEntry(pe)
 }
 
-// hashFields returns an entry hash's algorithm and value. The Rekor models
-// declare both as optional pointers, so they are only safe to dereference once
-// they have been checked.
 func hashFields(algorithm, value *string) (string, string, error) {
 	if algorithm == nil || value == nil {
 		return "", "", errors.New("bundle entry hash is missing its algorithm or value")
@@ -1557,11 +1554,9 @@ func bundleHash(bundleBody, _ string) (string, string, error) {
 		return "", "", err
 	}
 
-	// The hash is optional in each of these schemas and unmarshalling an entry
-	// does not always populate it, so every level is checked before it is
-	// dereferenced. This body comes from the bundle attached to the signature,
-	// which is read before the certificate or the signature has been verified,
-	// so a missing field has to be an error rather than a panic.
+	// The Rekor models mark these hash fields required, but each entry type's
+	// own validation decides what is enforced, and some accept an entry that
+	// carries no hash at all.
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
 		if h := entry.DSSEObj.EnvelopeHash; h != nil {
