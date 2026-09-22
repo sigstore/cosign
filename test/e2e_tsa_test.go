@@ -213,16 +213,21 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	_, err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "", true, "", "", false)
 	must(err, t)
 
+	trBytes, err := trustedRoot.MarshalJSON()
+	must(err, t)
+	trustedRootFile := mkfile(string(trBytes), td, t)
+
 	verifyKO := options.KeyOpts{
 		KeyRef:          pubKey,
 		BundlePath:      bundlePath,
-		TrustedMaterial: trustedRoot,
 		NewBundleFormat: true,
 	}
 
 	verifyCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:    verifyKO,
-		IgnoreTlog: true,
+		KeyOpts:             verifyKO,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: true,
+		TrustedRootPath:     trustedRootFile,
 	}
 	must(verifyCmd.Exec(context.Background(), blobPath), t)
 }
@@ -338,10 +343,11 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 	trustedRootFile := mkfile(string(trBytes), td, t)
 
 	verifyCmd := cliverify.VerifyCommand{
-		IgnoreTlog:      true,
-		IgnoreSCT:       true,
-		CheckClaims:     true,
-		NewBundleFormat: true,
+		IgnoreTlog:          true,
+		IgnoreSCT:           true,
+		CheckClaims:         true,
+		NewBundleFormat:     true,
+		UseSignedTimestamps: true,
 		CommonVerifyOptions: options.CommonVerifyOptions{
 			TrustedRootPath: trustedRootFile,
 		},
