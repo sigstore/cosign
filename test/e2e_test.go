@@ -5499,7 +5499,43 @@ func TestSignVerifyUploadFalse(t *testing.T) {
 	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
 	assert.Contains(t, out.String(), fmt.Sprintf("Signatures for an image tag: %s:%s-%s.sig", name, desc.Digest.Algorithm, desc.Digest.Hex))
 
+	// Try on a new image with legacy bundle format
+	imgName = path.Join(repo, "cosign-e2e-no-upload-legacy-bundle")
+	nameLegacy, descLegacy, cleanupLegacy := mkimage(t, imgName)
+	defer cleanupLegacy()
+
+	// There should be no signatures yet
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now sign the image with Upload: false
+	legacyBundlePath := path.Join(td, "legacy-output.bundle")
+	ko.BundlePath = legacyBundlePath
+	so.Upload = false
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
+	assert.FileExists(t, legacyBundlePath)
+
+	// There should still be no signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), "No Supply Chain Security Related Artifacts found for image")
+
+	// Now with Upload: true
+	so.Upload = true
+	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
+
+	// Now there should be signatures
+	out.Reset()
+	must(cli.TreeCmd(ctx, regOpts, regExpOpts, true, imgName, &out), t)
+	assert.Contains(t, out.String(), fmt.Sprintf("Signatures for an image tag: %s:%s-%s.sig", nameLegacy, descLegacy.Digest.Algorithm, descLegacy.Digest.Hex))
+	assert.FileExists(t, legacyBundlePath)
+	fLegacy, err := os.Open(legacyBundlePath)
+	must(err, t)
+	defer fLegacy.Close()
+
 	// Try on a new image with new bundle format
+	ko.BundlePath = ""
 	imgName = path.Join(repo, "cosign-e2e-no-upload-bundle")
 	name2, _, cleanup2 := mkimage(t, imgName)
 	defer cleanup2()
