@@ -140,11 +140,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
 	}
-	uploadToTlog := signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload)
-	if !uploadToTlog {
+	if !signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload) {
 		c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
 	}
-	if err := signcommon.ConfirmPrivacyStatement(ctx, c.KeyOpts, uploadToTlog); err != nil {
+	if err := signcommon.ConfirmPrivacyStatement(ctx, c.KeyOpts); err != nil {
 		return err
 	}
 
