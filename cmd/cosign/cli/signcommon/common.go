@@ -149,11 +149,11 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 
 // ConfirmPrivacyStatement prompts the user with the Sigstore privacy statement
 // if the operation will record data to a public transparency log.
-func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts, uploadToRekor bool) error {
+func ConfirmPrivacyStatement(ctx context.Context, ko options.KeyOpts) error {
 	isKeyless := (ko.KeyRef == "" && !ko.Sk) || ko.IssueCertificateForExistingKey
 	// The privacy statement applies when publishing to the public Rekor
 	// transparency log or the public Fulcio Certificate Transparency (CT) log.
-	if (uploadToRekor && hasPublicGoodRekorURL(ko.SigningConfig)) ||
+	if hasPublicGoodRekorURL(ko.SigningConfig) ||
 		(isKeyless && hasPublicGoodFulcioURL(ko.SigningConfig)) {
 		var statementErr error
 		privacy.StatementOnce.Do(func() {

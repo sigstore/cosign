@@ -78,7 +78,7 @@ func SignBlobCmd(ctx context.Context, ro *options.RootOptions, ko options.KeyOpt
 		ko.DefaultLoadOptions = &[]signature.LoadOption{}
 	}
 
-	if err := signcommon.ConfirmPrivacyStatement(ctx, ko, uploadToTlog); err != nil {
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko); err != nil {
 		return nil, err
 	}
 
