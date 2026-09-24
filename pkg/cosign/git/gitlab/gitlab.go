@@ -98,12 +98,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	// Create COSIGN_PASSWORD variable
 	if isGrp {
 		_, passwordResp, err := client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
-			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
-			Value:            gitlab.Ptr(string(keys.Password())),
-			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:        gitlab.Ptr(false),
-			Masked:           gitlab.Ptr(false),
-			EnvironmentScope: gitlab.Ptr("*"),
+			Key:              new("COSIGN_PASSWORD"),
+			Value:            new(string(keys.Password())),
+			VariableType:     new(gitlab.EnvVariableType),
+			Protected:        new(false),
+			Masked:           new(false),
+			EnvironmentScope: new("*"),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
@@ -114,12 +114,12 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		}
 	} else {
 		_, passwordResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-			Key:              gitlab.Ptr("COSIGN_PASSWORD"),
-			Value:            gitlab.Ptr(string(keys.Password())),
-			VariableType:     gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:        gitlab.Ptr(false),
-			Masked:           gitlab.Ptr(false),
-			EnvironmentScope: gitlab.Ptr("*"),
+			Key:              new("COSIGN_PASSWORD"),
+			Value:            new(string(keys.Password())),
+			VariableType:     new(gitlab.EnvVariableType),
+			Protected:        new(false),
+			Masked:           new(false),
+			EnvironmentScope: new("*"),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PASSWORD\" variable: %w", err)
@@ -135,11 +135,11 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	// Create COSIGN_PRIVATE_KEY variable
 	if isGrp {
 		_, privateKeyResp, err := client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
-			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
-			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
-			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:    gitlab.Ptr(false),
-			Masked:       gitlab.Ptr(false),
+			Key:          new("COSIGN_PRIVATE_KEY"),
+			Value:        new(string(keys.PrivateBytes)),
+			VariableType: new(gitlab.EnvVariableType),
+			Protected:    new(false),
+			Masked:       new(false),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" variable: %w", err)
@@ -150,11 +150,11 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		}
 	} else {
 		_, privateKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-			Key:          gitlab.Ptr("COSIGN_PRIVATE_KEY"),
-			Value:        gitlab.Ptr(string(keys.PrivateBytes)),
-			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:    gitlab.Ptr(false),
-			Masked:       gitlab.Ptr(false),
+			Key:          new("COSIGN_PRIVATE_KEY"),
+			Value:        new(string(keys.PrivateBytes)),
+			VariableType: new(gitlab.EnvVariableType),
+			Protected:    new(false),
+			Masked:       new(false),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" variable: %w", err)
@@ -170,11 +170,11 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	// Create COSIGN_PUBLIC_KEY variable
 	if isGrp {
 		_, publicKeyResp, err := client.GroupVariables.CreateVariable(ref, &gitlab.CreateGroupVariableOptions{
-			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
-			Value:        gitlab.Ptr(string(keys.PublicBytes)),
-			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:    gitlab.Ptr(false),
-			Masked:       gitlab.Ptr(false),
+			Key:          new("COSIGN_PUBLIC_KEY"),
+			Value:        new(string(keys.PublicBytes)),
+			VariableType: new(gitlab.EnvVariableType),
+			Protected:    new(false),
+			Masked:       new(false),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" variable: %w", err)
@@ -185,11 +185,11 @@ func (g *Gl) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		}
 	} else {
 		_, publicKeyResp, err := client.ProjectVariables.CreateVariable(ref, &gitlab.CreateProjectVariableOptions{
-			Key:          gitlab.Ptr("COSIGN_PUBLIC_KEY"),
-			Value:        gitlab.Ptr(string(keys.PublicBytes)),
-			VariableType: gitlab.Ptr(gitlab.EnvVariableType),
-			Protected:    gitlab.Ptr(false),
-			Masked:       gitlab.Ptr(false),
+			Key:          new("COSIGN_PUBLIC_KEY"),
+			Value:        new(string(keys.PublicBytes)),
+			VariableType: new(gitlab.EnvVariableType),
+			Protected:    new(false),
+			Masked:       new(false),
 		})
 		if err != nil {
 			return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" variable: %w", err)
