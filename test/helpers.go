@@ -52,12 +52,14 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -801,3 +803,18 @@ func generateCertificateBundle(genIntermediate bool) (
 
 	return caCertBuf, caPrivKeyBuf, caIntermediateCertBuf, caIntermediatePrivKeyBuf, certBuf, certBundleBuf, nil
 }
+
+var rekorSigningConfig = func() *root.SigningConfig {
+	sc := signcommon.NewEmptySigningConfig()
+	sc.WithRekorLogURLs(root.Service{
+		URL:                 rekorURL,
+		MajorAPIVersion:     1,
+		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
+	})
+	sc.WithFulcioCertificateAuthorityURLs(root.Service{
+		URL:                 fulcioURL,
+		MajorAPIVersion:     1,
+		ValidityPeriodStart: time.Now().Add(-24 * time.Hour),
+	})
+	return sc
+}()
