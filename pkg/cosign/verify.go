@@ -1541,26 +1541,47 @@ func extractEntryImpl(bundleBody string) (rekor_types.EntryImpl, error) {
 	return rekor_types.UnmarshalEntry(pe)
 }
 
+func hashFields(algorithm, value *string) (string, string, error) {
+	if algorithm == nil || value == nil {
+		return "", "", errors.New("bundle entry hash is missing its algorithm or value")
+	}
+	return *algorithm, *value, nil
+}
+
 func bundleHash(bundleBody, _ string) (string, string, error) {
 	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
 		return "", "", err
 	}
 
+	// The Rekor models mark these hash fields required, but each entry type's
+	// own validation decides what is enforced, and some accept an entry that
+	// carries no hash at all.
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
-		return *entry.DSSEObj.EnvelopeHash.Algorithm, *entry.DSSEObj.EnvelopeHash.Value, nil
+		if h := entry.DSSEObj.EnvelopeHash; h != nil {
+			return hashFields(h.Algorithm, h.Value)
+		}
 	case *hashedrekord_v001.V001Entry:
-		return *entry.HashedRekordObj.Data.Hash.Algorithm, *entry.HashedRekordObj.Data.Hash.Value, nil
+		if d := entry.HashedRekordObj.Data; d != nil && d.Hash != nil {
+			return hashFields(d.Hash.Algorithm, d.Hash.Value)
+		}
 	case *intoto_v001.V001Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		if c := entry.IntotoObj.Content; c != nil && c.Hash != nil {
+			return hashFields(c.Hash.Algorithm, c.Hash.Value)
+		}
 	case *intoto_v002.V002Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		if c := entry.IntotoObj.Content; c != nil && c.Hash != nil {
+			return hashFields(c.Hash.Algorithm, c.Hash.Value)
+		}
 	case *rekord_v001.V001Entry:
-		return *entry.RekordObj.Data.Hash.Algorithm, *entry.RekordObj.Data.Hash.Value, nil
+		if d := entry.RekordObj.Data; d != nil && d.Hash != nil {
+			return hashFields(d.Hash.Algorithm, d.Hash.Value)
+		}
 	default:
 		return "", "", errors.New("unsupported type")
 	}
+	return "", "", errors.New("no hash found in bundle entry")
 }
 
 // bundleSig extracts the signature from the rekor bundle body
