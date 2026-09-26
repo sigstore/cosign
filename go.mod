@@ -3,7 +3,7 @@ module github.com/sigstore/cosign/v3
 go 1.26.0
 
 require (
-	cloud.google.com/go/compute/metadata v0.9.0
+	cloud.google.com/go/compute/metadata v0.9.1
 	cuelang.org/go v0.17.1
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
 	github.com/buildkite/agent/v3 v3.130.0
@@ -15,8 +15,8 @@ require (
 	github.com/eclipse-keypont/crypto11 v1.6.8
 	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/go-openapi/runtime v0.33.2
-	github.com/go-openapi/strfmt v0.27.1
-	github.com/go-openapi/swag/conv v0.29.1
+	github.com/go-openapi/strfmt v0.27.2
+	github.com/go-openapi/swag/conv v0.29.2
 	github.com/go-piv/piv-go/v2 v2.6.0
 	github.com/google/certificate-transparency-go v1.3.3
 	github.com/google/go-cmp v0.7.0
@@ -46,7 +46,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
-	github.com/spiffe/go-spiffe/v2 v2.8.1
+	github.com/spiffe/go-spiffe/v2 v2.8.2
 	github.com/stretchr/testify v1.12.1
 	github.com/theupdateframework/go-tuf/v2 v2.4.2
 	github.com/transparency-dev/merkle v0.0.2
@@ -170,7 +170,7 @@ require (
 	github.com/go-openapi/swag/netutils v0.28.0 // indirect
 	github.com/go-openapi/swag/pools v0.29.1 // indirect
 	github.com/go-openapi/swag/stringutils v0.29.1 // indirect
-	github.com/go-openapi/swag/typeutils v0.29.1 // indirect
+	github.com/go-openapi/swag/typeutils v0.29.2 // indirect
 	github.com/go-openapi/swag/yamlutils v0.29.1 // indirect
 	github.com/go-openapi/validate v1.0.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
