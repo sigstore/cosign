@@ -63,19 +63,27 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	ociRemoteOpts := ociremote.WithRemoteOptions(remoteOpts...)
+	ociRemoteOpts := []ociremote.Option{ociremote.WithRemoteOptions(remoteOpts...)}
+	// Without the prefix, the tag helpers below resolve the default
+	// `sha256-<digest>.sig|.att|.sbom` tags, so a run that passed
+	// --attachment-tag-prefix deleted the unprefixed attachments instead of the
+	// ones it named. sign/attest apply the prefix when they push these tags, so
+	// clean has to apply it when it resolves them.
+	if regOpts.RefOpts.TagPrefix != "" {
+		ociRemoteOpts = append(ociRemoteOpts, ociremote.WithPrefix(regOpts.RefOpts.TagPrefix))
+	}
 
-	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts)
+	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts)
+	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts)
+	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -84,7 +92,7 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	digest, ok := ref.(name.Digest)
 	if !ok {
 		var err error
-		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts)
+		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts...)
 		if err != nil {
 			return fmt.Errorf("resolving digest: %w", err)
 		}
