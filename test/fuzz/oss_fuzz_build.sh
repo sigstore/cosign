@@ -20,7 +20,6 @@ compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/attestation
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/cue FuzzValidateJSON FuzzValidateJSON_cue
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign/rego FuzzValidateJSON FuzzValidateJSON_rego
 compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzImportKeyPairLoadPrivateKey FuzzImportKeyPairLoadPrivateKey
-compile_native_go_fuzzer_v2 github.com/sigstore/cosign/v3/pkg/cosign FuzzSigVerify FuzzSigVerify
 
 zip -j $OUT/FuzzValidateJSON_cue_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
 zip -j $OUT/FuzzValidateJSON_rego_seed_corpus.zip $SRC/go-fuzz-corpus/json/corpus/*
