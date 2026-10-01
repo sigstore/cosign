@@ -27,7 +27,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,7 +35,6 @@ import (
 	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
-	"github.com/digitorus/timestamp"
 	"github.com/go-openapi/runtime"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -67,7 +65,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/tuf"
-	tsaverification "github.com/sigstore/timestamp-authority/v2/pkg/verification"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -552,106 +549,6 @@ func VerifyBundle(sig oci.Signature, co *CheckOpts) (bool, error) {
 	}
 
 	return true, nil
-}
-
-type signedEntityForTimestamp struct {
-	verify.BaseSignedEntity
-	timestamp  *cbundle.RFC3161Timestamp
-	sigContent *sigContent
-}
-
-type sigContent struct {
-	rawSig []byte
-}
-
-func (e *signedEntityForTimestamp) Timestamps() ([][]byte, error) {
-	timestamps := make([][]byte, 1)
-	timestamps[0] = e.timestamp.SignedRFC3161Timestamp
-	return timestamps, nil
-}
-
-func (e *signedEntityForTimestamp) SignatureContent() (verify.SignatureContent, error) {
-	return e.sigContent, nil
-}
-
-func (s *sigContent) Signature() []byte {
-	return s.rawSig
-}
-
-func (s *sigContent) EnvelopeContent() verify.EnvelopeContent {
-	log.Fatal("programmer error: EnvelopeContent was called but not implemented")
-	return nil
-}
-
-func (s *sigContent) MessageSignatureContent() verify.MessageSignatureContent {
-	log.Fatal("programmer error: MessageSignatureContent was called but not implemented")
-	return nil
-}
-
-// VerifyRFC3161Timestamp verifies that the timestamp in sig is correctly signed, and if so,
-// returns the timestamp value.
-// It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
-// no root is provided with a timestamp.
-//
-// Note: This function does not perform CRL/OCSP certificate revocation checks.
-// Callers are responsible for validating the TSA certificate and trusted material provided via CheckOpts according to their policy.
-func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
-	ts, err := sig.RFC3161Timestamp()
-	switch {
-	case err != nil:
-		return nil, err
-	case ts == nil:
-		return nil, nil
-	case co.TSARootCertificates == nil && co.TrustedMaterial == nil:
-		return nil, errors.New("no TSA root certificate(s) provided to verify timestamp")
-	}
-
-	b64Sig, err := sig.Base64Signature()
-	if err != nil {
-		return nil, fmt.Errorf("reading base64signature: %w", err)
-	}
-
-	var tsBytes []byte
-	if len(b64Sig) == 0 {
-		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
-		signedPayload, err := sig.Payload()
-		if err != nil {
-			return nil, fmt.Errorf("reading the payload: %w", err)
-		}
-		tsBytes = signedPayload
-	} else {
-		// create timestamp over raw bytes of signature
-		rawSig, err := base64.StdEncoding.DecodeString(b64Sig)
-		if err != nil {
-			return nil, err
-		}
-		tsBytes = rawSig
-	}
-
-	if co.TrustedMaterial != nil {
-		entity := &signedEntityForTimestamp{
-			timestamp:  ts,
-			sigContent: &sigContent{rawSig: tsBytes},
-		}
-		verifiedTimestamps, verifyErrs, err := verify.VerifySignedTimestamp(entity, co.TrustedMaterial)
-		if err != nil {
-			return nil, fmt.Errorf("unable to verify signed timestamps with trusted root: %w", err)
-		}
-		if len(verifyErrs) > 0 {
-			log.Printf("Warning: subset of signed timestamps failed to verify: %v", verifyErrs)
-		}
-		if len(verifiedTimestamps) == 0 {
-			return nil, fmt.Errorf("expected at least one verified timestamp")
-		}
-		return &timestamp.Timestamp{Time: verifiedTimestamps[0].Time}, nil
-	}
-
-	return tsaverification.VerifyTimestampResponse(ts.SignedRFC3161Timestamp, bytes.NewReader(tsBytes),
-		tsaverification.VerifyOpts{
-			TSACertificate: co.TSACertificate,
-			Intermediates:  co.TSAIntermediateCertificates,
-			Roots:          co.TSARootCertificates,
-		})
 }
 
 // compare bundle signature to the signature we are verifying

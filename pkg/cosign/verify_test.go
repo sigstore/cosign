@@ -24,7 +24,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -32,18 +31,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/digitorus/timestamp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	ggcrlayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	gcrMutate "github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
-	tsaMock "github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/mock"
 	"github.com/sigstore/cosign/v3/internal/test"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/layout"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
@@ -51,7 +46,6 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
-	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
@@ -162,131 +156,6 @@ func TestTrustedCertSuccessChainFromRoot(t *testing.T) {
 	_, err := TrustedCert(leafCert, rootPool, subPool)
 	if err != nil {
 		t.Fatalf("expected no error verifying certificate, got %v", err)
-	}
-}
-
-func TestVerifyRFC3161Timestamp(t *testing.T) {
-	// generate signed artifact
-	rootCert, rootKey, _ := test.GenerateRootCa()
-	leafCert, privKey, _ := test.GenerateLeafCert("subject", "oidc-issuer", rootCert, rootKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-	payload := []byte{1, 2, 3, 4}
-	h := sha256.Sum256(payload)
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-
-	client, err := tsaMock.NewTSAClient((tsaMock.TSAClientOptions{Time: time.Now()}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tsBytes, err := getTimestampedSignature(signature, client)
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TS := bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
-
-	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
-	if err != nil {
-		t.Fatalf("unexpected error marshalling cert chain: %v", err)
-	}
-
-	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
-	if err != nil {
-		t.Fatal("error splitting response into certificate chain")
-	}
-
-	ociSig, _ := static.NewSignature(payload,
-		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
-		static.WithRFC3161Timestamp(&rfc3161TS))
-
-	// success, signing over signature
-	ts, err := VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error verifying timestamp with signature: %v", err)
-	}
-	if err := CheckExpiry(leafCert, nil, ts.Time); err != nil {
-		t.Fatalf("unexpected error using time from timestamp to verify certificate: %v", err)
-	}
-
-	// success, signing over payload
-	tsBytes, err = getTimestampedSignature(payload, client)
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
-	ociSig, _ = static.NewSignature(payload,
-		"", /*signature*/
-		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
-		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-	})
-	if err != nil {
-		t.Fatalf("unexpected error verifying timestamp with payload: %v", err)
-	}
-
-	// failure with non-base64 encoded signature
-	ociSig, _ = static.NewSignature(payload,
-		string(signature),
-		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
-		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-	})
-	if err == nil || !strings.Contains(err.Error(), "base64 data") {
-		t.Fatalf("expected error verifying timestamp with raw signature, got: %v", err)
-	}
-
-	// failure with mismatched signature
-	tsBytes, err = getTimestampedSignature(signature, client)
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
-	// regenerate signature
-	signature, _ = privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	ociSig, _ = static.NewSignature(payload,
-		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
-		static.WithRFC3161Timestamp(&rfc3161TS))
-	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-		TSARootCertificates:         roots,
-	})
-	if err == nil || !strings.Contains(err.Error(), "hashed messages don't match") {
-		t.Fatalf("expected error verifying mismatched signatures, got: %v", err)
-	}
-
-	// failure without root certificate
-	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TSACertificate:              leaves[0],
-		TSAIntermediateCertificates: intermediates,
-	})
-	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
-		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
-	}
-
-	// failure with empty TrustedRoot
-	emptyTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, nil, nil)
-	if err != nil {
-		t.Fatalf("unexpected error creating empty trusted root: %v", err)
-	}
-	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
-		TrustedMaterial: emptyTrustedRoot,
-	})
-	if err == nil || !strings.Contains(err.Error(), "expected at least one verified timestamp") {
-		t.Fatalf("expected error verifying with empty trusted root, got: %v", err)
 	}
 }
 
@@ -823,19 +692,6 @@ func TestGetLocalBundles_InvalidPath(t *testing.T) {
 	assert.Nil(t, hash)
 	assert.Nil(t, bundles)
 }
-
-func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]byte, error) {
-	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating timestamp request: %w", err)
-	}
-
-	return tsaClient.GetTimestampResponse(requestBytes)
-}
-
 func TestBundleHash(t *testing.T) {
 	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
 	if err != nil {
