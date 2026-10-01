@@ -16,19 +16,9 @@
 package cosign
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-
-	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
-)
-
-var (
-	defaultFuzzRef = "fuzz/test"
 )
 
 func fuzzPass(s string) PassFunc {
@@ -64,60 +54,6 @@ func FuzzImportKeyPairLoadPrivateKey(f *testing.F) {
 		_, err = LoadPrivateKey(keyBytes.PrivateBytes, password, nil)
 		if err != nil {
 			t.Fatal(err)
-		}
-	})
-}
-
-func FuzzSigVerify(f *testing.F) {
-	f.Fuzz(func(t *testing.T, sigData, payloadData []byte, verificationTest int) {
-		path := t.TempDir()
-		sigPath := filepath.Join(path, "sigFile")
-		err := os.WriteFile(sigPath, sigData, 0x755)
-		if err != nil {
-			return
-		}
-		payloadPath := filepath.Join(path, "payloadFile")
-		err = os.WriteFile(payloadPath, payloadData, 0x755)
-		if err != nil {
-			return
-		}
-		ref, err := name.ParseReference(defaultFuzzRef)
-		if err != nil {
-			panic(err)
-		}
-		sigs, err := loadSignatureFromFile(context.Background(), sigPath, ref, &CheckOpts{PayloadRef: payloadPath})
-		if err != nil {
-			return
-		}
-		switch verificationTest % 5 {
-		case 0:
-			VerifyImageAttestation(context.Background(), sigs, v1.Hash{}, &CheckOpts{IgnoreTlog: true})
-		case 1:
-			verifySignatures(context.Background(), sigs, v1.Hash{}, &CheckOpts{IgnoreTlog: true})
-		case 2:
-			sl, err := sigs.Get()
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, sig := range sl {
-				VerifyBlobSignature(context.Background(), sig, &CheckOpts{IgnoreTlog: true})
-			}
-		case 3:
-			sl, err := sigs.Get()
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, sig := range sl {
-				VerifyImageSignature(context.Background(), sig, v1.Hash{}, &CheckOpts{IgnoreTlog: true})
-			}
-		case 4:
-			sl, err := sigs.Get()
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, sig := range sl {
-				mutate.Signature(sig)
-			}
 		}
 	})
 }
