@@ -70,7 +70,6 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "https://rekor.sigstore.dev",
 		"address of rekor STL server")
 	_ = cmd.RegisterFlagCompletionFunc("rekor-url", cobra.NoFileCompletions)
-	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use a signing config to specify a rekor url; see `cosign signing-config --help`")
 
 	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
 		"path to RFC3161 timestamp FILE")
@@ -89,6 +88,42 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.MarkFlagsMutuallyExclusive("bundle", "certificate")
 	cmd.MarkFlagsMutuallyExclusive("bundle", "signature")
+}
+
+type BundleCreateFromContainerOptions struct {
+	Registry   RegistryOptions
+	IgnoreTlog bool
+	KeyRef     string
+	RekorURL   string
+	Sk         bool
+	Slot       string
+}
+
+var _ Interface = (*BundleCreateFromContainerOptions)(nil)
+
+func (o *BundleCreateFromContainerOptions) AddFlags(cmd *cobra.Command) {
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().BoolVar(&o.IgnoreTlog, "ignore-tlog", false,
+		"ignore transparency log verification, to be used when an artifact "+
+			"signature has not been uploaded to the transparency log.")
+
+	cmd.Flags().StringVar(&o.KeyRef, "key", "",
+		"path to the public key file, KMS URI or Kubernetes Secret")
+	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
+
+	cmd.Flags().StringVar(&o.RekorURL, "rekor-url", "https://rekor.sigstore.dev",
+		"address of rekor STL server")
+	_ = cmd.RegisterFlagCompletionFunc("rekor-url", cobra.NoFileCompletions)
+
+	cmd.Flags().BoolVar(&o.Sk, "sk", false,
+		"whether to use a hardware security key")
+
+	cmd.Flags().StringVar(&o.Slot, "slot", "signature",
+		fmt.Sprintf("security key slot to use for generated key (%s)", strings.Join(securityKeySlots, "|")))
+	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
+
+	cmd.MarkFlagsMutuallyExclusive("key", "sk")
 }
 
 type BundleUpgradeOptions struct {
