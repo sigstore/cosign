@@ -2663,3 +2663,236 @@ func getTimestampedSignature(sigBytes []byte, tsaClient *tsaMock.TSAClient) ([]b
 
 	return tsaClient.GetTimestampResponse(requestBytes)
 }
+
+func TestBundleHash(t *testing.T) {
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	b64key := base64.StdEncoding.EncodeToString(pemBytes)
+
+	payload := []byte{1, 2, 3, 4}
+	digest := sha256.Sum256(payload)
+	value := hex.EncodeToString(digest[:])
+	sig, err := sv.SignMessage(bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("signing: %v", err)
+	}
+	b64sig := base64.StdEncoding.EncodeToString(sig)
+	hash := fmt.Sprintf(`{"algorithm":"sha256","value":%q}`, value)
+
+	tests := []struct {
+		name string
+		body string
+	}{{
+		name: "dsse v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"dsse","spec":{"envelopeHash":%s,"payloadHash":%s,"signatures":[{"signature":%q,"verifier":%q}]}}`,
+			hash, hash, b64sig, b64key),
+	}, {
+		name: "hashedrekord v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"hashedrekord","spec":{"data":{"hash":%s},"signature":{"content":%q,"publicKey":{"content":%q}}}}`,
+			hash, b64sig, b64key),
+	}, {
+		name: "intoto v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"intoto","spec":{"content":{"hash":%s,"payloadHash":%s},"publicKey":%q}}`,
+			hash, hash, b64key),
+	}, {
+		name: "intoto v0.0.2",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.2","kind":"intoto","spec":{"content":{"envelope":{"payloadType":"application/vnd.in-toto+json","payload":"","signatures":[{"publicKey":%q,"sig":%q}]},"hash":%s}}}`,
+			b64key, b64sig, hash),
+	}, {
+		name: "rekord v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"rekord","spec":{"data":{"hash":%s},"signature":{"format":"x509","content":%q,"publicKey":{"content":%q}}}}`,
+			hash, b64sig, b64key),
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			alg, val, err := bundleHash(base64.StdEncoding.EncodeToString([]byte(tt.body)), "")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if alg != "sha256" || val != value {
+				t.Errorf("got %s:%s, want sha256:%s", alg, val, value)
+			}
+		})
+	}
+}
+
+func TestBundleHashWithMissingHash(t *testing.T) {
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	b64key := base64.StdEncoding.EncodeToString(pemBytes)
+	value := strings.Repeat("0", 64)
+	payloadHash := fmt.Sprintf(`{"algorithm":"sha256","value":%q}`, value)
+
+	rekord := func(hash string) string {
+		return fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"rekord","spec":{"data":{"content":"YQ=="%s},"signature":{"format":"x509","content":"YQ==","publicKey":{"content":%q}}}}`,
+			hash, b64key)
+	}
+	intotoV002 := func(hash string) string {
+		return fmt.Sprintf(`{"apiVersion":"0.0.2","kind":"intoto","spec":{"content":{"envelope":{"payloadType":"application/vnd.in-toto+json","payload":"","signatures":[{"publicKey":%q,"sig":"YQ=="}]}%s}}}`,
+			b64key, hash)
+	}
+
+	// Only rekord v0.0.1 and intoto v0.0.2 accept an entry with no hash, and
+	// those reach bundleHash's own check. Rekor rejects every other case
+	// before the switch is reached. A hash object missing only its algorithm
+	// or value fails Rekor's validation for every entry type, so the
+	// hashFields error is covered by TestHashFields instead.
+	tests := []struct {
+		name    string
+		body    string
+		wantErr string
+	}{{
+		name:    "rekord v0.0.1 without data.hash",
+		body:    rekord(""),
+		wantErr: "no hash found in bundle entry",
+	}, {
+		name:    "intoto v0.0.2 without content.hash",
+		body:    intotoV002(""),
+		wantErr: "no hash found in bundle entry",
+	}, {
+		name: "rekord v0.0.1 without data.hash.value",
+		body: rekord(`,"hash":{"algorithm":"sha256"}`),
+	}, {
+		name: "rekord v0.0.1 without data.hash.algorithm",
+		body: rekord(fmt.Sprintf(`,"hash":{"value":%q}`, value)),
+	}, {
+		name: "intoto v0.0.2 without content.hash.value",
+		body: intotoV002(`,"hash":{"algorithm":"sha256"}`),
+	}, {
+		name: "intoto v0.0.2 without content.hash.algorithm",
+		body: intotoV002(fmt.Sprintf(`,"hash":{"value":%q}`, value)),
+	}, {
+		name: "dsse v0.0.1 without envelopeHash",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"dsse","spec":{"payloadHash":%s,"signatures":[{"signature":"YQ==","verifier":%q}]}}`,
+			payloadHash, b64key),
+	}, {
+		name: "hashedrekord v0.0.1 without data.hash",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"hashedrekord","spec":{"data":{},"signature":{"content":"YQ==","publicKey":{"content":%q}}}}`,
+			b64key),
+	}, {
+		name: "intoto v0.0.1 without content.hash",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"intoto","spec":{"content":{"payloadHash":%s},"publicKey":%q}}`,
+			payloadHash, b64key),
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := bundleHash(base64.StdEncoding.EncodeToString([]byte(tt.body)), "")
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("wanted %q, got: %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestHashFields(t *testing.T) {
+	algorithm, value := "sha256", strings.Repeat("0", 64)
+	tests := []struct {
+		name      string
+		algorithm *string
+		value     *string
+		wantErr   bool
+	}{
+		{name: "both set", algorithm: &algorithm, value: &value},
+		{name: "missing algorithm", value: &value, wantErr: true},
+		{name: "missing value", algorithm: &algorithm, wantErr: true},
+		{name: "missing both", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			alg, val, err := hashFields(tt.algorithm, tt.value)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected an error, got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if alg != algorithm || val != value {
+				t.Errorf("got %s:%s, want %s:%s", alg, val, algorithm, value)
+			}
+		})
+	}
+}
+
+func TestVerifyImageSignatureWithBundleBodyMissingHash(t *testing.T) {
+	rootCert, rootKey, _ := test.GenerateRootCa()
+	leafCert, privKey, _ := test.GenerateLeafCert("subject@mail.com", "oidc-issuer", rootCert, rootKey)
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sig, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	b64sig := base64.StdEncoding.EncodeToString(sig)
+	b64leaf := base64.StdEncoding.EncodeToString(pemLeaf)
+
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating signer: %v", err)
+	}
+	pemBytes, _ := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active)
+
+	// The bundle is read from the registry, so its body is chosen by whoever
+	// published the signature. These bodies carry the real signature and
+	// certificate so that they get past the bundle's signature and public key
+	// comparisons, but omit the entry hash.
+	tests := []struct {
+		name string
+		body string
+	}{{
+		name: "rekord v0.0.1",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.1","kind":"rekord","spec":{"data":{"content":%q},"signature":{"format":"x509","content":%q,"publicKey":{"content":%q}}}}`,
+			base64.StdEncoding.EncodeToString(payload), b64sig, b64leaf),
+	}, {
+		name: "intoto v0.0.2",
+		body: fmt.Sprintf(`{"apiVersion":"0.0.2","kind":"intoto","spec":{"content":{"envelope":{"payloadType":"application/vnd.in-toto+json","payload":"","signatures":[{"publicKey":%q,"sig":%q}]}}}}`,
+			b64leaf, b64sig),
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rekorBundle := &bundle.RekorBundle{
+				SignedEntryTimestamp: []byte("not reached"),
+				Payload: bundle.RekorPayload{
+					Body:           base64.StdEncoding.EncodeToString([]byte(tt.body)),
+					IntegratedTime: 1,
+					LogIndex:       1,
+					LogID:          "deadbeef",
+				},
+			}
+			opts := []static.Option{static.WithCertChain(pemLeaf, []byte{}), static.WithBundle(rekorBundle)}
+			ociSig, _ := static.NewSignature(payload, b64sig, opts...)
+
+			_, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+				&CheckOpts{
+					RootCerts:    rootPool,
+					IgnoreSCT:    true,
+					Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+					RekorPubKeys: &rekorPubKeys})
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), "no hash found in bundle entry") {
+				t.Errorf("wanted 'no hash found in bundle entry', got: %v", err)
+			}
+		})
+	}
+}
