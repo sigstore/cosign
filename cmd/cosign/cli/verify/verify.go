@@ -113,7 +113,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain || c.CommonVerifyOptions.AllowCertificateChain,
-		NewBundleFormat:              true,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.Sk, co)
 	err = SetTrustedMaterial(c.TrustedRootPath, vOfflineKey, co)

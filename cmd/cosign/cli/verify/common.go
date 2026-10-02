@@ -42,9 +42,6 @@ import (
 
 // CheckSigstoreBundleUnsupportedOptions checks for incompatible settings on any Verify* command struct when NewBundleFormat is used.
 func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, co *cosign.CheckOpts) error {
-	if !co.NewBundleFormat {
-		return nil
-	}
 	fieldToErr := map[string]string{
 		"CertRef":              "certificate must be in bundle and may not be provided using --certificate",
 		"CertChain":            "certificate chain must be in bundle and may not be provided using --certificate-chain",
@@ -160,7 +157,7 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 // It takes a CheckOpts as input and modifies it.
 func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, keylessVerification bool, rekorURL, tsaCertChain, certChain, caRoots, caIntermediates string, co *cosign.CheckOpts) error {
 	var err error
-	if !ignoreTlog && !co.NewBundleFormat && rekorURL != "" {
+	if !ignoreTlog && rekorURL != "" {
 		co.RekorClient, err = rekor.NewClient(rekorURL)
 		if err != nil {
 			return fmt.Errorf("creating rekor client: %w", err)

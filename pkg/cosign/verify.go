@@ -174,10 +174,6 @@ type CheckOpts struct {
 	// Should the experimental OCI 1.1 behaviour be enabled or not.
 	// Defaults to false.
 	ExperimentalOCI11 bool
-
-	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
-	NewBundleFormat bool
-
 	// AllowCertificateChain permits bundles with version >= v0.3 to contain
 	// X.509 certificate chains in the verification material.
 	AllowCertificateChain bool
@@ -654,10 +650,6 @@ func VerifyImageSignatures(ctx context.Context, signedImgRef name.Reference, co 
 		if err == nil {
 			return verified, bundleVerified, nil
 		}
-	}
-
-	if co.NewBundleFormat {
-		return nil, false, errors.New("bundle support for image signatures is not yet implemented")
 	}
 
 	// Enforce this up front.
