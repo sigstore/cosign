@@ -28,7 +28,6 @@ const DefaultOIDCIssuerURL = "https://oauth2.sigstore.dev/auth"
 
 // OIDCOptions is the wrapper for OIDC related options.
 type OIDCOptions struct {
-	Issuer                  string
 	ClientID                string
 	clientSecretFile        string
 	RedirectURL             string
@@ -56,10 +55,6 @@ var _ Interface = (*OIDCOptions)(nil)
 
 // AddFlags implements Interface
 func (o *OIDCOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().StringVar(&o.Issuer, "oidc-issuer", DefaultOIDCIssuerURL,
-		"OIDC provider to be used to issue ID token")
-	_ = cmd.Flags().MarkDeprecated("oidc-issuer", "please use a signing config to specify an OIDC issuer; see `cosign signing-config create --help`")
-
 	cmd.Flags().StringVar(&o.ClientID, "oidc-client-id", "sigstore",
 		"OIDC client ID for application")
 
