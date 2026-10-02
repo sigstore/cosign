@@ -118,7 +118,6 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 		BundlePath:      bundlePath,
 		SigningConfig:   signingConfig,
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 	}
 	err = sign.SignBlobCmd(t.Context(), ro, signingKO, blobPath, "", "")
 	must(err, t)
@@ -128,9 +127,8 @@ func TestSignBlobTSAMTLSWithSigningConfig(t *testing.T) {
 	trustedRootFile := mkfile(string(trBytes), td, t)
 
 	verifyKO := options.KeyOpts{
-		KeyRef:          pubKey,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
+		KeyRef:     pubKey,
+		BundlePath: bundlePath,
 	}
 
 	verifyCmd := cliverify.VerifyBlobCmd{
@@ -238,7 +236,6 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 		TSAServerName:   "server.example.com",
 		SigningConfig:   signingConfig,
 		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
 	}
 	so := options.SignOptions{
 		Upload:    true,

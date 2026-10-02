@@ -178,7 +178,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	trustedMaterial, err := cosign.TrustedRoot()
 	must(err, t)
 	ko.TrustedMaterial = trustedMaterial
-	ko.NewBundleFormat = true
 
 	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
@@ -198,9 +197,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			NewBundleFormat: true,
-		},
 		KeyRef:        pubKey,
 		PredicateType: "slsaprovenance",
 		RegistryOptions: options.RegistryOptions{
@@ -245,7 +241,6 @@ func TestAttachInsecureRegistry(t *testing.T) {
 		PassFunc:         passFunc,
 		SigningConfig:    newRekorV2SigningConfig(t, rekorURL),
 		SkipConfirmation: true,
-		NewBundleFormat:  true,
 		BundlePath:       bundlePath,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -274,7 +269,6 @@ func TestAttachInsecureRegistry(t *testing.T) {
 		PredicateType:   "slsaprovenance",
 		RegistryOptions: regOpts,
 	}
-	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true
 	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
 
 	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, imgName), t)
