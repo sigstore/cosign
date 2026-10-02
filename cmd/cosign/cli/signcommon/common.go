@@ -19,9 +19,6 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -48,9 +45,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
 
-	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -138,7 +133,7 @@ func ShouldUploadToTlog(ctx context.Context, ko options.KeyOpts, ref name.Refere
 
 	// Check if the image is public (no auth in Get)
 	if _, err := remote.Get(ref, remote.WithContext(ctx)); err != nil {
-		ui.Warnf(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log at %q", ref.Context().String(), ko.RekorURL)
+		ui.Warnf(ctx, "%q appears to be a private repository, please confirm uploading to the transparency log", ref.Context().String())
 		if ui.ConfirmContinue(ctx) != nil {
 			ui.Infof(ctx, "not uploading to transparency log")
 			return false
@@ -427,10 +422,10 @@ type CommonBundleOpts struct {
 }
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
-func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, crypto.PublicKey, pb_go_v1.HashAlgorithm, error) {
+func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certChain string, bundleOpts CommonBundleOpts, signingConfig *root.SigningConfig, trustedMaterial root.TrustedMaterial) ([]byte, error) {
 	keypair, certBytes, chainBytes, idToken, err := GetKeypairAndToken(ctx, ko, cert, certChain)
 	if err != nil {
-		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting keypair and token: %w", err)
+		return nil, fmt.Errorf("getting keypair and token: %w", err)
 	}
 	if closer, ok := keypair.(interface{ Close() }); ok {
 		defer closer.Close()
@@ -445,24 +440,17 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 	if ko.TSAClientCACert != "" || (ko.TSAClientCert != "" && ko.TSAClientKey != "") {
 		tsaClientTransport, err = client.GetHTTPTransport(ko.TSAClientCACert, ko.TSAClientCert, ko.TSAClientKey, ko.TSAServerName, 30*time.Second)
 		if err != nil {
-			return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("getting TSA client transport: %w", err)
+			return nil, fmt.Errorf("getting TSA client transport: %w", err)
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
 
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
-		return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, fmt.Errorf("signing bundle: %w", err)
+		return nil, fmt.Errorf("signing bundle: %w", err)
 	}
 
-	return bundle, keypair.GetPublicKey(), keypair.GetHashAlgorithm(), nil
-}
-
-type BundleComponents struct {
-	Signature         []byte
-	Certificates      []*pb_go_v1.X509Certificate
-	RekorEntries      []*protorekor.TransparencyLogEntry
-	RFC3161Timestamps []*pb_go_v1.RFC3161SignedTimestamp
+	return bundle, nil
 }
 
 // ParseOCIReference parses a string reference to an OCI image into a reference, warning if the reference did not include a digest.
@@ -486,50 +474,6 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 		}
 	}
 	return signature.ParseSignatureAlgorithmFlag(signingAlgorithm)
-}
-
-// ValidateSigningOptions checks signing option compatibility and emits deprecation warnings.
-func ValidateSigningOptions(ctx context.Context, useSigningConfig bool, signingConfigPath string,
-	rekorURL, fulcioURL, oidcIssuer, tsaServerURL string,
-	tlogUpload bool, newBundleFormat bool, bundlePath string,
-	output, outputAttestation, outputCertificate, outputPayload, outputSignature, outputTimestamp string) error {
-	// TODO: Remove deprecated output flags warning in a future release (when flags are removed)
-	if newBundleFormat && outputSignature != "" {
-		ui.Warnf(ctx, "--output-signature is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputAttestation != "" {
-		ui.Warnf(ctx, "--output-attestation is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputCertificate != "" {
-		ui.Warnf(ctx, "--output-certificate is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputPayload != "" {
-		ui.Warnf(ctx, "--output-payload is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && outputTimestamp != "" {
-		ui.Warnf(ctx, "--rfc3161-timestamp is deprecated when using --new-bundle-format and will be ignored")
-	}
-	if newBundleFormat && output != "" {
-		ui.Warnf(ctx, "--output is deprecated when using --new-bundle-format and will be ignored")
-	}
-
-	// If a signing config is used, then service URLs cannot be specified
-	if (useSigningConfig || signingConfigPath != "") &&
-		((rekorURL != "" && rekorURL != options.DefaultRekorURL) ||
-			(fulcioURL != "" && fulcioURL != options.DefaultFulcioURL) ||
-			(oidcIssuer != "" && oidcIssuer != options.DefaultOIDCIssuerURL) ||
-			tsaServerURL != "") {
-		return fmt.Errorf("cannot specify service URLs and use signing config")
-	}
-	if (useSigningConfig || signingConfigPath != "") && !tlogUpload {
-		return fmt.Errorf("--tlog-upload=false is not supported with --signing-config or --use-signing-config. Provide a signing config with --signing-config without a transparency log service, which can be created with `cosign signing-config create` or `curl https://raw.githubusercontent.com/sigstore/root-signing/refs/heads/main/targets/signing_config.v0.2.json | jq 'del(.rekorTlogUrls)'` for the public instance")
-	}
-	// Signing config requires a bundle as output for verification materials since sigstore-go is used
-	if (useSigningConfig || signingConfigPath != "") && !newBundleFormat && bundlePath == "" {
-		return fmt.Errorf("must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config")
-	}
-
-	return nil
 }
 
 // LoadSigningConfigAndTrustedMaterial loads the signing config and trusted material from the given options.
@@ -594,108 +538,6 @@ func signingConfigHasServices(sc *root.SigningConfig) bool {
 		len(sc.TimestampAuthorityURLs()) > 0
 }
 
-// ExtractComponentsFromProtoBundle extracts the components from a protobuf bundle.
-func ExtractComponentsFromProtoBundle(bundle *protobundle.Bundle) (*BundleComponents, error) {
-	if bundle == nil {
-		return nil, fmt.Errorf("bundle is nil")
-	}
-
-	var sig []byte
-	if dsseEnv := bundle.GetDsseEnvelope(); dsseEnv != nil {
-		var err error
-		sig, err = json.Marshal(dsseEnv)
-		if err != nil {
-			return nil, fmt.Errorf("marshalling dsse envelope: %w", err)
-		}
-	} else if ms := bundle.GetMessageSignature(); ms != nil {
-		sig = ms.GetSignature()
-	}
-
-	if sig == nil {
-		return nil, fmt.Errorf("bundle does not contain a message signature or dsse envelope")
-	}
-
-	bc := &BundleComponents{
-		Signature: sig,
-	}
-
-	if vm := bundle.GetVerificationMaterial(); vm != nil {
-		if chain := vm.GetX509CertificateChain(); chain != nil && len(chain.GetCertificates()) > 0 {
-			bc.Certificates = chain.GetCertificates()
-		} else if cert := vm.GetCertificate(); cert != nil {
-			bc.Certificates = []*pb_go_v1.X509Certificate{cert}
-		}
-		if tlogEntries := vm.GetTlogEntries(); len(tlogEntries) > 0 {
-			bc.RekorEntries = tlogEntries
-		}
-		if tvd := vm.GetTimestampVerificationData(); tvd != nil {
-			if timestamps := tvd.GetRfc3161Timestamps(); len(timestamps) > 0 {
-				bc.RFC3161Timestamps = timestamps
-			}
-		}
-	}
-
-	return bc, nil
-}
-
-// EncodeCertificatesToPEM encodes certificates to PEM format.
-func EncodeCertificatesToPEM(certs []*pb_go_v1.X509Certificate) ([]byte, []byte) {
-	if len(certs) == 0 {
-		return nil, nil
-	}
-
-	var parsedCerts []*x509.Certificate
-	for _, cert := range certs {
-		c, err := x509.ParseCertificate(cert.GetRawBytes())
-		if err != nil {
-			continue
-		}
-		parsedCerts = append(parsedCerts, c)
-	}
-
-	if len(parsedCerts) == 0 {
-		return nil, nil
-	}
-
-	certPem, _ := cryptoutils.MarshalCertificateToPEM(parsedCerts[0])
-	var chainPem []byte
-	if len(parsedCerts) > 1 {
-		chainPem, _ = cryptoutils.MarshalCertificatesToPEM(parsedCerts[1:])
-	}
-	return certPem, chainPem
-}
-
-// RekorBundleFromProtoTlogEntry creates a RekorBundle from a protobuf TransparencyLogEntry.
-func RekorBundleFromProtoTlogEntry(entry *protorekor.TransparencyLogEntry) *cbundle.RekorBundle {
-	return &cbundle.RekorBundle{
-		SignedEntryTimestamp: entry.GetInclusionPromise().GetSignedEntryTimestamp(),
-		Payload: cbundle.RekorPayload{
-			Body:           entry.GetCanonicalizedBody(),
-			IntegratedTime: entry.GetIntegratedTime(),
-			LogIndex:       entry.GetLogIndex(),
-			LogID:          hex.EncodeToString(entry.GetLogId().GetKeyId()),
-		},
-	}
-}
-
-// NewLegacyBundleFromProtoBundleComponents creates a legacy bundle from a protobuf bundle.
-func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, error) {
-	signedPayload := cosign.LocalSignedPayload{
-		Base64Signature: base64.StdEncoding.EncodeToString(bc.Signature),
-	}
-
-	if len(bc.Certificates) > 0 {
-		certPem, _ := EncodeCertificatesToPEM(bc.Certificates)
-		signedPayload.Cert = base64.StdEncoding.EncodeToString(certPem)
-	}
-
-	if len(bc.RekorEntries) > 0 {
-		signedPayload.Bundle = RekorBundleFromProtoTlogEntry(bc.RekorEntries[0])
-	}
-
-	return json.Marshal(signedPayload)
-}
-
 // NewEmptySigningConfig returns a signing config with no services configured.
 func NewEmptySigningConfig() *root.SigningConfig {
 	// root.NewSigningConfig only errors when an unsupported media type is provided.
@@ -710,66 +552,6 @@ func NewEmptySigningConfig() *root.SigningConfig {
 		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
 	)
 	return sc
-}
-
-// NewSigningConfigFromKeyOpts creates a signing config from key options.
-// This only supports Rekor v1. Rekor v2 requires a user-provided signing config.
-func NewSigningConfigFromKeyOpts(ko options.KeyOpts) (*root.SigningConfig, error) {
-	var fulcioServices []root.Service
-	if ko.FulcioURL != "" {
-		fulcioServices = append(fulcioServices, root.Service{
-			URL:                 ko.FulcioURL,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-	}
-
-	var oidcServices []root.Service
-	if ko.OIDCIssuer != "" {
-		oidcServices = append(oidcServices, root.Service{
-			URL:                 ko.OIDCIssuer,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-	}
-
-	var rekorServices []root.Service
-	var rekorConfig root.ServiceConfiguration
-	if ko.RekorURL != "" {
-		rekorServices = append(rekorServices, root.Service{
-			URL:                 ko.RekorURL,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-		rekorConfig = root.ServiceConfiguration{
-			Selector: prototrustroot.ServiceSelector_ANY,
-			Count:    1,
-		}
-	}
-
-	var tsaServices []root.Service
-	var tsaConfig root.ServiceConfiguration
-	if ko.TSAServerURL != "" {
-		tsaServices = append(tsaServices, root.Service{
-			URL:                 ko.TSAServerURL,
-			MajorAPIVersion:     1,
-			ValidityPeriodStart: time.Now(),
-		})
-		tsaConfig = root.ServiceConfiguration{
-			Selector: prototrustroot.ServiceSelector_ANY,
-			Count:    1,
-		}
-	}
-
-	return root.NewSigningConfig(
-		root.SigningConfigMediaType02,
-		fulcioServices,
-		oidcServices,
-		rekorServices,
-		rekorConfig,
-		tsaServices,
-		tsaConfig,
-	)
 }
 
 // ProtoHashAlgoToHash converts a protobuf HashAlgorithm to a crypto.Hash.

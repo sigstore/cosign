@@ -167,7 +167,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		return err
 	}
 
-	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	bundleBytes, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
 	if err != nil {
 		return err
 	}
