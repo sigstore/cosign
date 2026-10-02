@@ -111,7 +111,6 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
-		NewBundleFormat:              true,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.Sk, co)
 
