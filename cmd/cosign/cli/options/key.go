@@ -25,11 +25,8 @@ type KeyOpts struct {
 	Sk                   bool
 	Slot                 string
 	KeyRef               string
-	FulcioURL            string
-	RekorURL             string
 	IDToken              string
 	PassFunc             cosign.PassFunc
-	OIDCIssuer           string
 	OIDCClientID         string
 	OIDCClientSecret     string
 	OIDCRedirectURL      string
@@ -41,7 +38,6 @@ type KeyOpts struct {
 	TSAClientCert        string
 	TSAClientKey         string
 	TSAServerName        string // expected SAN field in the TSA server's certificate - https://pkg.go.dev/crypto/tls#Config.ServerName
-	TSAServerURL         string
 	RFC3161TimestampPath string
 	TSACertChainPath     string
 	// IssueCertificate controls whether to issue a certificate when a key is
@@ -49,14 +45,8 @@ type KeyOpts struct {
 	IssueCertificateForExistingKey bool
 
 	// FulcioAuthFlow is the auth flow to use when authenticating against
-	// Fulcio. See https://pkg.go.dev/github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio#pkg-constants
-	// for valid values.
+	// Fulcio. Valid values are normal, device, token, and client_credentials.
 	FulcioAuthFlow string
-
-	// Deprecated: SCT verification is no longer performed during signing/attestation.
-	// Modeled after InsecureSkipVerify in tls.Config, this disables
-	// verifying the SCT.
-	InsecureSkipFulcioVerify bool
 
 	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
 	TrustedMaterial root.TrustedMaterial
