@@ -48,8 +48,8 @@ race conditions or (worse) malicious tampering.
   # sign a multi-arch container image AND all referenced, discrete images
   cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE DIGEST>
 
-  # sign a container image and configure the OIDC issuer
-  cosign sign --oidc-issuer https://oauth2.sigstore.dev/auth <IMAGE DIGEST>
+  # sign a container image and add annotations
+  cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE DIGEST>
 
   # sign a container image with a key stored in an environment variable
   cosign sign --key env://[ENV_VAR] <IMAGE DIGEST>
@@ -70,7 +70,7 @@ race conditions or (worse) malicious tampering.
   cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE DIGEST>
 
   # sign a container image with a key, attaching a certificate and certificate chain
-  cosign sign --key cosign.key --certificate cosign.crt --certificate-chain chain.crt <IMAGE DIGEST>
+  cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE DIGEST>
 
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
@@ -90,13 +90,6 @@ race conditions or (worse) malicious tampering.
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
-				"", o.Fulcio.URL, o.OIDC.Issuer, "",
-				true, true, o.BundlePath,
-				"", "", "", "", "", ""); err != nil {
-				return err
-			}
-
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
