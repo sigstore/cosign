@@ -56,7 +56,6 @@ type VerifyCommand struct {
 	Annotations                  sigs.AnnotationsMap
 	LocalImage                   bool
 	NameOptions                  []name.Option
-	Offline                      bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
@@ -108,7 +107,6 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
-		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
