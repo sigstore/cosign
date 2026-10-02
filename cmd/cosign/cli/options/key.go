@@ -36,7 +36,6 @@ type KeyOpts struct {
 	OIDCDisableProviders bool   // Disable OIDC credential providers in keyless signer
 	OIDCProvider         string // Specify which OIDC credential provider to use for keyless signer
 	BundlePath           string
-	NewBundleFormat      bool
 	SkipConfirmation     bool
 	TSAClientCACert      string
 	TSAClientCert        string

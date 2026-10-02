@@ -778,8 +778,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			// Verify a blob
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
 				KeyOpts: options.KeyOpts{
-					BundlePath:      bundlePath,
-					NewBundleFormat: true,
+					BundlePath: bundlePath,
 				},
 				CertVerifyOptions: options.CertVerifyOptions{
 					CertOidcIssuer: issuer,
@@ -968,7 +967,6 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 
 	ko := options.KeyOpts{
 		IDToken:          identityToken,
-		NewBundleFormat:  true,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -1014,9 +1012,6 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
-		},
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			NewBundleFormat: true,
 		},
 		PredicateType:       "slsaprovenance",
 		UseSignedTimestamps: true,
@@ -1160,7 +1155,6 @@ func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
 	must(err, t)
 
 	ko := options.KeyOpts{
-		NewBundleFormat:  true,
 		SkipConfirmation: true,
 		KeyRef:           leafKeyPath,
 		PassFunc:         passFunc,
@@ -1213,7 +1207,6 @@ func TestSignVerifyContainerWithCertificateChain(t *testing.T) {
 				verifyErr = (&cliverify.VerifyAttestationCommand{
 					CertVerifyOptions: certVerify,
 					CommonVerifyOptions: options.CommonVerifyOptions{
-						NewBundleFormat:       true,
 						AllowCertificateChain: tc.allowChain,
 					},
 					IgnoreSCT:     true,
@@ -1532,7 +1525,6 @@ func TestSignAttestVerifyRekorV2(t *testing.T) {
 	must(os.WriteFile(predicatePath, []byte(predicate), 0o644), t)
 
 	ko.BundlePath = filepath.Join(t.TempDir(), "att.bundle")
-	ko.NewBundleFormat = true
 	must((&attest.AttestCommand{
 		KeyOpts:       ko,
 		PredicatePath: predicatePath,
@@ -1555,9 +1547,6 @@ func TestSignAttestVerifyRekorV2(t *testing.T) {
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuer: os.Getenv("ISSUER_URL"),
 			CertIdentity:   certID,
-		},
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			NewBundleFormat: true,
 		},
 		PredicateType:       "slsaprovenance",
 		UseSignedTimestamps: true,
@@ -2127,9 +2116,6 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 
 	// Verify should fail at first
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		CommonVerifyOptions: options.CommonVerifyOptions{
-			NewBundleFormat: true,
-		},
 		KeyRef:     pubKeyPath,
 		IgnoreTlog: true,
 		MaxWorkers: 10,
@@ -2145,10 +2131,9 @@ func attestVerify(t *testing.T, predicateType, attestation, goodCue, badCue stri
 	// Now attest the image
 	attestCmd := attest.AttestCommand{
 		KeyOpts: options.KeyOpts{
-			SigningConfig:   rekorSigningConfig(),
-			KeyRef:          privKeyPath,
-			PassFunc:        passFunc,
-			NewBundleFormat: true,
+			SigningConfig: rekorSigningConfig(),
+			KeyRef:        privKeyPath,
+			PassFunc:      passFunc,
 		},
 		PredicatePath: attestationPath,
 		PredicateType: predicateType,
@@ -3545,7 +3530,6 @@ func TestSaveLoadCrossRegistry(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKeyPath,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	so := options.SignOptions{
@@ -3819,10 +3803,9 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 
 	attestCommand := attest.AttestCommand{
 		KeyOpts: options.KeyOpts{
-			SigningConfig:   rekorSigningConfig(),
-			KeyRef:          privKeyPath,
-			PassFunc:        passFunc,
-			NewBundleFormat: true,
+			SigningConfig: rekorSigningConfig(),
+			KeyRef:        privKeyPath,
+			PassFunc:      passFunc,
 		},
 		PredicatePath: slsaAttestationPath,
 		PredicateType: "slsaprovenance",
@@ -4157,9 +4140,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	ctx := context.Background()
 	ko := options.KeyOpts{
-		KeyRef:          pubKeyPath1,
-		BundlePath:      bundlePath1,
-		NewBundleFormat: true,
+		KeyRef:     pubKeyPath1,
+		BundlePath: bundlePath1,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
@@ -4212,9 +4194,8 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	// Test statement verification
 	ko = options.KeyOpts{
-		KeyRef:          pubKeyPath1,
-		BundlePath:      bundlePath2,
-		NewBundleFormat: true,
+		KeyRef:     pubKeyPath1,
+		BundlePath: bundlePath2,
 	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
@@ -4927,7 +4908,6 @@ func TestAttestVerifyUploadFalse(t *testing.T) {
 
 	// Now attest the image with NoUpload: true
 	attestCmd.NoUpload = true
-	attestCmd.NewBundleFormat = true
 	attestCmd.BundlePath = path.Join(td, "output.bundle")
 	must(attestCmd.Exec(ctx, imgName), t)
 	assert.FileExists(t, attestCmd.BundlePath)
