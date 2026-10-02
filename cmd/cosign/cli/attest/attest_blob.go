@@ -142,7 +142,7 @@ func (c *AttestBlobCommand) Exec(ctx context.Context, artifactPath string) error
 		return err
 	}
 
-	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	bundleBytes, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
 	if err != nil {
 		return fmt.Errorf("creating bundle: %w", err)
 	}
