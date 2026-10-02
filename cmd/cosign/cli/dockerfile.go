@@ -101,7 +101,6 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					Output:                       o.Output,
 					Annotations:                  annotations,
 					LocalImage:                   o.LocalImage,
-					Offline:                      o.CommonVerifyOptions.Offline,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
