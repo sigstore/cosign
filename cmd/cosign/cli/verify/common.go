@@ -42,9 +42,6 @@ import (
 
 // CheckSigstoreBundleUnsupportedOptions checks for incompatible settings on any Verify* command struct when NewBundleFormat is used.
 func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, co *cosign.CheckOpts) error {
-	if !co.NewBundleFormat {
-		return nil
-	}
 	fieldToErr := map[string]string{
 		"CertRef":              "certificate must be in bundle and may not be provided using --certificate",
 		"CertChain":            "certificate chain must be in bundle and may not be provided using --certificate-chain",
