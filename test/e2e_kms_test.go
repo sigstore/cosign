@@ -115,7 +115,6 @@ func TestSecretsKMS(t *testing.T) {
 		SigningConfig:    signingConfig,
 		TrustedMaterial:  trustedMaterial,
 		SkipConfirmation: true,
-		NewBundleFormat:  true,
 	}
 	so := options.SignOptions{
 		Upload: true,
