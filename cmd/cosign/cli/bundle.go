@@ -31,6 +31,7 @@ func Bundle() *cobra.Command {
 	}
 
 	cmd.AddCommand(bundleCreate())
+	cmd.AddCommand(bundleCreateFromContainer())
 	cmd.AddCommand(bundleUpgrade())
 	cmd.AddCommand(bundleInspect())
 
@@ -69,6 +70,42 @@ func bundleCreate() *cobra.Command {
 			defer cancel()
 
 			return bundleCreateCmd.Exec(ctx)
+		},
+	}
+
+	o.AddFlags(cmd)
+	return cmd
+}
+
+func bundleCreateFromContainer() *cobra.Command {
+	o := &options.BundleCreateFromContainerOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "create-from-container IMAGE",
+		Short: "Create Sigstore protobuf bundles from legacy container attestations",
+		Long: `Create Sigstore protobuf bundles from attestations stored in the
+legacy tag-based format (.att / .sig) for a container image, and attach them to
+the image as OCI 1.1 referrers. Bundles that are already attached are skipped.`,
+		Example: `  # convert keyless attestations
+	cosign bundle create-from-container <IMAGE>
+
+  # convert attestations created with a key
+			cosign bundle create-from-container --key cosign.pub <IMAGE>`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			bundleCreateFromContainerCmd := &bundle.CreateFromContainerCmd{
+				Registry:   o.Registry,
+				IgnoreTlog: o.IgnoreTlog,
+				KeyRef:     o.KeyRef,
+				RekorURL:   o.RekorURL,
+				Sk:         o.Sk,
+				Slot:       o.Slot,
+			}
+
+			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)
+			defer cancel()
+
+			return bundleCreateFromContainerCmd.Exec(ctx, args[0])
 		},
 	}
 

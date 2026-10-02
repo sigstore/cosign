@@ -48,6 +48,10 @@ func AssembleNewBundle(ctx context.Context, sigBytes, signedTimestamp []byte, en
 	if err != nil {
 		return nil, err
 	}
+	return AssembleNewBundleFromPayload(ctx, payload, sigBytes, signedTimestamp, envelope, cert, ignoreTlog, sigVerifier, pkOpts, rekorClient)
+}
+
+func AssembleNewBundleFromPayload(ctx context.Context, payload, sigBytes, signedTimestamp []byte, envelope *dsse.Envelope, cert *x509.Certificate, ignoreTlog bool, sigVerifier signature.Verifier, pkOpts []signature.PublicKeyOption, rekorClient *client.Rekor) (*sgbundle.Bundle, error) {
 	buf := bytes.NewBuffer(payload)
 	digest := sha256.Sum256(buf.Bytes())
 
