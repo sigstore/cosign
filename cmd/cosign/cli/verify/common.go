@@ -14,24 +14,13 @@
 package verify
 
 import (
-	"bytes"
 	"context"
-	"crypto"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"reflect"
 
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/rekor"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pivkey"
 	"github.com/sigstore/cosign/v3/pkg/cosign/pkcs11key"
 	"github.com/sigstore/cosign/v3/pkg/oci"
@@ -42,136 +31,40 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 )
 
-// CheckSigstoreBundleUnsupportedOptions checks for incompatible settings on any Verify* command struct when NewBundleFormat is used.
-func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, co *cosign.CheckOpts) error {
-	if !co.NewBundleFormat {
-		return nil
-	}
-	fieldToErr := map[string]string{
-		"CertRef":              "certificate must be in bundle and may not be provided using --certificate",
-		"CertChain":            "certificate chain must be in bundle and may not be provided using --certificate-chain",
-		"CARoots":              "CA roots/intermediates must be provided using --trusted-root",
-		"CAIntermediates":      "CA roots/intermediates must be provided using --trusted-root",
-		"TSACertChainPath":     "TSA certificate chain path may only be provided using --trusted-root",
-		"RFC3161TimestampPath": "RFC3161 timestamp may not be provided using --rfc3161-timestamp",
-		"SigRef":               "signature may not be provided using --signature",
-		"SCTRef":               "SCT may not be provided using --sct",
-	}
-	v := reflect.ValueOf(cmd)
-	for f, e := range fieldToErr {
-		if field := v.FieldByName(f); field.IsValid() && field.String() != "" {
-			return fmt.Errorf("unsupported: %s when using --new-bundle-format", e)
-		}
-	}
-	if co.TrustedMaterial == nil && !verifyOfflineWithKey {
-		return fmt.Errorf("trusted root is required when using new bundle format")
-	}
-	return nil
-}
-
-// LoadVerifierFromKeyOrCert returns either a signature.Verifier or a certificate from the provided flags to use for verifying an artifact.
+// LoadVerifierFromKey returns a signature.Verifier from the provided key flags to use for verifying an artifact.
 // In the case of certain types of keys, it returns a close function that must be called by the calling method.
-func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certChain string, hashAlgorithm crypto.Hash, sk, withGetCert bool, co *cosign.CheckOpts) (signature.Verifier, *x509.Certificate, func(), error) {
+func LoadVerifierFromKey(ctx context.Context, keyRef, slot string, sk bool) (signature.Verifier, func(), error) {
 	var sigVerifier signature.Verifier
 	var err error
 	switch {
 	case keyRef != "":
-		sigVerifier, err = csignature.PublicKeyFromKeyRefWithHashAlgo(ctx, keyRef, hashAlgorithm)
+		sigVerifier, err = csignature.PublicKeyFromKeyRef(ctx, keyRef)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("loading public key: %w", err)
+			return nil, nil, fmt.Errorf("loading public key: %w", err)
 		}
 		pkcs11Key, ok := sigVerifier.(*pkcs11key.Key)
 		closeSV := func() {}
 		if ok {
 			closeSV = pkcs11Key.Close
 		}
-		return sigVerifier, nil, closeSV, nil
+		return sigVerifier, closeSV, nil
 	case sk:
 		sk, err := pivkey.GetKeyWithSlot(slot)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("opening piv token: %w", err)
+			return nil, nil, fmt.Errorf("opening piv token: %w", err)
 		}
 		sigVerifier, err = sk.Verifier()
 		if err != nil {
 			sk.Close()
-			return nil, nil, nil, fmt.Errorf("initializing piv token verifier: %w", err)
+			return nil, nil, fmt.Errorf("initializing piv token verifier: %w", err)
 		}
-		return sigVerifier, nil, sk.Close, nil
-	case certRef != "":
-		cert, err := loadCertFromFileOrURL(certRef)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("loading cert: %w", err)
-		}
-		if withGetCert {
-			return nil, cert, func() {}, nil
-		}
-		if certChain == "" {
-			sigVerifier, err = cosign.ValidateAndUnpackCert(cert, co)
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("validating cert: %w", err)
-			}
-			return sigVerifier, nil, func() {}, nil
-		}
-		chain, err := loadCertChainFromFileOrURL(certChain)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("loading cert chain: %w", err)
-		}
-		sigVerifier, err = cosign.ValidateAndUnpackCertWithChain(cert, chain, co)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("validating cert with chain: %w", err)
-		}
-		return sigVerifier, nil, func() {}, nil
+		return sigVerifier, sk.Close, nil
 	}
-	return nil, nil, func() {}, nil
-}
-
-// SetLegacyClientsAndKeys sets up TSA and rekor clients and keys for TSA, rekor, and CT log.
-// It may perform an online fetch of keys, so using trusted root instead of these TUF v1 methods is recommended.
-// It takes a CheckOpts as input and modifies it.
-func SetLegacyClientsAndKeys(ctx context.Context, ignoreTlog, shouldVerifySCT, keylessVerification bool, rekorURL, tsaCertChain, certChain, caRoots, caIntermediates string, co *cosign.CheckOpts) error {
-	var err error
-	if !ignoreTlog && !co.NewBundleFormat && rekorURL != "" {
-		co.RekorClient, err = rekor.NewClient(rekorURL)
-		if err != nil {
-			return fmt.Errorf("creating rekor client: %w", err)
-		}
-	}
-	// If trusted material is set, we don't need to fetch disparate keys.
-	if co.TrustedMaterial != nil {
-		return nil
-	}
-	if co.UseSignedTimestamps {
-		tsaCertificates, err := cosign.GetTSACerts(ctx, tsaCertChain, cosign.GetTufTargets)
-		if err != nil {
-			return fmt.Errorf("loading TSA certificates: %w", err)
-		}
-		co.TSACertificate = tsaCertificates.LeafCert
-		co.TSARootCertificates = tsaCertificates.RootCert
-		co.TSAIntermediateCertificates = tsaCertificates.IntermediateCerts
-	}
-	if !ignoreTlog {
-		co.RekorPubKeys, err = cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting rekor public keys: %w", err)
-		}
-	}
-	if shouldVerifySCT {
-		co.CTLogPubKeys, err = cosign.GetCTLogPubs(ctx)
-		if err != nil {
-			return fmt.Errorf("getting ctlog public keys: %w", err)
-		}
-	}
-	if keylessVerification {
-		if err := loadCertsKeylessVerification(certChain, caRoots, caIntermediates, co); err != nil {
-			return fmt.Errorf("loading certs for keyless verification: %w", err)
-		}
-	}
-	return nil
+	return nil, func() {}, nil
 }
 
 // SetTrustedMaterial sets TrustedMaterial on CheckOpts, either from the provided trusted root path or from TUF.
-// It does not set TrustedMaterial if the user provided trusted material via other flags or environment variables.
-func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots, caIntermediates, tsaCertChainPath string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
+func SetTrustedMaterial(trustedRootPath string, verifyOnlyWithKey bool, co *cosign.CheckOpts) error {
 	var err error
 	if trustedRootPath != "" {
 		co.TrustedMaterial, err = root.NewTrustedRootFromPath(trustedRootPath)
@@ -183,18 +76,9 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots
 	if verifyOnlyWithKey {
 		return nil
 	}
-	if options.NOf(certChain, caRoots, caIntermediates, tsaCertChainPath) == 0 &&
-		env.Getenv(env.VariableSigstoreCTLogPublicKeyFile) == "" &&
-		env.Getenv(env.VariableSigstoreRootFile) == "" &&
-		env.Getenv(env.VariableSigstoreRekorPublicKey) == "" &&
-		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
-		co.TrustedMaterial, err = cosign.TrustedRoot()
-		if err != nil {
-			if co.NewBundleFormat {
-				return fmt.Errorf("getting trusted root from TUF for new bundle verification: %w", err)
-			}
-			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
-		}
+	co.TrustedMaterial, err = cosign.TrustedRoot()
+	if err != nil {
+		return fmt.Errorf("getting trusted root from TUF for bundle verification: %w", err)
 	}
 	return nil
 }
@@ -346,133 +230,9 @@ func PrintVerification(ctx context.Context, verified []oci.Signature, output str
 	}
 }
 
-func loadCertFromFileOrURL(path string) (*x509.Certificate, error) {
-	pems, err := blob.LoadFileOrURL(path)
-	if err != nil {
-		return nil, err
-	}
-	return loadCertFromPEM(pems)
-}
-
-func loadCertFromPEM(pems []byte) (*x509.Certificate, error) {
-	var out []byte
-	out, err := base64.StdEncoding.DecodeString(string(pems))
-	if err != nil {
-		// not a base64
-		out = pems
-	}
-
-	certs, err := cryptoutils.UnmarshalCertificatesFromPEM(out)
-	if err != nil {
-		return nil, err
-	}
-	if len(certs) == 0 {
-		return nil, errors.New("no certs found in pem file")
-	}
-	return certs[0], nil
-}
-
-func loadCertChainFromFileOrURL(path string) ([]*x509.Certificate, error) {
-	pems, err := blob.LoadFileOrURL(path)
-	if err != nil {
-		return nil, err
-	}
-	certs, err := cryptoutils.LoadCertificatesFromPEM(bytes.NewReader(pems))
-	if err != nil {
-		return nil, err
-	}
-	return certs, nil
-}
-
-func keylessVerification(keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	return true
-}
-
-func shouldVerifySCT(ignoreSCT bool, keyRef string, sk bool) bool {
-	if keyRef != "" {
-		return false
-	}
-	if sk {
-		return false
-	}
-	if ignoreSCT {
-		return false
-	}
-	return true
-}
-
 // No trusted root is needed if verification doesn't require Rekor or
 // signed timestamps, and a key is explicitly provided instead of using
-// a Fulcio certificate either via a key or certificate reference or security key.
-func verifyOfflineWithKey(keyRef, certRef string, sk bool, co *cosign.CheckOpts) bool {
-	return (keyRef != "" || certRef != "" || sk) && co.IgnoreTlog && !co.UseSignedTimestamps
-}
-
-// loadCertsKeylessVerification loads certificates provided as a certificate chain or CA roots + CA intermediate
-// certificate files. If both certChain and caRootsFile are empty strings, the Fulcio roots are loaded.
-//
-// The co *cosign.CheckOpts is both input and output parameter - it gets updated
-// with the root and intermediate certificates needed for verification.
-func loadCertsKeylessVerification(certChainFile string,
-	caRootsFile string,
-	caIntermediatesFile string,
-	co *cosign.CheckOpts) error {
-	var err error
-	switch {
-	case certChainFile != "":
-		chain, err := loadCertChainFromFileOrURL(certChainFile)
-		if err != nil {
-			return err
-		}
-		co.RootCerts = x509.NewCertPool()
-		co.RootCerts.AddCert(chain[len(chain)-1])
-		if len(chain) > 1 {
-			co.IntermediateCerts = x509.NewCertPool()
-			for _, cert := range chain[:len(chain)-1] {
-				co.IntermediateCerts.AddCert(cert)
-			}
-		}
-	case caRootsFile != "":
-		caRoots, err := loadCertChainFromFileOrURL(caRootsFile)
-		if err != nil {
-			return err
-		}
-		co.RootCerts = x509.NewCertPool()
-		if len(caRoots) > 0 {
-			for _, cert := range caRoots {
-				co.RootCerts.AddCert(cert)
-			}
-		}
-		if caIntermediatesFile != "" {
-			caIntermediates, err := loadCertChainFromFileOrURL(caIntermediatesFile)
-			if err != nil {
-				return err
-			}
-			if len(caIntermediates) > 0 {
-				co.IntermediateCerts = x509.NewCertPool()
-				for _, cert := range caIntermediates {
-					co.IntermediateCerts.AddCert(cert)
-				}
-			}
-		}
-	default:
-		// This performs an online fetch of the Fulcio roots from a TUF repository.
-		// This is needed for verifying keyless certificates (both online and offline).
-		co.RootCerts, err = fulcio.GetRoots()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio roots: %w", err)
-		}
-		co.IntermediateCerts, err = fulcio.GetIntermediates()
-		if err != nil {
-			return fmt.Errorf("getting Fulcio intermediates: %w", err)
-		}
-	}
-
-	return nil
+// a Fulcio certificate either via a key or security key.
+func verifyOfflineWithKey(keyRef string, sk bool, co *cosign.CheckOpts) bool {
+	return (keyRef != "" || sk) && co.IgnoreTlog && !co.UseSignedTimestamps
 }
