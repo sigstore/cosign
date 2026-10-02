@@ -53,13 +53,6 @@ func AttestBlob() *cobra.Command {
 
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
-				"", o.Fulcio.URL, o.OIDC.Issuer, "",
-				true, true, o.BundlePath,
-				"", "", "", "", "", ""); err != nil {
-				return err
-			}
-
 			if o.Predicate.Statement == "" && len(args) != 1 {
 				return cobra.ExactArgs(1)(cmd, args)
 			}
