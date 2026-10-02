@@ -43,7 +43,6 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	IgnoreSCT                    bool
-	Offline                      bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	AllowCertificateChain        bool
@@ -82,7 +81,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
-		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,

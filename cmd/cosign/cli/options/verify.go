@@ -24,30 +24,17 @@ import (
 )
 
 type CommonVerifyOptions struct {
-	Offline          bool // Force offline verification
-	TSACertChainPath string
-	IgnoreTlog       bool
-	MaxWorkers       int
+	IgnoreTlog            bool
+	PrivateInfrastructure bool
+	MaxWorkers            int
 	// This is added to CommonVerifyOptions to provide a path to support
 	// it for other verify options.
-	ExperimentalOCI11     bool
-	PrivateInfrastructure bool
 	UseSignedTimestamps   bool
 	TrustedRootPath       string
 	AllowCertificateChain bool
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.Offline, "offline", false,
-		"only verify an artifact's inclusion in a transparency log using a provided proof, rather than querying the log. May still include network requests to retrieve service keys from a TUF repository")
-	_ = cmd.Flags().MarkDeprecated("offline", "To verify in an airgapped environment, provide a --bundle with the signature and verification material, and a --trusted-root file with the service keys and certificates")
-
-	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
-		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
-			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
-	_ = cmd.MarkFlagFilename("timestamp-certificate-chain", certificateExts...)
-	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chain")
-
 	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
 		"verify rfc3161 timestamps")
 
@@ -58,10 +45,6 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.PrivateInfrastructure, "private-infrastructure", false,
 		"skip transparency log verification when verifying artifacts in a privately deployed infrastructure")
 	_ = cmd.Flags().MarkDeprecated("private-infrastructure", "please use --insecure-ignore-tlog instead")
-
-	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
-		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
-	_ = cmd.Flags().MarkDeprecated("experimental-oci11", "OCI referrers will be the default behavior in future versions")
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
