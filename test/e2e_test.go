@@ -28,7 +28,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -47,7 +46,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/digitorus/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -71,11 +69,11 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/publickey"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signingconfig"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -639,6 +637,37 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 	return cmd.Out
 }
 
+func prepareTrustedRootTSA(t *testing.T, tsaURL string) string {
+	downloadDirectory := t.TempDir()
+	caPath := filepath.Join(downloadDirectory, "fulcio.crt.pem")
+	caFP, err := os.Create(caPath)
+	must(err, t)
+	defer caFP.Close()
+	must(downloadFile(fulcioURL+"/api/v1/rootCert", caFP), t)
+
+	rekorPath := filepath.Join(downloadDirectory, "rekor.pub")
+	rekorFP, err := os.Create(rekorPath)
+	must(err, t)
+	defer rekorFP.Close()
+	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
+
+	out := filepath.Join(downloadDirectory, "trusted_root.json")
+	cmd := &trustedroot.CreateCmd{
+		CertChain:    []string{caPath},
+		Out:          out,
+		RekorKeyPath: []string{rekorPath},
+	}
+	if tsaURL != "" {
+		tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
+		tsaFP, err := os.Create(tsaPath)
+		must(err, t)
+		must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
+		cmd.TSACertChainPath = []string{tsaPath}
+	}
+	must(cmd.Exec(context.Background()), t)
+	return out
+}
+
 func prepareTrustedRootWithSelfSignedCertificate(t *testing.T, certPath, tsaURL string) string {
 	td := t.TempDir()
 	cmd := trustedRootCmd(t, td, tsaURL)
@@ -659,6 +688,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	tsaLeaf, tsaInter, tsaRoot, err := downloadTSACerts(t.TempDir(), tsaURL)
 	must(err, t)
 	trustedRoot := prepareTrustedRoot(t, tsaURL)
+	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 	tests := []struct {
 		name          string
 		targets       []targetInfo
@@ -691,6 +721,14 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 					name:   "tsa_intermediate_0.crt.pem",
 					source: tsaInter,
 				},
+				{
+					name:   "trusted_root.json",
+					source: trustedRoot,
+				},
+				{
+					name:   "signing_config.v0.2.json",
+					source: signingConfigStr,
+				},
 			},
 		},
 		{
@@ -719,6 +757,10 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "tsachain.pem",
 					source: tsaInter,
+				},
+				{
+					name:   "signing_config.v0.2.json",
+					source: signingConfigStr,
 				},
 			},
 			wantVerifyErr: true,
@@ -761,6 +803,14 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 					source: tsaInter,
 					usage:  "TSA",
 				},
+				{
+					name:   "trusted_root.json",
+					source: trustedRoot,
+				},
+				{
+					name:   "signing_config.v0.2.json",
+					source: signingConfigStr,
+				},
 			},
 		},
 		{
@@ -769,6 +819,10 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				{
 					name:   "trusted_root.json",
 					source: trustedRoot,
+				},
+				{
+					name:   "signing_config.v0.2.json",
+					source: signingConfigStr,
 				},
 			},
 		},
@@ -796,12 +850,12 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			_, _, cleanup := mkimage(t, imgName)
 			defer cleanup()
 
+			signingConfig, err := cosign.SigningConfig()
+			must(err, t)
 			ko := options.KeyOpts{
-				FulcioURL:        fulcioURL,
-				RekorURL:         rekorURL,
+				SigningConfig:    signingConfig,
 				IDToken:          identityToken,
 				SkipConfirmation: true,
-				TSAServerURL:     tsaURL + "/api/v1/timestamp",
 			}
 			trustedMaterial, err := cosign.TrustedRoot()
 			if err == nil {
@@ -840,17 +894,18 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 			if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			tsPath := filepath.Join(blobDir, "ts.txt")
 			bundlePath := filepath.Join(blobDir, "bundle.sig")
-			// TODO(cmurphy): make this work with ko.NewBundleFormat = true
 			ko.BundlePath = bundlePath
-			ko.RFC3161TimestampPath = tsPath
-			_, gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true)
+			ko.RFC3161TimestampPath = ""
+			gotErr = sign.SignBlobCmd(ctx, ro, ko, bp, "", "")
 			must(gotErr, t)
 
 			// Verify a blob
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
-				KeyOpts: ko,
+				KeyOpts: options.KeyOpts{
+					BundlePath:      bundlePath,
+					NewBundleFormat: true,
+				},
 				CertVerifyOptions: options.CertVerifyOptions{
 					CertOidcIssuer: issuer,
 					CertIdentity:   certID,
@@ -949,7 +1004,7 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 	ko.NewBundleFormat = true
 	ko.BundlePath = bundlePath
 
-	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", false, "", "", true)
+	err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "")
 	must(err, t)
 
 	// Verify a blob
@@ -973,14 +1028,11 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
-	ko.NewBundleFormat = true
 	ko.BundlePath = attBundlePath
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		RekorEntryType: "dsse",
-		StatementPath:  statementPath,
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1419,12 +1471,10 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 			var verifyErr error
 			if tc.attestation {
 				attestBlobCmd := attest.AttestBlobCommand{
-					KeyOpts:        ko,
-					CertPath:       leafCertPath,
-					CertChainPath:  signChainPath,
-					RekorEntryType: "dsse",
-					StatementPath:  statementPath,
-					TlogUpload:     false,
+					KeyOpts:       ko,
+					CertPath:      leafCertPath,
+					CertChainPath: signChainPath,
+					StatementPath: statementPath,
 				}
 				must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1440,7 +1490,7 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 					AllowCertificateChain: tc.allowChain,
 				}).Exec(ctx, "")
 			} else {
-				_, err = sign.SignBlobCmd(ctx, ro, ko, bp, leafCertPath, signChainPath, true, "", "", false)
+				err = sign.SignBlobCmd(ctx, ro, ko, bp, leafCertPath, signChainPath)
 				must(err, t)
 
 				verifyErr = (&cliverify.VerifyBlobCmd{
@@ -1743,7 +1793,7 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	ko.BundlePath = bundlePath
 	ko.KeyRef = privKeyPath
 
-	_, err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "", false, "", "", true)
+	err = sign.SignBlobCmd(ctx, ro, ko, bp, "", "")
 	must(err, t)
 
 	// Verify a blob with the key in the trusted root
@@ -1762,15 +1812,12 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
-	ko.NewBundleFormat = true
 	ko.BundlePath = attBundlePath
 	ko.KeyRef = privKeyPath
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		RekorEntryType: "dsse",
-		StatementPath:  statementPath,
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -2813,21 +2860,22 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 
 	ctx := context.Background()
+	signingConfigPath := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
+	trustedRootPath := prepareTrustedRootTSA(t, tsaURL)
 	ko := options.KeyOpts{
-		KeyRef:          privKeyPath,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
-		TSAServerURL:    tsaURL + "/api/v1/timestamp",
-		PassFunc:        passFunc,
+		KeyRef:           privKeyPath,
+		BundlePath:       bundlePath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
 	}
+	err := signcommon.LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, signingConfigPath, trustedRootPath)
+	must(err, t)
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		PredicatePath:  predicatePath,
-		PredicateType:  predicateType,
-		Timeout:        30 * time.Second,
-		TlogUpload:     false,
-		RekorEntryType: "dsse",
+		KeyOpts:       ko,
+		PredicatePath: predicatePath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -2864,7 +2912,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	trustedRootPath := filepath.Join(td, "trustedroot.json")
+	trustedRootPath = filepath.Join(td, "trustedroot.json")
 	trustedRootBytes, err := trustedRoot.MarshalJSON()
 	if err != nil {
 		t.Error(err)
@@ -2902,12 +2950,10 @@ func TestVerifyWithCARoots(t *testing.T) {
 	defer cleanup()
 	blob := "someblob2sign"
 
-	b := bytes.Buffer{}
 	blobRef := filepath.Join(td, blob)
 	if err := os.WriteFile(blobRef, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
 	rootCert, rootKey, _ := cert_test.GenerateRootCa()
 	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
@@ -2927,15 +2973,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 	pemrootRef02 := mkfile(string(pemRoot02), td, t)
 	pemleafRef02 := mkfile(string(pemLeaf02), td, t)
 
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(rootCert)
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString(signature)
-	sigRef := mkfile(b64signature, td, t)
 	pemsubRef := mkfile(string(pemSub), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 	pemleafRef := mkfile(string(pemLeaf), td, t)
@@ -2964,27 +3001,20 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
+	// Sign the image with the leaf cert, cert chain, and TSA
+	koImg := options.KeyOpts{
+		KeyRef:           privKeyRef,
+		PassFunc:         passFunc,
+		TSAServerURL:     tsaURL + "/api/v1/timestamp",
+		SkipConfirmation: true,
 	}
-	rfc3161TSRef := mkfile(string(tsBytes), td, t)
+	soImg := options.SignOptions{
+		Upload:    true,
+		Cert:      pemleafRef,
+		CertChain: certchainRef,
+	}
+	must(sign.SignCmd(ctx, ro, koImg, soImg, []string{imgName}), t)
 
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Now sign the blob with one key
-	ko := options.KeyOpts{
-		KeyRef:   privKeyRef,
-		PassFunc: passFunc,
-	}
-	blobSig, err := sign.SignBlobCmd(ctx, ro, ko, blobRef, "", "", true, "", "", false)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// the following fields with non-changing values are logically "factored out" for brevity
 	// and passed to verifyKeylessTSAWithCARoots in the testing loop:
 	// imageName string
@@ -2996,7 +3026,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 		rootRef   string
 		subRef    string
 		leafRef   string
-		skipBlob  bool // skip the verify-blob test (for cases that need the image)
 		wantError bool
 	}{
 		{
@@ -3004,7 +3033,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef,
-			false,
 			false,
 		},
 		// NB - "confusely" switching the root and intermediate PEM files does _NOT_ (currently) produce an error
@@ -3019,14 +3047,12 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemleafRef,
 			false,
-			false,
 		},
 		{
 			"leave out the root certificate",
 			"",
 			pemsubRef,
 			pemleafRef,
-			false,
 			true,
 		},
 		{
@@ -3034,7 +3060,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			"",
 			pemleafRef,
-			false,
 			true,
 		},
 		{
@@ -3042,7 +3067,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			"",
-			true,
 			false,
 		},
 		{
@@ -3050,7 +3074,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef,
 			pemleafRef02,
-			false,
 			true,
 		},
 		{
@@ -3059,14 +3082,12 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemsubBundleRef,
 			pemleafRef,
 			false,
-			false,
 		},
 		{
 			"wrong root and intermediates bundles",
 			pemrootRef02,
 			pemsubRef02,
 			pemleafRef,
-			false,
 			true,
 		},
 		{
@@ -3074,7 +3095,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef02,
 			pemsubBundleRef,
 			pemleafRef,
-			false,
 			true,
 		},
 		{
@@ -3082,7 +3102,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 			pemrootRef,
 			pemsubRef02,
 			pemleafRef,
-			false,
 			true,
 		},
 	}
@@ -3101,23 +3120,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 					t.Errorf("%s - no expected error", tt.name)
 				} else {
 					t.Errorf("%s - unexpected error: %v", tt.name, err)
-				}
-			}
-			if !tt.skipBlob {
-				err = verifyBlobKeylessWithCARoots(blobRef,
-					string(blobSig),
-					tt.rootRef,
-					tt.subRef,
-					tt.leafRef,
-					true,
-					true)
-				hasErr = (err != nil)
-				if hasErr != tt.wantError {
-					if tt.wantError {
-						t.Errorf("%s - no expected error", tt.name)
-					} else {
-						t.Errorf("%s - unexpected error: %v", tt.name, err)
-					}
 				}
 			}
 		})
@@ -3350,76 +3352,6 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
 }
 
-func TestAttachWithRFC3161Timestamp(t *testing.T) {
-	ctx := context.Background()
-
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-
-	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	b := bytes.Buffer{}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
-
-	rootCert, rootKey, _ := cert_test.GenerateRootCa()
-	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString(signature)
-	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
-	pemrootRef := mkfile(string(pemRoot), td, t)
-
-	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
-
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
-
-	tsclient, err := tsaclient.GetTimestampClient(tsaURL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := tsclient.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
-	}
-
-	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TSRef := mkfile(string(tsBytes), td, t)
-
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	must(verifyKeylessTSA(imgName, file.Name(), pemrootRef, true, true), t)
-}
-
 func TestDuplicateSign(t *testing.T) {
 	td := t.TempDir()
 	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
@@ -3589,117 +3521,6 @@ func TestMultipleSignatures(t *testing.T) {
 	must(verify(pub2, imgName, true, nil, "", false), t)
 }
 
-func TestSignBlob(t *testing.T) {
-	td := t.TempDir()
-	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blob := "someblob"
-	td1 := t.TempDir()
-	td2 := t.TempDir()
-	bp := filepath.Join(td1, blob)
-
-	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
-	_, _, pubKeyPath2 := keypair(t, td2)
-
-	ctx := context.Background()
-
-	ko1 := options.KeyOpts{
-		KeyRef: pubKeyPath1,
-	}
-	ko2 := options.KeyOpts{
-		KeyRef: pubKeyPath2,
-	}
-	// Verify should fail on a bad input
-	cmd1 := cliverify.VerifyBlobCmd{
-		KeyOpts:    ko1,
-		SigRef:     "badsig",
-		IgnoreTlog: true,
-	}
-	cmd2 := cliverify.VerifyBlobCmd{
-		KeyOpts:    ko2,
-		SigRef:     "badsig",
-		IgnoreTlog: true,
-	}
-	mustErr(cmd1.Exec(ctx, blob), t)
-	mustErr(cmd2.Exec(ctx, blob), t)
-
-	// Now sign the blob with one key
-	ko := options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
-	}
-	sig, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Now verify should work with that one, but not the other
-	cmd1.SigRef = string(sig)
-	cmd2.SigRef = string(sig)
-	must(cmd1.Exec(ctx, bp), t)
-	mustErr(cmd2.Exec(ctx, bp), t)
-}
-
-func TestSignBlobBundle(t *testing.T) {
-	blob := "someblob"
-	td1 := t.TempDir()
-	bp := filepath.Join(td1, blob)
-	bundlePath := filepath.Join(td1, "bundle.sig")
-
-	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
-
-	ctx := context.Background()
-
-	ko1 := options.KeyOpts{
-		KeyRef:     pubKeyPath1,
-		BundlePath: bundlePath,
-	}
-	// Verify should fail on a bad input
-	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:    ko1,
-		IgnoreTlog: true,
-	}
-	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
-
-	// Now sign the blob with one key
-	ko := options.KeyOpts{
-		KeyRef:           privKeyPath1,
-		PassFunc:         passFunc,
-		BundlePath:       bundlePath,
-		RekorURL:         rekorURL,
-		SkipConfirmation: true,
-	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
-		t.Fatal(err)
-	}
-	// Now verify should work
-	must(verifyBlobCmd.Exec(ctx, bp), t)
-
-	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true); err != nil {
-		t.Fatal(err)
-	}
-
-	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	verifyBlobCmd.RekorURL = "notreal"
-	verifyBlobCmd.IgnoreTlog = false
-	must(verifyBlobCmd.Exec(ctx, bp), t)
-}
-
 func TestSignBlobNewBundle(t *testing.T) {
 	td1 := t.TempDir()
 
@@ -3736,7 +3557,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 		NewBundleFormat: true,
 	}
 
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", false); err != nil {
+	if err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3766,7 +3587,7 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 		BundlePath:      bundlePath,
 		NewBundleFormat: true,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", false); err != nil {
+	if err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -3776,9 +3597,8 @@ func TestSignBlobNewBundleNonSHA256(t *testing.T) {
 		NewBundleFormat: true,
 	}
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:       ko1,
-		IgnoreTlog:    true,
-		HashAlgorithm: crypto.SHA512,
+		KeyOpts:    ko1,
+		IgnoreTlog: true,
 	}
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
 }
@@ -3853,8 +3673,6 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 			verifyBlobCmd := cliverify.VerifyBlobCmd{
 				TrustedRootPath: trustedRootPath,
 				KeyOpts: options.KeyOpts{
-					FulcioURL:        fulcioURL,
-					RekorURL:         rekorURL,
 					PassFunc:         passFunc,
 					BundlePath:       bundlePath,
 					NewBundleFormat:  true,
@@ -3871,18 +3689,16 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 
 			// Produce signed bundle
 			ko := options.KeyOpts{
-				FulcioURL:                      fulcioURL,
-				RekorURL:                       rekorURL,
+				SigningConfig:                  rekorSigningConfig,
 				IDToken:                        identityToken,
 				KeyRef:                         privKeyPath,
 				PassFunc:                       passFunc,
 				BundlePath:                     bundlePath,
-				NewBundleFormat:                true,
 				IssueCertificateForExistingKey: true,
 				SkipConfirmation:               true,
 			}
 
-			if _, err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", "", true, "", "", true); err != nil {
+			if err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", ""); err != nil {
 				t.Fatal(err)
 			}
 
@@ -3902,82 +3718,48 @@ func TestSignBlobNewBundleNonDefaultAlgorithm(t *testing.T) {
 	}
 }
 
-func TestSignBlobRFC3161TimestampBundle(t *testing.T) {
+func TestSignBlobRFC3161Timestamp(t *testing.T) {
 	td := t.TempDir()
-	err := downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td)
-	if err != nil {
-		t.Fatal(err)
-	}
+	must(setLocalEnv(t, td), t)
 
 	blob := "someblob"
 	bp := filepath.Join(td, blob)
-	bundlePath := filepath.Join(td, "bundle.sig")
-	tsPath := filepath.Join(td, "rfc3161Timestamp.json")
+	bundlePath := filepath.Join(td, "bundle.sigstore.json")
 
 	if err := os.WriteFile(bp, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	client, err := tsaclient.GetTimestampClient(tsaURL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
-	}
-
-	_, privKeyPath1, pubKeyPath1 := keypair(t, td)
-
+	_, privKeyPath, pubKeyPath := keypair(t, td)
 	ctx := context.Background()
 
-	ko1 := options.KeyOpts{
-		KeyRef:               pubKeyPath1,
-		BundlePath:           bundlePath,
-		RFC3161TimestampPath: tsPath,
-		TSACertChainPath:     file.Name(),
-	}
-	// Verify should fail on a bad input
-	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:    ko1,
-		IgnoreTlog: true,
-	}
-	mustErr(verifyBlobCmd.Exec(ctx, bp), t)
-
-	// Now sign the blob with one key
+	signingConfigPath := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
+	trustedRootPath := prepareTrustedRootTSA(t, tsaURL)
 	ko := options.KeyOpts{
-		KeyRef:               privKeyPath1,
-		PassFunc:             passFunc,
-		BundlePath:           bundlePath,
-		RFC3161TimestampPath: tsPath,
-		TSAServerURL:         tsaURL + "/api/v1/timestamp",
-		RekorURL:             rekorURL,
-		SkipConfirmation:     true,
+		KeyRef:           privKeyPath,
+		BundlePath:       bundlePath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
 	}
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", false); err != nil {
-		t.Fatal(err)
-	}
-	// Now verify should work
-	must(verifyBlobCmd.Exec(ctx, bp), t)
+	err := signcommon.LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, signingConfigPath, trustedRootPath)
+	must(err, t)
 
-	// Now we turn on the tlog and sign again
-	if _, err := sign.SignBlobCmd(ctx, ro, ko, bp, "", "", true, "", "", true); err != nil {
+	// Sign the blob
+	if err := sign.SignBlobCmd(ctx, ro, ko, bp, "", ""); err != nil {
 		t.Fatal(err)
 	}
-	// Point to a fake rekor server to make sure offline verification of the tlog entry works
-	verifyBlobCmd.RekorURL = "notreal"
-	verifyBlobCmd.IgnoreTlog = false
+
+	// Verify the blob with the trusted root containing the TSA CA
+	koVerify := options.KeyOpts{
+		KeyRef:     pubKeyPath,
+		BundlePath: bundlePath,
+	}
+	verifyBlobCmd := cliverify.VerifyBlobCmd{
+		KeyOpts:             koVerify,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: true,
+		TrustedRootPath:     trustedRootPath,
+	}
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
 
@@ -4486,7 +4268,7 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(attach.AttestationCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
+	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
 
 	// Download should succeed on second image
 	out = bytes.Buffer{}
@@ -4532,7 +4314,7 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(attach.SignatureCmd(ctx, regOpts, "", bundlePath, "", "", "", "", img2Name), t)
+	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
 
 	// Download should succeed on second image
 	must(download.SignatureCmd(ctx, regOpts, img2Name, os.Stdout), t)
@@ -4803,17 +4585,19 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	outputSignature := filepath.Join(td1, "signature")
+	bundlePath1 := filepath.Join(td1, "attest1.bundle.json")
+	bundlePath2 := filepath.Join(td1, "attest2.bundle.json")
 
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 
 	ctx := context.Background()
 	ko := options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:          pubKeyPath1,
+		BundlePath:      bundlePath1,
+		NewBundleFormat: true,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
-		SignaturePath: outputSignature,
 		PredicateType: predicateType,
 		IgnoreTlog:    true,
 		CheckClaims:   true,
@@ -4823,15 +4607,15 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	// Now attest the blob with the private key
 	ko = options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
+		KeyRef:           privKeyPath1,
+		PassFunc:         passFunc,
+		BundlePath:       bundlePath1,
+		SkipConfirmation: true,
 	}
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:         ko,
-		PredicatePath:   predicatePath,
-		PredicateType:   predicateType,
-		OutputSignature: outputSignature,
-		RekorEntryType:  "dsse",
+		KeyOpts:       ko,
+		PredicatePath: predicatePath,
+		PredicateType: predicateType,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -4847,23 +4631,28 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
 
 	// Test statement signing
+	ko = options.KeyOpts{
+		KeyRef:           privKeyPath1,
+		PassFunc:         passFunc,
+		BundlePath:       bundlePath2,
+		SkipConfirmation: true,
+	}
 	attestBlobCmd = attest.AttestBlobCommand{
-		KeyOpts:         ko,
-		StatementPath:   statementPath,
-		OutputSignature: outputSignature,
-		RekorEntryType:  "dsse",
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
 	// Test statement verification
 	ko = options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:          pubKeyPath1,
+		BundlePath:      bundlePath2,
+		NewBundleFormat: true,
 	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
 		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
-		DigestAlg:     "alg",
-		SignaturePath: outputSignature,
+		DigestAlg:     "sha256",
 		IgnoreTlog:    true,
 		PredicateType: "something",
 	}
@@ -5862,16 +5651,4 @@ func TestSignVerifyDetachedKeyless(t *testing.T) {
 		},
 	}
 	must(cmdWithChain.Exec(ctx, []string{imgName}), t)
-}
-
-func getTimestampedSignature(sigBytes []byte, tsaClient client.TimestampAuthorityClient) ([]byte, error) {
-	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating timestamp request: %w", err)
-	}
-
-	return tsaClient.GetTimestampResponse(requestBytes)
 }
