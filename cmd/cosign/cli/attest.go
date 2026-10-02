@@ -75,13 +75,6 @@ func Attest() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
-				"", o.Fulcio.URL, o.OIDC.Issuer, "",
-				true, true, o.BundlePath,
-				"", "", "", "", "", ""); err != nil {
-				return err
-			}
-
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
