@@ -18,7 +18,7 @@ cosign sign [flags]
 ### Examples
 
 ```
-  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+  cosign sign [--key <key path>|<kms uri>] [-a key=value] [--upload=true|false] [-y] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -29,8 +29,8 @@ cosign sign [flags]
   # sign a multi-arch container image AND all referenced, discrete images
   cosign sign --key cosign.key --recursive <MULTI-ARCH IMAGE DIGEST>
 
-  # sign a container image and add annotations
-  cosign sign --key cosign.key -a key1=value1 -a key2=value2 <IMAGE DIGEST>
+  # sign a container image and configure the OIDC issuer
+  cosign sign --oidc-issuer https://oauth2.sigstore.dev/auth <IMAGE DIGEST>
 
   # sign a container image with a key stored in an environment variable
   cosign sign --key env://[ENV_VAR] <IMAGE DIGEST>
@@ -51,19 +51,13 @@ cosign sign [flags]
   cosign sign --key k8s://[NAMESPACE]/[KEY] <IMAGE DIGEST>
 
   # sign a container image with a key, attaching a certificate and certificate chain
-  cosign sign --key cosign.key --cert cosign.crt --cert-chain chain.crt <IMAGE DIGEST>
+  cosign sign --key cosign.key --certificate cosign.crt --certificate-chain chain.crt <IMAGE DIGEST>
 
   # sign a container in a registry which does not fully support OCI media types
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
   # sign a container image and upload to the transparency log
   cosign sign --key cosign.key <IMAGE DIGEST>
-
-  # sign a container image and skip uploading to the transparency log
-  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
-
-  # sign a container image and honor the creation timestamp of the signature
-  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options
