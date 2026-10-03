@@ -58,6 +58,8 @@ type VerifyAttestationCommand struct {
 	SCTRef                       string
 	Sk                           bool
 	Slot                         string
+	PIVSerial                    string
+	PIVKeySHA256                 string
 	Output                       string
 	RekorURL                     string
 	PredicateType                string
@@ -168,7 +170,7 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 	// provided in an attached bundle or OCI annotation. LoadVerifierFromKeyOrCert must be called
 	// after initializing trust material in order to verify certificate chain.
 	var closeSV func()
-	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
+	co.SigVerifier, _, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.PIVSerial, c.PIVKeySHA256, c.CertRef, c.CertChain, c.HashAlgorithm, c.Sk, false, co)
 	if err != nil {
 		return fmt.Errorf("loading verifierfrom key opts: %w", err)
 	}

@@ -81,6 +81,8 @@ cosign verify [flags]
       --local-image                                     whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
   -o, --output string                                   output format for the signing image information (json|text) (default "json")
+      --piv-key-sha256 string                           select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)
+      --piv-serial string                               select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)
       --registry-cacert string                          path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                     path to the X.509 certificate file in PEM format to be used for the connection to the registry
       --registry-client-key string                      path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry

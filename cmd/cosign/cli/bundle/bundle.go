@@ -52,11 +52,16 @@ type CreateCmd struct {
 	SignaturePath        string
 	Sk                   bool
 	Slot                 string
+	PIVSerial            string
+	PIVKeySHA256         string
 }
 
 func (c *CreateCmd) Exec(ctx context.Context) (err error) {
 	if c.Artifact == "" {
 		return fmt.Errorf("must supply --artifact")
+	}
+	if !c.Sk && (c.PIVSerial != "" || c.PIVKeySHA256 != "") {
+		return fmt.Errorf("--piv-serial and --piv-key-sha256 require --sk")
 	}
 
 	// We require some signature
@@ -182,7 +187,10 @@ func (c *CreateCmd) Exec(ctx context.Context) (err error) {
 			defer pkcs11Key.Close()
 		}
 	} else if c.Sk {
-		sk, err := pivkey.GetKeyWithSlot(c.Slot)
+		sk, err := pivkey.GetKeyWithSlotAndSelector(c.Slot, pivkey.Selector{
+			Serial:    c.PIVSerial,
+			KeySHA256: c.PIVKeySHA256,
+		})
 		if err != nil {
 			return fmt.Errorf("opening piv token: %w", err)
 		}

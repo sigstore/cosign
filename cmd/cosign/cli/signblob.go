@@ -100,6 +100,8 @@ func SignBlob() *cobra.Command {
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
+				PIVSerial:                      o.SecurityKey.PIVSerial,
+				PIVKeySHA256:                   o.SecurityKey.PIVKeySHA256,
 				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
