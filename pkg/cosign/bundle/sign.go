@@ -17,19 +17,22 @@ package bundle
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -72,13 +75,16 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 			return nil, err
 		}
 		block, _ := pem.Decode([]byte(publicKeyPem))
+		if block == nil {
+			return nil, errors.New("could not decode public key PEM")
+		}
 		pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("parsing public key: %w", err)
 		}
-		verifier, err := signature.LoadDefaultVerifier(pubKey)
+		verifier, err := verifierForKeypair(keypair, pubKey)
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("loading verifier for signing key: %w", err)
 		}
 		key := root.NewExpiringKey(verifier, time.Time{}, time.Time{})
 		keyTrustedMaterial := root.NewTrustedPublicKeyMaterial(func(_ string) (root.TimeConstrainedVerifier, error) {
@@ -97,7 +103,7 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		tsaSvcs, err := root.SelectServices(signingConfig.TimestampAuthorityURLs(),
 			signingConfig.TimestampAuthorityURLsConfig(), sign.TimestampAuthorityAPIVersions, time.Now())
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("selecting timestamp authority: %w", err)
 		}
 		for _, tsaSvc := range tsaSvcs {
 			tsaOpts := &sign.TimestampAuthorityOptions{
@@ -149,6 +155,19 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		return nil, fmt.Errorf("error signing bundle: %w", err)
 	}
 	return protojson.Marshal(bundle)
+}
+
+// verifierForKeypair loads a verifier that checks signatures the way the
+// keypair makes them. The two are not the same thing for Ed25519: a key
+// loaded for the transparency log signs as Ed25519ph, while a verifier loaded
+// with the default options checks pure Ed25519 only, so the signature just
+// made would fail the bundle's own post-signing verification.
+func verifierForKeypair(keypair sign.Keypair, pubKey crypto.PublicKey) (signature.Verifier, error) {
+	var loadOpts []signature.LoadOption
+	if keypair.GetSigningAlgorithm() == protocommon.PublicKeyDetails_PKIX_ED25519_PH {
+		loadOpts = append(loadOpts, options.WithED25519ph())
+	}
+	return signature.LoadDefaultVerifier(pubKey, loadOpts...)
 }
 
 type verifyTrustedMaterial struct {
