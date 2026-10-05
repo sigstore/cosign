@@ -230,7 +230,12 @@ func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	genKey := false
 	switch {
 	case ko.Sk:
-		sv, err = signerFromSecurityKey(ctx, ko.Slot)
+		sv, err = signerFromSecurityKey(ctx, ko.Slot, pivkey.Selector{
+			Serial:    ko.PIVSerial,
+			KeySHA256: ko.PIVKeySHA256,
+		})
+	case ko.PIVSerial != "" || ko.PIVKeySHA256 != "":
+		err = errors.New("--piv-serial and --piv-key-sha256 require --sk")
 	case ko.KeyRef != "":
 		sv, err = signerFromKeyRef(ctx, certPath, certChainPath, ko.KeyRef, ko.PassFunc, ko.DefaultLoadOptions)
 	default:
@@ -244,8 +249,8 @@ func signerFromKeyOpts(ctx context.Context, certPath string, certChainPath strin
 	return sv, genKey, nil
 }
 
-func signerFromSecurityKey(ctx context.Context, keySlot string) (*SignerVerifier, error) {
-	sk, err := pivkey.GetKeyWithSlot(keySlot)
+func signerFromSecurityKey(ctx context.Context, keySlot string, selector pivkey.Selector) (*SignerVerifier, error) {
+	sk, err := pivkey.GetKeyWithSlotAndSelector(keySlot, selector)
 	if err != nil {
 		return nil, err
 	}

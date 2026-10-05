@@ -133,7 +133,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
 	var cert *x509.Certificate
-	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
+	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.PIVSerial, c.PIVKeySHA256, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}

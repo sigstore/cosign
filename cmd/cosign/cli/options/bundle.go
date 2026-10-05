@@ -35,6 +35,8 @@ type BundleCreateOptions struct {
 	SignaturePath        string
 	Sk                   bool
 	Slot                 string
+	PIVSerial            string
+	PIVKeySHA256         string
 }
 
 var _ Interface = (*BundleCreateOptions)(nil)
@@ -86,6 +88,12 @@ func (o *BundleCreateOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Slot, "slot", "signature",
 		fmt.Sprintf("security key slot to use for generated key (%s)", strings.Join(securityKeySlots, "|")))
 	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
+
+	cmd.Flags().StringVar(&o.PIVSerial, "piv-serial", "",
+		"select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)")
+
+	cmd.Flags().StringVar(&o.PIVKeySHA256, "piv-key-sha256", "",
+		"select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)")
 
 	cmd.MarkFlagsMutuallyExclusive("bundle", "certificate")
 	cmd.MarkFlagsMutuallyExclusive("bundle", "signature")
