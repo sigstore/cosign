@@ -5,7 +5,7 @@ Create Sigstore protobuf bundles from legacy container attestations
 ### Synopsis
 
 Create Sigstore protobuf bundles from attestations stored in the
-legacy tag-based format (.att / .sig) for a container image, and attach them to
+legacy tag-based format (.att) for a container image, and attach them to
 the image as OCI 1.1 referrers. Bundles that are already attached are skipped.
 
 ```

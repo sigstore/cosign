@@ -39,8 +39,8 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
@@ -123,7 +123,7 @@ func (f *legacyFixture) attachAttestation(t *testing.T, predicateType string) {
 }
 
 func (f *legacyFixture) createFromContainerCmd() *CreateFromContainerCmd {
-	return &CreateFromContainerCmd{IgnoreTlog: true, KeyRef: f.keyPath}
+	return &CreateFromContainerCmd{CommonBundleCreateOptions: options.CommonBundleCreateOptions{IgnoreTlog: true, KeyRef: f.keyPath}}
 }
 
 func TestCreateFromContainerCmd(t *testing.T) {
@@ -137,14 +137,12 @@ func TestCreateFromContainerCmd(t *testing.T) {
 
 	bundles, _, err := cosign.GetBundles(ctx, f.digest, nil)
 	checkErr(t, err)
-	if len(bundles) != 2 {
-		t.Fatalf("expected 2 bundle, got %d", len(bundles))
+	if len(bundles) != 1 {
+		t.Fatalf("expected 1 bundle, got %d", len(bundles))
 	}
-	var sawMessage, sawDSSE bool
+	var sawDSSE bool
 	for _, b := range bundles {
 		switch b.Content.(type) {
-		case *protobundle.Bundle_MessageSignature:
-			sawMessage = true
 		case *protobundle.Bundle_DsseEnvelope:
 			sawDSSE = true
 		}
@@ -152,8 +150,8 @@ func TestCreateFromContainerCmd(t *testing.T) {
 			t.Error("expected public key verification material")
 		}
 	}
-	if !sawMessage || !sawDSSE {
-		t.Errorf("expected one message signature and one DSSE bundle, got message=%v dsse=%v", sawMessage, sawDSSE)
+	if !sawDSSE {
+		t.Errorf("expected one DSSE bundle, got dsse=%v", sawDSSE)
 	}
 
 	index, err := ociremote.Referrers(f.digest, "")
@@ -168,17 +166,8 @@ func TestCreateFromContainerCmd(t *testing.T) {
 	checkErr(t, f.createFromContainerCmd().Exec(ctx, f.digest.String()))
 	bundles, _, err = cosign.GetBundles(ctx, f.digest, nil)
 	checkErr(t, err)
-	if len(bundles) != 2 {
-		t.Fatalf("expected 2 bundle after re-run, got %d", len(bundles))
-	}
-}
-
-func TestCreateFromContainerCmd_FailOnIgnoreTlogWithSET(t *testing.T) {
-	f := newLegacyFixture(t)
-	f.attachSignature(t, static.WithBundle(&cbundle.RekorBundle{SignedEntryTimestamp: []byte("set")}))
-
-	if err := f.createFromContainerCmd().Exec(context.Background(), f.digest.String()); err == nil {
-		t.Fatal("expected error when ignoring tlog with a Signed Entry Timestamp")
+	if len(bundles) != 1 {
+		t.Fatalf("expected 1 bundle after re-run, got %d", len(bundles))
 	}
 }
 
@@ -187,14 +176,5 @@ func TestCreateFromContainerCmd_NoLegacyMaterial(t *testing.T) {
 
 	if err := f.createFromContainerCmd().Exec(context.Background(), f.digest.String()); err == nil {
 		t.Fatal("expected error when no legacy attestation exist")
-	}
-}
-
-func TestCreateFromContainerCmd_NoKeyOrCert(t *testing.T) {
-	f := newLegacyFixture(t)
-	f.attachSignature(t)
-
-	if err := (&CreateFromContainerCmd{IgnoreTlog: true}).Exec(context.Background(), f.digest.String()); err == nil {
-		t.Fatal("expected error when signature has no certificate and no key is supplied")
 	}
 }
