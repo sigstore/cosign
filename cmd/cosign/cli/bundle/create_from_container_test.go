@@ -142,8 +142,7 @@ func TestCreateFromContainerCmd(t *testing.T) {
 	}
 	var sawDSSE bool
 	for _, b := range bundles {
-		switch b.Content.(type) {
-		case *protobundle.Bundle_DsseEnvelope:
+		if _, ok := b.Content.(*protobundle.Bundle_DsseEnvelope); ok {
 			sawDSSE = true
 		}
 		if b.VerificationMaterial.GetPublicKey() == nil {
