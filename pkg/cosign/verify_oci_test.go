@@ -18,19 +18,26 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	ggcrtypes "github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/proto"
 
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	cosigntypes "github.com/sigstore/cosign/v3/pkg/types"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/root"
 )
@@ -123,6 +130,123 @@ func TestGetBundles_Valid(t *testing.T) {
 	if !proto.Equal(bundles[0].Bundle, &expected) {
 		t.Errorf("got %v, want %v", bundles[0].Bundle, &expected)
 	}
+}
+
+func TestGetBundlesWithPredicateTypeSkipsOtherAnnotatedBundles(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	var blobGets atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodGet && strings.Contains(req.URL.Path, "/blobs/") {
+			blobGets.Add(1)
+		}
+		r.ServeHTTP(w, req)
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	desc, err := remote.Head(ref)
+	assert.NoError(t, err)
+	digestRef := ref.Context().Digest(desc.Digest.String())
+
+	assert.NoError(t, ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://spdx.dev/Document"))
+	signatureBundle := append(append([]byte(nil), testAttestation...), ' ')
+	assert.NoError(t, ociremote.WriteAttestationNewBundleFormat(digestRef, signatureBundle, cosigntypes.CosignSignPredicateType))
+
+	blobGets.Store(0)
+	bundles, _, err := GetBundlesWithPredicateType(context.Background(), ref, []ociremote.Option{}, cosigntypes.CosignSignPredicateType)
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.Equal(t, int32(1), blobGets.Load())
+
+	expected := sgbundle.Bundle{}
+	assert.NoError(t, expected.UnmarshalJSON(signatureBundle))
+	assert.True(t, proto.Equal(bundles[0].Bundle, &expected))
+
+	// Unfiltered callers keep their existing behavior and retrieve both bundles.
+	blobGets.Store(0)
+	bundles, _, err = GetBundles(context.Background(), ref, []ociremote.Option{})
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 2)
+	assert.Equal(t, int32(2), blobGets.Load())
+}
+
+func TestGetBundlesWithPredicateTypeIncludesUnannotatedBundles(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	desc, err := remote.Head(ref)
+	assert.NoError(t, err)
+	digestRef := ref.Context().Digest(desc.Digest.String())
+
+	bundleMediaType, err := sgbundle.MediaTypeString("0.3")
+	assert.NoError(t, err)
+	layer := static.NewLayer(testAttestation, ggcrtypes.MediaType(bundleMediaType))
+	assert.NoError(t, ociremote.WriteReferrer(digestRef, bundleMediaType, []v1.Layer{layer}, nil))
+
+	bundles, _, err := GetBundlesWithPredicateType(context.Background(), ref, []ociremote.Option{}, cosigntypes.CosignSignPredicateType)
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+}
+
+func TestVerifyImageAttestationsSigstoreBundleUsesPredicateTypeFilter(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	var blobGets atomic.Int32
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.Method == http.MethodGet && strings.Contains(req.URL.Path, "/blobs/") {
+			blobGets.Add(1)
+		}
+		r.ServeHTTP(w, req)
+	}))
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+
+	ref, err := name.ParseReference(fmt.Sprintf("%s/repo:tag", u.Host))
+	assert.NoError(t, err)
+	assert.NoError(t, remote.Write(ref, empty.Image))
+
+	desc, err := remote.Head(ref)
+	assert.NoError(t, err)
+	digestRef := ref.Context().Digest(desc.Digest.String())
+
+	otherPredicateBundle := append(append([]byte(nil), testAttestation...), ' ')
+	signatureBundle := append(append([]byte(nil), testAttestation...), '\t')
+	assert.NoError(t, ociremote.WriteAttestationNewBundleFormat(digestRef, otherPredicateBundle, "https://spdx.dev/Document"))
+	assert.NoError(t, ociremote.WriteAttestationNewBundleFormat(digestRef, signatureBundle, cosigntypes.CosignSignPredicateType))
+
+	trustedRoot, err := root.NewTrustedRootFromJSON(testTrustedRootPGI)
+	assert.NoError(t, err)
+	blobGets.Store(0)
+	atts, bundleVerified, err := VerifyImageAttestations(context.Background(), ref, &CheckOpts{
+		TrustedMaterial:     trustedRoot,
+		NewBundleFormat:     true,
+		BundlePredicateType: cosigntypes.CosignSignPredicateType,
+		Identities: []Identity{
+			{
+				IssuerRegExp:  ".*",
+				SubjectRegExp: ".*",
+			},
+		},
+	})
+	assert.NoError(t, err)
+	assert.True(t, bundleVerified)
+	assert.Len(t, atts, 1)
+	assert.Equal(t, int32(1), blobGets.Load())
 }
 
 func TestGetBundles_WithTargetRepository(t *testing.T) {
