@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -125,7 +124,7 @@ func (c *CreateFromContainerCmd) Exec(ctx context.Context, imageRef string) (err
 	}
 
 	if len(sigLayers) != 0 {
-		slog.Warn("unable to convert signatures into attestations; skipping")
+		ui.Warnf(ctx, "unable to convert signatures into attestations; skipping")
 	}
 
 	if len(attLayers) == 0 {
