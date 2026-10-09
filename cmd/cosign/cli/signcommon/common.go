@@ -477,14 +477,17 @@ func ParseSignatureAlgorithmFlag(signingAlgorithm string) (pb_go_v1.PublicKeyDet
 }
 
 // LoadSigningConfigAndTrustedMaterial loads the signing config and trusted material from the given options.
-func LoadSigningConfigAndTrustedMaterial(ctx context.Context, ko *options.KeyOpts, useSigningConfig bool, signingConfigPath, trustedRootPath string) error {
+func LoadSigningConfigAndTrustedMaterial(ctx context.Context, ko *options.KeyOpts, noSigningConfig bool, signingConfigPath, trustedRootPath string) error {
 	var err error
-	if signingConfigPath != "" {
+	switch {
+	case signingConfigPath != "":
 		ko.SigningConfig, err = root.NewSigningConfigFromPath(signingConfigPath)
 		if err != nil {
 			return fmt.Errorf("error reading signing config from file: %w", err)
 		}
-	} else if useSigningConfig {
+	case noSigningConfig:
+		ko.SigningConfig = NewEmptySigningConfig()
+	default:
 		ko.SigningConfig, err = cosign.SigningConfig()
 		if err != nil {
 			return fmt.Errorf("error getting signing config from TUF: %w", err)
