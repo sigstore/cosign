@@ -135,15 +135,8 @@ func sbomCmdOCIExperimental(ctx context.Context, regOpts options.RegistryOptions
 }
 
 func sbomBytes(sbomRef string) ([]byte, error) {
-	// sbomRef can be "-", a string or a file.
-	switch signatureType(sbomRef) {
-	case StdinSignature:
+	if sbomRef == "-" {
 		return io.ReadAll(os.Stdin)
-	case RawSignature:
-		return []byte(sbomRef), nil
-	case FileSignature:
-		return os.ReadFile(filepath.Clean(sbomRef))
-	default:
-		return nil, errors.New("unknown SBOM arg type")
 	}
+	return os.ReadFile(filepath.Clean(sbomRef))
 }
