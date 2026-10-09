@@ -32,7 +32,7 @@ type AttestOptions struct {
 	TSAClientKey      string
 	TSAServerName     string
 	BundlePath        string
-	UseSigningConfig  bool
+	NoSigningConfig   bool
 	SigningConfigPath string
 	TrustedRootPath   string
 
@@ -95,14 +95,13 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
-	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs")
-	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
+	cmd.Flags().BoolVar(&o.NoSigningConfig, "no-signing-config", false,
+		"do not use a signing config or connect to any Sigstore services")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
 		"path to a signing config file")
 
-	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
+	cmd.MarkFlagsMutuallyExclusive("no-signing-config", "signing-config")
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
 		"optional path to a TrustedRoot JSON file to verify a signature after signing")
