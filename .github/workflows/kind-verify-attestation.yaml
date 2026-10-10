@@ -33,10 +33,9 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.30.x
-        - v1.31.x
-        - v1.32.x
         - v1.33.x
+        - v1.34.x
+        - v1.35.x
         tuf-root:
         - remote
         - air-gap
@@ -46,7 +45,7 @@ jobs:
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.31"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
@@ -79,7 +78,6 @@ jobs:
     - name: Install cluster + sigstore
       uses: sigstore/scaffolding/actions/setup@main
       with:
-        legacy-variables: "false"
         k8s-version: ${{ matrix.k8s-version }}
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
