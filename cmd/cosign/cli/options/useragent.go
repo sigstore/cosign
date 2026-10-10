@@ -15,19 +15,10 @@
 package options
 
 import (
-	"fmt"
-	"runtime"
-
-	"sigs.k8s.io/release-utils/version"
+	"github.com/sigstore/cosign/v3/internal/useragent"
 )
 
-var (
-	// uaString is meant to resemble the User-Agent sent by browsers with requests.
-	// See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent
-	uaString = fmt.Sprintf("cosign/%s (%s; %s)", version.GetVersionInfo().GitVersion, runtime.GOOS, runtime.GOARCH)
-)
-
-// UserAgent returns the User-Agent string which `cosign` should send with HTTP requests.ß
+// UserAgent returns the User-Agent string which `cosign` should send with HTTP requests.
 func UserAgent() string {
-	return uaString
+	return useragent.Get()
 }
