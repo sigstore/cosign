@@ -16,51 +16,45 @@ package attach
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/ui"
-	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
-	"github.com/sigstore/cosign/v3/pkg/oci/static"
-	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
-func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, signedPayloads []string, imageRef string) error {
+func BundleCmd(ctx context.Context, regOpts options.RegistryOptions, bundlePaths []string, imageRef string) error {
+	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
+	if err != nil {
+		return err
+	}
+	if _, ok := ref.(name.Digest); !ok {
+		ui.Warnf(ctx, ui.TagReferenceMessage, imageRef)
+	}
+
 	ociremoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
 
-	for _, payload := range signedPayloads {
-		fmt.Fprintf(os.Stderr, "Using payload from: %s", payload)
+	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
+	if err != nil {
+		return err
+	}
 
-		ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
+	for _, bundlePath := range bundlePaths {
+		fmt.Fprintf(os.Stderr, "Using bundle from: %s\n", bundlePath)
+
+		b, err := bundle.LoadJSONFromPath(bundlePath)
 		if err != nil {
-			return err
-		}
-		if _, ok := ref.(name.Digest); !ok {
-			ui.Warnf(ctx, ui.TagReferenceMessage, imageRef)
+			return fmt.Errorf("loading bundle from %s: %w", bundlePath, err)
 		}
 
-		digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
-		if err != nil {
-			return err
-		}
-
-		// Detect if we are using new bundle format
-		b, err := bundle.LoadJSONFromPath(payload)
-		if err == nil {
-			return attachAttestationNewBundle(ociremoteOpts, b, digest)
-		}
-
-		if err := attachAttestation(ociremoteOpts, payload, digest); err != nil {
-			return fmt.Errorf("attaching payload from %s: %w", payload, err)
+		if err := attachAttestationNewBundle(ociremoteOpts, b, digest); err != nil {
+			return fmt.Errorf("attaching bundle from %s: %w", bundlePath, err)
 		}
 	}
 
@@ -87,56 +81,4 @@ func attachAttestationNewBundle(remoteOpts []ociremote.Option, b *bundle.Bundle,
 		return err
 	}
 	return ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, statement.PredicateType, remoteOpts...)
-}
-
-func attachAttestation(remoteOpts []ociremote.Option, signedPayload string, digest name.Digest) error {
-	attestationFile, err := os.Open(signedPayload)
-	if err != nil {
-		return err
-	}
-	defer attestationFile.Close()
-
-	env := ssldsse.Envelope{}
-	decoder := json.NewDecoder(attestationFile)
-	for decoder.More() {
-		if err := decoder.Decode(&env); err != nil {
-			return err
-		}
-
-		payload, err := json.Marshal(env)
-		if err != nil {
-			return err
-		}
-
-		if env.PayloadType != types.IntotoPayloadType {
-			return fmt.Errorf("invalid payloadType %s on envelope. Expected %s", env.PayloadType, types.IntotoPayloadType)
-		}
-
-		if len(env.Signatures) == 0 {
-			return fmt.Errorf("could not attach attestation without having signatures")
-		}
-
-		opts := []static.Option{static.WithLayerMediaType(types.DssePayloadType)}
-		att, err := static.NewAttestation(payload, opts...)
-		if err != nil {
-			return err
-		}
-
-		se, err := ociremote.SignedEntity(digest, remoteOpts...)
-		if err != nil {
-			return err
-		}
-
-		newSE, err := mutate.AttachAttestationToEntity(se, att)
-		if err != nil {
-			return err
-		}
-
-		// Publish the signatures associated with this entity
-		err = ociremote.WriteAttestations(digest.Repository, newSE, remoteOpts...)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
