@@ -24,8 +24,10 @@ import (
 
 // SecurityKeyOptions is the wrapper for security key related options.
 type SecurityKeyOptions struct {
-	Use  bool
-	Slot string
+	Use          bool
+	Slot         string
+	PIVSerial    string
+	PIVKeySHA256 string
 }
 
 var _ Interface = (*SecurityKeyOptions)(nil)
@@ -38,4 +40,10 @@ func (o *SecurityKeyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Slot, "slot", "",
 		fmt.Sprintf("security key slot to use for generated key (default: signature) (%s)", strings.Join(securityKeySlots, "|")))
 	_ = cmd.RegisterFlagCompletionFunc("slot", cobra.FixedCompletions(securityKeySlots, cobra.ShellCompDirectiveNoFileComp))
+
+	cmd.Flags().StringVar(&o.PIVSerial, "piv-serial", "",
+		"select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)")
+
+	cmd.Flags().StringVar(&o.PIVKeySHA256, "piv-key-sha256", "",
+		"select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)")
 }

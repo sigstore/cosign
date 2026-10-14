@@ -43,11 +43,13 @@ cosign public-key [flags]
 ### Options
 
 ```
-  -h, --help             help for public-key
-      --key string       path to the private key file, KMS URI or Kubernetes Secret
-      --outfile string   path to a payload file to use rather than generating one
-      --sk               whether to use a hardware security key
-      --slot string      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+  -h, --help                    help for public-key
+      --key string              path to the private key file, KMS URI or Kubernetes Secret
+      --outfile string          path to a payload file to use rather than generating one
+      --piv-key-sha256 string   select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)
+      --piv-serial string       select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)
+      --sk                      whether to use a hardware security key
+      --slot string             security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
 ```
 
 ### Options inherited from parent commands

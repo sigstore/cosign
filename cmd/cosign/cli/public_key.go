@@ -16,6 +16,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
@@ -59,6 +60,9 @@ func PublicKey() *cobra.Command {
 			if !options.OneOf(o.Key, o.SecurityKey.Use) {
 				return &options.KeyParseError{}
 			}
+			if !o.SecurityKey.Use && (o.SecurityKey.PIVSerial != "" || o.SecurityKey.PIVKeySHA256 != "") {
+				return fmt.Errorf("--piv-serial and --piv-key-sha256 require --sk")
+			}
 			return nil
 		},
 		PersistentPreRun: options.BindViper,
@@ -79,9 +83,11 @@ func PublicKey() *cobra.Command {
 				writer.Writer = os.Stdout
 			}
 			pk := publickey.Pkopts{
-				KeyRef: o.Key,
-				Sk:     o.SecurityKey.Use,
-				Slot:   o.SecurityKey.Slot,
+				KeyRef:       o.Key,
+				Sk:           o.SecurityKey.Use,
+				Slot:         o.SecurityKey.Slot,
+				PIVSerial:    o.SecurityKey.PIVSerial,
+				PIVKeySHA256: o.SecurityKey.PIVKeySHA256,
 			}
 			return publickey.GetPublicKey(cmd.Context(), pk, writer, generate.GetPass)
 		},

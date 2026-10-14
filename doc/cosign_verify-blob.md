@@ -69,6 +69,8 @@ cosign verify-blob [flags]
       --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
+      --piv-key-sha256 string                           select a PIV card by the SHA-256 fingerprint of the slot's PKIX-encoded public key (requires --sk)
+      --piv-serial string                               select a PIV card by its unsigned decimal YubiKey serial number (requires --sk)
       --sk                                              whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file

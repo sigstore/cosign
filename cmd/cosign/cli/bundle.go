@@ -63,6 +63,8 @@ func bundleCreate() *cobra.Command {
 				SignaturePath:        o.SignaturePath,
 				Sk:                   o.Sk,
 				Slot:                 o.Slot,
+				PIVSerial:            o.PIVSerial,
+				PIVKeySHA256:         o.PIVKeySHA256,
 			}
 
 			ctx, cancel := context.WithTimeout(cmd.Context(), ro.Timeout)

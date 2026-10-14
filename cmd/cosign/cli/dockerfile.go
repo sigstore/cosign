@@ -100,6 +100,8 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					SCTRef:                       o.CertVerify.SCT,
 					Sk:                           o.SecurityKey.Use,
 					Slot:                         o.SecurityKey.Slot,
+					PIVSerial:                    o.SecurityKey.PIVSerial,
+					PIVKeySHA256:                 o.SecurityKey.PIVKeySHA256,
 					Output:                       o.Output,
 					RekorURL:                     o.Rekor.URL,
 					Attachment:                   o.Attachment,

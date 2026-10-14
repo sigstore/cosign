@@ -71,7 +71,11 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, c
 
 // LoadVerifierFromKeyOrCert returns either a signature.Verifier or a certificate from the provided flags to use for verifying an artifact.
 // In the case of certain types of keys, it returns a close function that must be called by the calling method.
-func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certChain string, hashAlgorithm crypto.Hash, sk, withGetCert bool, co *cosign.CheckOpts) (signature.Verifier, *x509.Certificate, func(), error) {
+func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, pivSerial, pivKeySHA256, certRef, certChain string, hashAlgorithm crypto.Hash, sk, withGetCert bool, co *cosign.CheckOpts) (signature.Verifier, *x509.Certificate, func(), error) {
+	if !sk && (pivSerial != "" || pivKeySHA256 != "") {
+		return nil, nil, nil, fmt.Errorf("--piv-serial and --piv-key-sha256 require --sk")
+	}
+
 	var sigVerifier signature.Verifier
 	var err error
 	switch {
@@ -87,7 +91,10 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 		}
 		return sigVerifier, nil, closeSV, nil
 	case sk:
-		sk, err := pivkey.GetKeyWithSlot(slot)
+		sk, err := pivkey.GetKeyWithSlotAndSelector(slot, pivkey.Selector{
+			Serial:    pivSerial,
+			KeySHA256: pivKeySHA256,
+		})
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("opening piv token: %w", err)
 		}

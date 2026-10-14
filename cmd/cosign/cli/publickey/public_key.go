@@ -35,12 +35,18 @@ type NamedWriter struct {
 }
 
 type Pkopts struct {
-	KeyRef string
-	Sk     bool
-	Slot   string
+	KeyRef       string
+	Sk           bool
+	Slot         string
+	PIVSerial    string
+	PIVKeySHA256 string
 }
 
 func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosign.PassFunc) error {
+	if !opts.Sk && (opts.PIVSerial != "" || opts.PIVKeySHA256 != "") {
+		return fmt.Errorf("--piv-serial and --piv-key-sha256 require --sk")
+	}
+
 	var k signature.PublicKeyProvider
 	switch {
 	case opts.KeyRef != "":
@@ -54,7 +60,10 @@ func GetPublicKey(ctx context.Context, opts Pkopts, writer NamedWriter, pf cosig
 		}
 		k = s
 	case opts.Sk:
-		sk, err := pivkey.GetKeyWithSlot(opts.Slot)
+		sk, err := pivkey.GetKeyWithSlotAndSelector(opts.Slot, pivkey.Selector{
+			Serial:    opts.PIVSerial,
+			KeySHA256: opts.PIVKeySHA256,
+		})
 		if err != nil {
 			return fmt.Errorf("opening piv token: %w", err)
 		}
