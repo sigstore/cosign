@@ -232,20 +232,23 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	err = ociremote.WriteAttestationNewBundleFormat(digestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1")
 	assert.NoError(t, err)
 
-	// Verify the attestation
-	atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
-		TrustedMaterial: trustedRoot,
-		NewBundleFormat: true,
-		Identities: []Identity{
-			{
-				IssuerRegExp:  ".*",
-				SubjectRegExp: ".*",
+	// Bundle verification takes precedence, even when OCI 1.1 discovery is enabled.
+	for _, experimental := range []bool{false, true} {
+		atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
+			TrustedMaterial:   trustedRoot,
+			NewBundleFormat:   true,
+			ExperimentalOCI11: experimental,
+			Identities: []Identity{
+				{
+					IssuerRegExp:  ".*",
+					SubjectRegExp: ".*",
+				},
 			},
-		},
-	})
-	assert.NoError(t, err)
-	assert.True(t, bundleVerified)
-	assert.Len(t, atts, 1)
+		})
+		assert.NoError(t, err)
+		assert.True(t, bundleVerified)
+		assert.Len(t, atts, 1)
+	}
 
 	// Wrong identity should not verify
 	atts, bundleVerified, err = VerifyImageAttestations(context.Background(), ref, &CheckOpts{
