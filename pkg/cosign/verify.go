@@ -1083,6 +1083,8 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 
 // VerifyImageAttestations does all the main cosign checks in a loop, returning the verified attestations.
 // If there were no valid attestations, we return an error.
+// NewBundleFormat takes precedence over ExperimentalOCI11. Otherwise, ExperimentalOCI11
+// enables OCI 1.1 DSSE attestation discovery before falling back to the legacy attestation tag.
 func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
 	// Enforce this up front.
 	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
@@ -1090,6 +1092,19 @@ func VerifyImageAttestations(ctx context.Context, signedImgRef name.Reference, c
 	}
 	if co.NewBundleFormat {
 		return verifyImageAttestationsSigstoreBundle(ctx, signedImgRef, co, nameOpts...)
+	}
+
+	if co.ExperimentalOCI11 {
+		verified, bundleVerified, referrersErr := verifyImageAttestationsExperimentalOCI(ctx, signedImgRef, co)
+		if referrersErr == nil {
+			return verified, bundleVerified, nil
+		}
+		// Preserve the discovery/verification error if the legacy lookup also fails.
+		defer func() {
+			if err != nil {
+				err = errors.Join(fmt.Errorf("verifying OCI 1.1 attestations: %w", referrersErr), err)
+			}
+		}()
 	}
 
 	// This is a carefully optimized sequence for fetching the attestations of
@@ -1743,6 +1758,73 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 	}
 
 	return verifySignatures(ctx, sigs, h, co)
+}
+
+// verifyImageAttestationsExperimentalOCI discovers and verifies DSSE attestations
+// published through WriteAttestationsReferrer.
+func verifyImageAttestationsExperimentalOCI(ctx context.Context, signedImgRef name.Reference, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
+	// Enforce this up front.
+	if co.RootCerts == nil && co.SigVerifier == nil && co.TrustedMaterial == nil {
+		return nil, false, errors.New("one of verifier, root certs, or trusted root is required")
+	}
+
+	// This is a carefully optimized sequence for fetching the attestations of
+	// the entity that minimizes registry requests when supplied with a digest
+	// input.
+	digest, err := ociremote.ResolveDigest(signedImgRef, co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	h, err := v1.NewHash(digest.Identifier())
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Some registries omit or misreport artifactType. Discover all referrers and
+	// let DSSE verification identify valid in-toto attestations.
+	index, err := ociremote.Referrers(digest, "", co.RegistryClientOpts...)
+	if err != nil {
+		return nil, false, err
+	}
+	results := index.Manifests
+	if len(results) == 0 {
+		return nil, false, fmt.Errorf("unable to locate any referrers for %s", digest)
+	}
+
+	// Referrers may live in a separate target repository when one is configured.
+	refRepo := digest.Repository
+	if targetRepo := ociremote.TargetRepositoryFromOptions(co.RegistryClientOpts...); (targetRepo != name.Repository{}) {
+		refRepo = targetRepo
+	}
+
+	var checked []oci.Signature
+	var verificationErrors []error
+	for _, result := range results {
+		st, err := name.ParseReference(fmt.Sprintf("%s@%s", refRepo, result.Digest.String()))
+		if err != nil {
+			return nil, false, err
+		}
+		atts, err := ociremote.Signatures(st, co.RegistryClientOpts...)
+		if err != nil {
+			verificationErrors = append(verificationErrors, fmt.Errorf("fetching attestation referrer %s: %w", st, err))
+			continue
+		}
+		verified, bv, err := VerifyImageAttestation(ctx, atts, h, co)
+		if err != nil {
+			verificationErrors = append(verificationErrors, fmt.Errorf("verifying attestation referrer %s: %w", st, err))
+			continue
+		}
+		bundleVerified = bundleVerified || bv
+		checked = append(checked, verified...)
+	}
+
+	if len(checked) == 0 {
+		return nil, false, &ErrNoMatchingAttestations{
+			errors.Join(fmt.Errorf("no valid attestations found via the referrers API for %s", digest), errors.Join(verificationErrors...)),
+		}
+	}
+
+	return checked, bundleVerified, nil
 }
 
 func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOpts []ociremote.Option, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {

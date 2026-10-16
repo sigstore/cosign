@@ -160,7 +160,13 @@ func VerifyAttestation() *cobra.Command {
 		Use:   "verify-attestation",
 		Short: "Verify an attestation on the supplied container image",
 		Long: `Verify an attestation on an image by checking the claims
-against the transparency log.`,
+against the transparency log.
+
+For DSSE attestations stored as OCI 1.1 referrers, use --experimental-oci11
+with --new-bundle-format=false. Verification falls back to the legacy .att
+tag if no referrer attestation verifies. The experimental flag defaults to false.
+When --new-bundle-format=true, Sigstore bundle verification takes precedence;
+the CLI automatically disables that mode when it finds no Sigstore bundles.`,
 		Example: `  cosign verify-attestation --key <key path>|<key url>|<kms uri> <image uri> [<image uri> ...]
 
   # verify cosign attestations on the image against the transparency log
@@ -174,6 +180,9 @@ against the transparency log.`,
 
   # verify image with public key
   cosign verify-attestation --key cosign.pub <IMAGE>
+
+  # verify DSSE attestations via OCI 1.1 referrers, falling back to the legacy attestation tag
+  cosign verify-attestation --key cosign.pub --experimental-oci11 --new-bundle-format=false <IMAGE>
 
   # verify image attestations with an on-disk signed image from 'cosign save'
   cosign verify-attestation --key cosign.pub --local-image <PATH>
