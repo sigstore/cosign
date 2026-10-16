@@ -181,6 +181,10 @@ type CheckOpts struct {
 	// AllowCertificateChain permits bundles with version >= v0.3 to contain
 	// X.509 certificate chains in the verification material.
 	AllowCertificateChain bool
+
+	// HashAlgorithm optionally specifies the digest algorithm to use when loading
+	// a verifier from a certificate; when 0, the key's default algorithm is used.
+	HashAlgorithm crypto.Hash
 }
 
 // BundleOptions returns sigstore-go bundle options based on CheckOpts.
@@ -370,7 +374,13 @@ func ValidateAndUnpackCert(cert *x509.Certificate, co *CheckOpts) (signature.Ver
 // Optionally verifies the subject and issuer of the certificate. Returns the chain built from the
 // certificate pools. Clients must verify the validity of this chain against a provided timestamp.
 func ValidateAndUnpackCertWithIntermediates(cert *x509.Certificate, co *CheckOpts, intermediateCerts *x509.CertPool) (signature.Verifier, []*x509.Certificate, error) {
-	verifier, err := signature.LoadVerifier(cert.PublicKey, crypto.SHA256)
+	var verifier signature.Verifier
+	var err error
+	if co != nil && co.HashAlgorithm != 0 {
+		verifier, err = signature.LoadVerifier(cert.PublicKey, co.HashAlgorithm)
+	} else {
+		verifier, err = signature.LoadDefaultVerifier(cert.PublicKey)
+	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid certificate found on signature: %w", err)
 	}
