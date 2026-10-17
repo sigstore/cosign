@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest, ubuntu-24.04-riscv, ubuntu-latest, windows-latest]
     env:
       OS: ${{ matrix.os }}
 
@@ -81,8 +81,12 @@ jobs:
           env_vars: OS
 
       - name: Run Go tests w/ `-race`
-        if: ${{ runner.os == 'Linux' }}
+        if: ${{ runner.os == 'Linux' && matrix.os != 'ubuntu-24.04-riscv' }}
         run: go test -race $(go list ./... | grep -v third_party/)
+
+      - name: Run Go tests w/ `-race` (timeout extended to 1h)
+        if: ${{ runner.os == 'Linux' && matrix.os == 'ubuntu-24.04-riscv' }}
+        run: go test -race -timeout 1h $(go list ./... | grep -v third_party/)
 
   e2e-tests:
     name: Run e2e tests
