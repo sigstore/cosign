@@ -2,6 +2,10 @@
 
 Thank you for considering contributing to Cosign! We welcome any contributions, whether it's bug fixes, new features, or improvements to the existing codebase.
 
+## AI Policy
+
+Please read [AI policy](https://github.com/sigstore/.github/blob/main/AI_POLICY.md) before making any contributions using AI.
+
 ## Your First Pull Request
 
 Review [Sigstore's contribution guidelines](https://github.com/sigstore/community/blob/main/CONTRIBUTING.md) which includes some high level information on how to contribute to Sigstore projects.
