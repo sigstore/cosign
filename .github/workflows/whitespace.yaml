@@ -38,8 +38,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: chainguard-dev/actions/trailing-space@84b1be4c638f12d4256ddddef17af98853b6d0d9 # v1.6.40
+      - uses: chainguard-dev/actions/trailing-space@3403a578b543fd3f0debdaef9dd989ae54e3fcef # v1.6.41
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@84b1be4c638f12d4256ddddef17af98853b6d0d9 # v1.6.40
+      - uses: chainguard-dev/actions/eof-newline@3403a578b543fd3f0debdaef9dd989ae54e3fcef # v1.6.41
         if: ${{ always() }}
