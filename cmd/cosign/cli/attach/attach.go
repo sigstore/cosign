@@ -39,6 +39,9 @@ func BundleCmd(ctx context.Context, regOpts options.RegistryOptions, bundlePaths
 	if err != nil {
 		return fmt.Errorf("constructing client options: %w", err)
 	}
+	if regOpts.AllowHTTPRegistry || regOpts.AllowInsecure {
+		ociremoteOpts = append(ociremoteOpts, ociremote.WithNameOptions(name.Insecure))
+	}
 
 	digest, err := ociremote.ResolveDigest(ref, ociremoteOpts...)
 	if err != nil {
