@@ -48,6 +48,7 @@ steps:
     entrypoint: /bin/sh
     dir: "go/src/sigstore/cosign"
     env:
+      - "GOTOOLCHAIN=go1.27.3"
       - "GOPATH=/workspace/go"
       - "GOBIN=/workspace/bin"
       - PROJECT_ID=${PROJECT_ID}
