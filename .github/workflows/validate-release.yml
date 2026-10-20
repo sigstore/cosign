@@ -97,6 +97,7 @@ jobs:
         run: make snapshot
         env:
           PROJECT_ID: honk-fake-project
+          GOTOOLCHAIN: go1.27.3
           RUNTIME_IMAGE: gcr.io/distroless/static-debian13:nonroot
 
       - name: check binaries
