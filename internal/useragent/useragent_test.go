@@ -15,51 +15,79 @@
 package useragent
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestGet(t *testing.T) {
 	ua := Get()
-
-	// Should contain "cosign/"
-	if !strings.Contains(ua, "cosign/") {
-		t.Errorf("User-Agent should contain 'cosign/', got: %s", ua)
+	if !strings.HasPrefix(ua, "cosign/") {
+		t.Errorf("User-Agent should start with 'cosign/', got: %s", ua)
 	}
-
-	// Should contain OS and architecture
-	if !strings.Contains(ua, "(") || !strings.Contains(ua, ")") {
-		t.Errorf("User-Agent should contain OS and architecture in parentheses, got: %s", ua)
+	if strings.Contains(ua, "sigstore-go") {
+		t.Errorf("User-Agent should not contain 'sigstore-go', got: %s", ua)
 	}
-
-	// When built as a binary (not with go run), it should contain sigstore-go version
-	// In test mode with go test, it might not have dependency info
-	t.Logf("User-Agent: %s", ua)
+	if !strings.HasSuffix(ua, fmt.Sprintf("(%s; %s)", runtime.GOOS, runtime.GOARCH)) {
+		t.Errorf("User-Agent should end with OS and architecture, got: %s", ua)
+	}
 }
 
-func TestGetSigstoreGoVersion(t *testing.T) {
-	version := getSigstoreGoVersion()
+func TestBuildSigstoreGoUserAgent(t *testing.T) {
+	platform := fmt.Sprintf("(%s; %s)", runtime.GOOS, runtime.GOARCH)
+	tests := []struct {
+		name      string
+		sgVersion string
+		want      string
+	}{
+		{
+			name:      "with sigstore-go version",
+			sgVersion: "v1.3.0",
+			want:      "cosign/v3.0.0 sigstore-go/v1.3.0 " + platform,
+		},
+		{
+			name:      "without sigstore-go version",
+			sgVersion: "",
+			want:      "cosign/v3.0.0 sigstore-go " + platform,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildSigstoreGoUserAgent("v3.0.0", tt.sgVersion); got != tt.want {
+				t.Errorf("buildSigstoreGoUserAgent() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
 
-	// NOTE: When running 'go test', the version will typically be empty because Go
-	// doesn't embed full dependency metadata in test binaries. The Deps slice in
-	// debug.ReadBuildInfo() is empty for test executables.
-	//
-	// However, when cosign is built with 'go build', the binary DOES contain this
-	// information (verified with 'go version -m ./cosign'), and getSigstoreGoVersion()
-	// will successfully extract it at runtime.
-	//
-	// To verify this works in production, check the built binary:
-	//   $ go version -m ./cosign | grep sigstore-go
-	//   dep github.com/sigstore/sigstore-go v1.1.4 ...
+func TestTransport(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		got = r.Header.Get("User-Agent")
+	}))
+	defer srv.Close()
 
-	if version == "" {
-		t.Log("sigstore-go version not found (expected in 'go test' mode)")
-		t.Log("In production binaries built with 'go build', the version IS available")
-	} else {
-		t.Logf("sigstore-go version found: %s", version)
-		// If version is found, it should start with 'v'
-		if len(version) > 0 && version[0] != 'v' {
-			t.Errorf("Expected version to start with 'v', got: %s", version)
-		}
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// sigstore-go sets its own User-Agent with Header.Add; it must be replaced.
+	req.Header.Add("User-Agent", "sigstore-go/v0.0.0")
+
+	client := &http.Client{Transport: NewSigstoreGoTransport(nil)}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	if got != GetWithSigstoreGo() {
+		t.Errorf("User-Agent = %q, want %q", got, GetWithSigstoreGo())
+	}
+	if req.Header.Get("User-Agent") != "sigstore-go/v0.0.0" {
+		t.Error("Transport should not mutate the original request")
 	}
 }

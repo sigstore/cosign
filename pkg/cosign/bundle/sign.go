@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/internal/useragent"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -101,12 +102,10 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		}
 		for _, tsaSvc := range tsaSvcs {
 			tsaOpts := &sign.TimestampAuthorityOptions{
-				URL:     tsaSvc.URL,
-				Timeout: 30 * time.Second,
-				Retries: 1,
-			}
-			if opts.TSAClientTransport != nil {
-				tsaOpts.Transport = opts.TSAClientTransport
+				URL:       tsaSvc.URL,
+				Timeout:   30 * time.Second,
+				Retries:   1,
+				Transport: useragent.NewSigstoreGoTransport(opts.TSAClientTransport),
 			}
 			bundleOpts.TimestampAuthorities = append(bundleOpts.TimestampAuthorities, sign.NewTimestampAuthority(tsaOpts))
 		}
@@ -232,9 +231,10 @@ func newFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvi
 		return nil, err
 	}
 	fulcioOpts := &sign.FulcioOptions{
-		BaseURL: fulcioSvc.URL,
-		Timeout: 30 * time.Second,
-		Retries: 1,
+		BaseURL:   fulcioSvc.URL,
+		Timeout:   30 * time.Second,
+		Retries:   1,
+		Transport: useragent.NewSigstoreGoTransport(nil),
 	}
 	return sign.NewFulcio(fulcioOpts), nil
 }
