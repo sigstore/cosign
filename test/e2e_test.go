@@ -640,37 +640,6 @@ func prepareTrustedRoot(t *testing.T, tsaURL string) string {
 	return cmd.Out
 }
 
-func prepareTrustedRootTSA(t *testing.T, tsaURL string) string {
-	downloadDirectory := t.TempDir()
-	caPath := filepath.Join(downloadDirectory, "fulcio.crt.pem")
-	caFP, err := os.Create(caPath)
-	must(err, t)
-	defer caFP.Close()
-	must(downloadFile(fulcioURL+"/api/v1/rootCert", caFP), t)
-
-	rekorPath := filepath.Join(downloadDirectory, "rekor.pub")
-	rekorFP, err := os.Create(rekorPath)
-	must(err, t)
-	defer rekorFP.Close()
-	must(downloadFile(rekorURL+"/api/v1/log/publicKey", rekorFP), t)
-
-	out := filepath.Join(downloadDirectory, "trusted_root.json")
-	cmd := &trustedroot.CreateCmd{
-		CertChain:    []string{caPath},
-		Out:          out,
-		RekorKeyPath: []string{rekorPath},
-	}
-	if tsaURL != "" {
-		tsaPath := filepath.Join(downloadDirectory, "tsa.crt.pem")
-		tsaFP, err := os.Create(tsaPath)
-		must(err, t)
-		must(downloadFile(tsaURL+"/api/v1/timestamp/certchain", tsaFP), t)
-		cmd.TSACertChainPath = []string{tsaPath}
-	}
-	must(cmd.Exec(context.Background()), t)
-	return out
-}
-
 func prepareTrustedRootWithSelfSignedCertificate(t *testing.T, certPath, tsaURL string) string {
 	td := t.TempDir()
 	cmd := trustedRootCmd(t, td, tsaURL)
@@ -3937,7 +3906,7 @@ func TestSignBlobRFC3161Timestamp(t *testing.T) {
 	ctx := context.Background()
 
 	signingConfigPath := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
-	trustedRootPath := prepareTrustedRootTSA(t, tsaURL)
+	trustedRootPath := prepareTrustedRoot(t, tsaURL)
 	ko := options.KeyOpts{
 		KeyRef:           privKeyPath,
 		BundlePath:       bundlePath,
@@ -3952,46 +3921,6 @@ func TestSignBlobRFC3161Timestamp(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Build the trusted root with TSA CA
-	client, err := tsaclient.GetTimestampClient(tsaURL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := client.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	var certs []*x509.Certificate
-	for block, contents := pem.Decode([]byte(chain.Payload)); ; block, contents = pem.Decode(contents) {
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			t.Error(err)
-		}
-		certs = append(certs, cert)
-		if len(contents) == 0 {
-			break
-		}
-	}
-	tsaCA := &root.SigstoreTimestampingAuthority{
-		Root:          certs[len(certs)-1],
-		Intermediates: certs[:len(certs)-1],
-	}
-
-	trustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, []root.TimestampingAuthority{tsaCA}, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	trustedRootPath = filepath.Join(td, "trustedroot.json")
-	trustedRootBytes, err := trustedRoot.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-	if err := os.WriteFile(trustedRootPath, trustedRootBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
-
 	// Verify the blob with the trusted root containing the TSA CA
 	koVerify := options.KeyOpts{
 		KeyRef:          pubKeyPath,
@@ -3999,9 +3928,10 @@ func TestSignBlobRFC3161Timestamp(t *testing.T) {
 		NewBundleFormat: true,
 	}
 	verifyBlobCmd := cliverify.VerifyBlobCmd{
-		KeyOpts:         koVerify,
-		IgnoreTlog:      true,
-		TrustedRootPath: trustedRootPath,
+		KeyOpts:             koVerify,
+		IgnoreTlog:          true,
+		UseSignedTimestamps: true,
+		TrustedRootPath:     trustedRootPath,
 	}
 	must(verifyBlobCmd.Exec(ctx, bp), t)
 }
