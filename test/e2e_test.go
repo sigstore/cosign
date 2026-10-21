@@ -662,9 +662,10 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 	trustedRoot := prepareTrustedRoot(t, tsaURL)
 	signingConfigStr := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
 	tests := []struct {
-		name          string
-		targets       []targetInfo
-		wantVerifyErr bool
+		name              string
+		targets           []targetInfo
+		wantVerifyErr     bool
+		wantVerifyBlobErr bool
 	}{
 		{
 			name: "standard key names",
@@ -694,14 +695,11 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 					source: tsaInter,
 				},
 				{
-					name:   "trusted_root.json",
-					source: trustedRoot,
-				},
-				{
 					name:   "signing_config.v0.2.json",
 					source: signingConfigStr,
 				},
 			},
+			wantVerifyBlobErr: true,
 		},
 		{
 			name: "invalid verifier key names with no usage",
@@ -735,7 +733,8 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 					source: signingConfigStr,
 				},
 			},
-			wantVerifyErr: true,
+			wantVerifyErr:     true,
+			wantVerifyBlobErr: true,
 		},
 		{
 			name: "nonstandard key names with valid usage",
@@ -776,14 +775,11 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 					usage:  "TSA",
 				},
 				{
-					name:   "trusted_root.json",
-					source: trustedRoot,
-				},
-				{
 					name:   "signing_config.v0.2.json",
 					source: signingConfigStr,
 				},
 			},
+			wantVerifyBlobErr: true,
 		},
 		{
 			name: "trusted root",
@@ -886,7 +882,7 @@ func TestSignVerifyWithTUFMirror(t *testing.T) {
 				UseSignedTimestamps: true,
 			}
 			gotErr = verifyBlobCmd.Exec(ctx, bp)
-			if test.wantVerifyErr {
+			if test.wantVerifyBlobErr {
 				mustErr(gotErr, t)
 			} else {
 				must(gotErr, t)
