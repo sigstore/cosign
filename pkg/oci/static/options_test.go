@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle/types"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 )
 

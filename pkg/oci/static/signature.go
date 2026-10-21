@@ -23,7 +23,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	bundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle/types"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
