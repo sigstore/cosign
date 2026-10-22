@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	bundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle/types"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 )
 
