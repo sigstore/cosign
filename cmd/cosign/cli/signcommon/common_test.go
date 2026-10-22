@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"os"
 	"path/filepath"
@@ -26,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -33,7 +33,7 @@ import (
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	pb_go_v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
@@ -213,18 +213,26 @@ func Test_ParseOCIReference(t *testing.T) {
 
 func mustSigningConfigWithRekor(t *testing.T, rekorURL string) *root.SigningConfig {
 	t.Helper()
-	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{RekorURL: rekorURL})
-	if err != nil {
-		t.Fatalf("creating signing config: %v", err)
+	sc := NewEmptySigningConfig()
+	if rekorURL != "" {
+		sc = sc.WithRekorLogURLs(root.Service{
+			URL:                 rekorURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		}).WithRekorTlogConfig(prototrustroot.ServiceSelector_ANY, 1)
 	}
 	return sc
 }
 
 func mustSigningConfigWithFulcio(t *testing.T, fulcioURL string) *root.SigningConfig {
 	t.Helper()
-	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: fulcioURL})
-	if err != nil {
-		t.Fatalf("creating signing config: %v", err)
+	sc := NewEmptySigningConfig()
+	if fulcioURL != "" {
+		sc = sc.WithFulcioCertificateAuthorityURLs(root.Service{
+			URL:                 fulcioURL,
+			MajorAPIVersion:     1,
+			ValidityPeriodStart: time.Now(),
+		})
 	}
 	return sc
 }
@@ -420,276 +428,6 @@ func TestIsPublicGoodURL(t *testing.T) {
 	}
 }
 
-func TestNewLegacyBundleFromProtoBundleComponents(t *testing.T) {
-	t.Run("without certificates leaves cert field empty", func(t *testing.T) {
-		bc := &BundleComponents{
-			Signature: []byte("signature"),
-		}
-		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
-		assert.NoError(t, err)
-
-		var payload cosign.LocalSignedPayload
-		err = json.Unmarshal(bundleBytes, &payload)
-		assert.NoError(t, err)
-		assert.Empty(t, payload.Cert, "expected empty cert field when BundleComponents has no certificates")
-	})
-
-	t.Run("with certificates populates cert field", func(t *testing.T) {
-		rootCert, _, _ := test.GenerateRootCa()
-		bc := &BundleComponents{
-			Signature:    []byte("signature"),
-			Certificates: []*pb_go_v1.X509Certificate{{RawBytes: rootCert.Raw}},
-		}
-		bundleBytes, err := NewLegacyBundleFromProtoBundleComponents(bc)
-		assert.NoError(t, err)
-
-		var payload cosign.LocalSignedPayload
-		err = json.Unmarshal(bundleBytes, &payload)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, payload.Cert, "expected non-empty cert field when BundleComponents has certificates")
-	})
-}
-
-func TestValidateSigningOptions(t *testing.T) {
-	tests := []struct {
-		name              string
-		useSigningConfig  bool
-		signingConfigPath string
-		rekorURL          string
-		fulcioURL         string
-		oidcIssuer        string
-		tsaServerURL      string
-		tlogUpload        bool
-		newBundleFormat   bool
-		bundlePath        string
-		output            string
-		outputAttestation string
-		outputCertificate string
-		outputPayload     string
-		outputSignature   string
-		outputTimestamp   string
-		wantErr           bool
-		wantErrSubstr     string
-		wantWarningSubstr string
-	}{
-		{
-			name:            "valid default online signing flags",
-			rekorURL:        options.DefaultRekorURL,
-			fulcioURL:       options.DefaultFulcioURL,
-			oidcIssuer:      options.DefaultOIDCIssuerURL,
-			tlogUpload:      true,
-			newBundleFormat: true,
-			wantErr:         false,
-		},
-		{
-			name:             "valid signing config from TUF",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  true,
-			wantErr:          false,
-		},
-		{
-			name:              "valid signing config from file",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   true,
-			wantErr:           false,
-		},
-		{
-			name:             "use signing config with custom rekor URL",
-			useSigningConfig: true,
-			rekorURL:         "http://localhost:3000",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom fulcio URL",
-			useSigningConfig: true,
-			fulcioURL:        "http://localhost:5555",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom OIDC issuer",
-			useSigningConfig: true,
-			oidcIssuer:       "http://localhost:8080",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with custom TSA server URL",
-			useSigningConfig: true,
-			tsaServerURL:     "http://localhost:3001",
-			tlogUpload:       true,
-			wantErr:          true,
-			wantErrSubstr:    "cannot specify service URLs and use signing config",
-		},
-		{
-			name:              "signing config path with custom service URLs",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          "http://localhost:3000",
-			tlogUpload:        true,
-			wantErr:           true,
-			wantErrSubstr:     "cannot specify service URLs and use signing config",
-		},
-		{
-			name:             "use signing config with tlog upload false",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       false,
-			newBundleFormat:  true,
-			wantErr:          true,
-			wantErrSubstr:    "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
-		},
-		{
-			name:              "signing config path with tlog upload false",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        false,
-			newBundleFormat:   true,
-			wantErr:           true,
-			wantErrSubstr:     "--tlog-upload=false is not supported with --signing-config or --use-signing-config",
-		},
-		{
-			name:             "missing bundle output with use signing config",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  false,
-			bundlePath:       "",
-			wantErr:          true,
-			wantErrSubstr:    "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
-		},
-		{
-			name:              "missing bundle output with signing config path",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   false,
-			bundlePath:        "",
-			wantErr:           true,
-			wantErrSubstr:     "must provide --new-bundle-format or --bundle where applicable with --signing-config or --use-signing-config",
-		},
-		{
-			name:             "legacy bundle format with explicit bundle path is valid with use signing config",
-			useSigningConfig: true,
-			rekorURL:         options.DefaultRekorURL,
-			fulcioURL:        options.DefaultFulcioURL,
-			oidcIssuer:       options.DefaultOIDCIssuerURL,
-			tlogUpload:       true,
-			newBundleFormat:  false,
-			bundlePath:       "/tmp/bundle.json",
-			wantErr:          false,
-		},
-		{
-			name:              "legacy bundle format with explicit bundle path is valid with signing config path",
-			signingConfigPath: "/path/to/signing_config.json",
-			rekorURL:          options.DefaultRekorURL,
-			fulcioURL:         options.DefaultFulcioURL,
-			oidcIssuer:        options.DefaultOIDCIssuerURL,
-			tlogUpload:        true,
-			newBundleFormat:   false,
-			bundlePath:        "/tmp/bundle.json",
-			wantErr:           false,
-		},
-		{
-			name:            "custom service URLs without signing config is valid",
-			rekorURL:        "http://localhost:3000",
-			tlogUpload:      true,
-			newBundleFormat: true,
-			wantErr:         false,
-		},
-		{
-			name:            "tlog upload false without signing config is valid",
-			tlogUpload:      false,
-			newBundleFormat: true,
-			wantErr:         false,
-		},
-		{
-			name:              "deprecated output-signature warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			outputSignature:   "sig.sig",
-			wantWarningSubstr: "--output-signature is deprecated when using --new-bundle-format",
-		},
-		{
-			name:              "deprecated output-attestation warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			outputAttestation: "att.att",
-			wantWarningSubstr: "--output-attestation is deprecated when using --new-bundle-format",
-		},
-		{
-			name:              "deprecated output-certificate warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			outputCertificate: "cert.crt",
-			wantWarningSubstr: "--output-certificate is deprecated when using --new-bundle-format",
-		},
-		{
-			name:              "deprecated output-payload warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			outputPayload:     "payload.json",
-			wantWarningSubstr: "--output-payload is deprecated when using --new-bundle-format",
-		},
-		{
-			name:              "deprecated rfc3161-timestamp warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			outputTimestamp:   "ts.tsr",
-			wantWarningSubstr: "--rfc3161-timestamp is deprecated when using --new-bundle-format",
-		},
-		{
-			name:              "deprecated output warning with new bundle format",
-			newBundleFormat:   true,
-			tlogUpload:        true,
-			output:            "out.sig",
-			wantWarningSubstr: "--output is deprecated when using --new-bundle-format",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var err error
-			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				err = ValidateSigningOptions(ctx, tt.useSigningConfig, tt.signingConfigPath,
-					tt.rekorURL, tt.fulcioURL, tt.oidcIssuer, tt.tsaServerURL,
-					tt.tlogUpload, tt.newBundleFormat, tt.bundlePath,
-					tt.output, tt.outputAttestation, tt.outputCertificate, tt.outputPayload, tt.outputSignature, tt.outputTimestamp)
-			})
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.wantErrSubstr != "" {
-					assert.Contains(t, err.Error(), tt.wantErrSubstr)
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-			if tt.wantWarningSubstr != "" {
-				assert.Contains(t, stderr, tt.wantWarningSubstr)
-			}
-		})
-	}
-}
-
 func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
 	ctx := t.Context()
 
@@ -698,8 +436,7 @@ func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
 		t.Setenv("TUF_ROOT", tufDir)
 		t.Setenv("TUF_MIRROR", tufDir)
 
-		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{})
-		assert.NoError(t, err)
+		sc := NewEmptySigningConfig()
 		scBytes, err := sc.MarshalJSON()
 		assert.NoError(t, err)
 
@@ -788,8 +525,7 @@ func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
 		t.Setenv("TUF_ROOT", tufDir)
 		t.Setenv("TUF_MIRROR", tufDir)
 
-		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: "https://fulcio.example.com"})
-		assert.NoError(t, err)
+		sc := mustSigningConfigWithFulcio(t, "https://fulcio.example.com")
 		scBytes, err := sc.MarshalJSON()
 		assert.NoError(t, err)
 
@@ -823,4 +559,72 @@ func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "getting signing config from TUF")
 	})
+}
+
+func TestRequireFulcioForCertificate(t *testing.T) {
+	withFulcio := mustSigningConfigWithFulcio(t, options.DefaultFulcioURL)
+	withoutFulcio := mustSigningConfigWithRekor(t, options.DefaultRekorURL)
+
+	tests := []struct {
+		name          string
+		ko            options.KeyOpts
+		wantErrSubstr string
+	}{
+		{
+			name: "keyless with Fulcio",
+			ko:   options.KeyOpts{SigningConfig: withFulcio},
+		},
+		{
+			name:          "keyless without Fulcio",
+			ko:            options.KeyOpts{SigningConfig: withoutFulcio},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with empty signing config",
+			ko:            options.KeyOpts{SigningConfig: NewEmptySigningConfig()},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with nil signing config",
+			ko:            options.KeyOpts{},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name: "key without Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with nil signing config",
+			ko:   options.KeyOpts{KeyRef: "cosign.key"},
+		},
+		{
+			name: "security key without Fulcio",
+			ko:   options.KeyOpts{Sk: true, SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with certificate and Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withFulcio},
+		},
+		{
+			name:          "key with certificate without Fulcio",
+			ko:            options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withoutFulcio},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "security key with certificate and nil signing config",
+			ko:            options.KeyOpts{Sk: true, IssueCertificateForExistingKey: true},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireFulcioForCertificate(tt.ko)
+			if tt.wantErrSubstr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, tt.wantErrSubstr)
+		})
+	}
 }
