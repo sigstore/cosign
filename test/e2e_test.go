@@ -28,7 +28,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -47,7 +46,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/digitorus/timestamp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -75,7 +73,6 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/trustedroot"
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
-	"github.com/sigstore/cosign/v3/internal/pkg/cosign/tsa/client"
 	cert_test "github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -2902,12 +2899,10 @@ func TestVerifyWithCARoots(t *testing.T) {
 	defer cleanup()
 	blob := "someblob2sign"
 
-	b := bytes.Buffer{}
 	blobRef := filepath.Join(td, blob)
 	if err := os.WriteFile(blobRef, []byte(blob), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
 
 	rootCert, rootKey, _ := cert_test.GenerateRootCa()
 	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
@@ -2927,15 +2922,6 @@ func TestVerifyWithCARoots(t *testing.T) {
 	pemrootRef02 := mkfile(string(pemRoot02), td, t)
 	pemleafRef02 := mkfile(string(pemLeaf02), td, t)
 
-	rootPool := x509.NewCertPool()
-	rootPool.AddCert(rootCert)
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString(signature)
-	sigRef := mkfile(b64signature, td, t)
 	pemsubRef := mkfile(string(pemSub), td, t)
 	pemrootRef := mkfile(string(pemRoot), td, t)
 	pemleafRef := mkfile(string(pemLeaf), td, t)
@@ -2964,17 +2950,19 @@ func TestVerifyWithCARoots(t *testing.T) {
 		t.Fatalf("error writing chain payload to temp file: %v", err)
 	}
 
-	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
+	// Sign the image with the leaf cert, cert chain, and TSA
+	koImg := options.KeyOpts{
+		KeyRef:           privKeyRef,
+		PassFunc:         passFunc,
+		TSAServerURL:     tsaURL + "/api/v1/timestamp",
+		SkipConfirmation: true,
 	}
-	rfc3161TSRef := mkfile(string(tsBytes), td, t)
-
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
-	if err != nil {
-		t.Fatal(err)
+	soImg := options.SignOptions{
+		Upload:    true,
+		Cert:      pemleafRef,
+		CertChain: certchainRef,
 	}
+	must(sign.SignCmd(ctx, ro, koImg, soImg, []string{imgName}), t)
 
 	// Now sign the blob with one key
 	ko := options.KeyOpts{
@@ -3348,76 +3336,6 @@ func TestRekorBundleAndRFC3161Timestamp(t *testing.T) {
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	// Make sure verify works against the Rekor and TSA clients
 	must(verifyTSA(pubKeyPath, imgName, true, nil, "", file.Name(), false), t)
-}
-
-func TestAttachWithRFC3161Timestamp(t *testing.T) {
-	ctx := context.Background()
-
-	repo, stop := reg(t)
-	defer stop()
-	td := t.TempDir()
-
-	imgName := path.Join(repo, "cosign-attach-timestamp-e2e")
-
-	_, _, cleanup := mkimage(t, imgName)
-	defer cleanup()
-
-	b := bytes.Buffer{}
-	must(generate.GenerateCmd(context.Background(), options.RegistryOptions{}, imgName, nil, &b), t)
-
-	rootCert, rootKey, _ := cert_test.GenerateRootCa()
-	subCert, subKey, _ := cert_test.GenerateSubordinateCa(rootCert, rootKey)
-	leafCert, privKey, _ := cert_test.GenerateLeafCert("subject@mail.com", "oidc-issuer", subCert, subKey)
-	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
-	pemSub := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: subCert.Raw})
-	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
-
-	payloadref := mkfile(b.String(), td, t)
-
-	h := sha256.Sum256(b.Bytes())
-	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
-	b64signature := base64.StdEncoding.EncodeToString(signature)
-	sigRef := mkfile(b64signature, td, t)
-	pemleafRef := mkfile(string(pemLeaf), td, t)
-	pemrootRef := mkfile(string(pemRoot), td, t)
-
-	certchainRef := mkfile(string(append(pemSub, pemRoot...)), td, t)
-
-	t.Setenv("SIGSTORE_ROOT_FILE", pemrootRef)
-
-	tsclient, err := tsaclient.GetTimestampClient(tsaURL)
-	if err != nil {
-		t.Error(err)
-	}
-
-	chain, err := tsclient.Timestamp.GetTimestampCertChain(tsatimestamp.NewGetTimestampCertChainParams())
-	if err != nil {
-		t.Fatalf("unexpected error getting timestamp chain: %v", err)
-	}
-
-	file, err := os.CreateTemp(os.TempDir(), "tempfile")
-	if err != nil {
-		t.Fatalf("error creating temp file: %v", err)
-	}
-	defer os.Remove(file.Name())
-	_, err = file.WriteString(chain.Payload)
-	if err != nil {
-		t.Fatalf("error writing chain payload to temp file: %v", err)
-	}
-
-	tsBytes, err := getTimestampedSignature(signature, client.NewTSAClient(tsaURL+"/api/v1/timestamp"))
-	if err != nil {
-		t.Fatalf("unexpected error creating timestamp: %v", err)
-	}
-	rfc3161TSRef := mkfile(string(tsBytes), td, t)
-
-	// Upload it!
-	err = attach.SignatureCmd(ctx, options.RegistryOptions{}, sigRef, payloadref, pemleafRef, certchainRef, rfc3161TSRef, "", imgName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	must(verifyKeylessTSA(imgName, file.Name(), pemrootRef, true, true), t)
 }
 
 func TestDuplicateSign(t *testing.T) {
@@ -4486,7 +4404,7 @@ func TestAttestDownloadAttachNewBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(attach.AttestationCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
+	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
 
 	// Download should succeed on second image
 	out = bytes.Buffer{}
@@ -4532,7 +4450,7 @@ func TestSignDownloadAttachNewBundle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	must(attach.SignatureCmd(ctx, regOpts, "", bundlePath, "", "", "", "", img2Name), t)
+	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, img2Name), t)
 
 	// Download should succeed on second image
 	must(download.SignatureCmd(ctx, regOpts, img2Name, os.Stdout), t)
@@ -5862,16 +5780,4 @@ func TestSignVerifyDetachedKeyless(t *testing.T) {
 		},
 	}
 	must(cmdWithChain.Exec(ctx, []string{imgName}), t)
-}
-
-func getTimestampedSignature(sigBytes []byte, tsaClient client.TimestampAuthorityClient) ([]byte, error) {
-	requestBytes, err := timestamp.CreateRequest(bytes.NewReader(sigBytes), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating timestamp request: %w", err)
-	}
-
-	return tsaClient.GetTimestampResponse(requestBytes)
 }
