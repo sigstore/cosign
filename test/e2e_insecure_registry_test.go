@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/attach"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/attest"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/initialize"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -59,8 +60,6 @@ func TestInsecureRegistry(t *testing.T) {
 
 	useOCI11 := os.Getenv("oci11Var") != ""
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -69,9 +68,9 @@ func TestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -80,8 +79,7 @@ func TestInsecureRegistry(t *testing.T) {
 
 	// Sign without bundle format
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload: true,
 	}
 	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
@@ -94,7 +92,7 @@ func TestInsecureRegistry(t *testing.T) {
 		}
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, false), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
 		CheckClaims: true,
@@ -102,9 +100,6 @@ func TestInsecureRegistry(t *testing.T) {
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
 		},
-	}
-	if useOCI11 {
-		cmd.ExperimentalOCI11 = true
 	}
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 
@@ -114,9 +109,7 @@ func TestInsecureRegistry(t *testing.T) {
 	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
 	defer cleanup2()
 
-	so.NewBundleFormat = true
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	cmd.NewBundleFormat = true
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
 
@@ -134,8 +127,6 @@ func TestAttestInsecureRegistry(t *testing.T) {
 
 	_, privKey, pubKey := keypair(t, td)
 
-	rekorURL := os.Getenv(rekorURLVar)
-
 	ctx := context.Background()
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -144,10 +135,81 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
 
 	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
 		SkipConfirmation: true,
+	}
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
+	ko.TrustedMaterial = trustedMaterial
+	ko.NewBundleFormat = true
+
+	slsaAttestation := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
+	slsaAttestationPath := filepath.Join(td, "attestation.slsa.json")
+	if err := os.WriteFile(slsaAttestationPath, []byte(slsaAttestation), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	attestCmd := attest.AttestCommand{
+		KeyOpts:       ko,
+		PredicatePath: slsaAttestationPath,
+		PredicateType: "slsaprovenance",
+		Timeout:       30 * time.Second,
+		RegistryOptions: options.RegistryOptions{
+			AllowInsecure:     true,
+			AllowHTTPRegistry: true,
+		},
+	}
+	must(attestCmd.Exec(ctx, imgName), t)
+	verifyAttestation := cliverify.VerifyAttestationCommand{
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
+		KeyRef:        pubKey,
+		PredicateType: "slsaprovenance",
+		RegistryOptions: options.RegistryOptions{
+			AllowInsecure:     true,
+			AllowHTTPRegistry: true,
+		},
+	}
+	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
+}
+
+func TestAttachInsecureRegistry(t *testing.T) {
+	if os.Getenv("COSIGN_TEST_REPO") == "" {
+		t.Fatal("COSIGN_TEST_REPO must be set to an insecure registry for this test")
+	}
+	repo, stop := reg(t)
+	defer stop()
+	td := t.TempDir()
+
+	imgName := path.Join(repo, "cosign-registry-e2e-attach")
+	cleanup := makeImageIndexWithInsecureRegistry(t, imgName)
+	defer cleanup()
+
+	_, privKey, pubKey := keypair(t, td)
+
+	ctx := context.Background()
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	rootPath := os.Getenv("TUF_ROOT_JSON")
+	mirror := os.Getenv("TUF_MIRROR")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
+	regOpts := options.RegistryOptions{
+		AllowInsecure:     true,
+		AllowHTTPRegistry: true,
+	}
+
+	bundlePath := filepath.Join(td, "attestation.sigstore.json")
+	ko := options.KeyOpts{
+		SigningConfig:    rekorSigningConfig(),
+		KeyRef:           privKey,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
+		NewBundleFormat:  true,
+		BundlePath:       bundlePath,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
 	must(err, t)
@@ -159,40 +221,26 @@ func TestAttestInsecureRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest without bundle
+	// Write the bundle only to disk (only attach will upload it)
 	attestCmd := attest.AttestCommand{
-		KeyOpts:        ko,
-		PredicatePath:  slsaAttestationPath,
-		PredicateType:  "slsaprovenance",
-		Timeout:        30 * time.Second,
-		RekorEntryType: "dsse",
-		TlogUpload:     true,
-		RegistryOptions: options.RegistryOptions{
-			AllowInsecure:     true,
-			AllowHTTPRegistry: true,
-		},
+		KeyOpts:         ko,
+		RegistryOptions: regOpts,
+		PredicatePath:   slsaAttestationPath,
+		PredicateType:   "slsaprovenance",
+		Timeout:         30 * time.Second,
+		NoUpload:        true,
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
+
 	verifyAttestation := cliverify.VerifyAttestationCommand{
-		KeyRef:        pubKey,
-		PredicateType: "slsaprovenance",
-		RegistryOptions: options.RegistryOptions{
-			AllowInsecure:     true,
-			AllowHTTPRegistry: true,
-		},
+		KeyRef:          pubKey,
+		PredicateType:   "slsaprovenance",
+		RegistryOptions: regOpts,
 	}
-	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
-
-	// Attest with new bundle
-	imgName = path.Join(repo, "cosign-registry-e2e-2")
-	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
-	defer cleanup2()
-
-	ko.NewBundleFormat = true
-	attestCmd.KeyOpts = ko
-	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true
-	verifyAttestation.IgnoreTlog = false
+	mustErr(verifyAttestation.Exec(ctx, []string{imgName}), t)
+
+	must(attach.BundleCmd(ctx, regOpts, []string{bundlePath}, imgName), t)
 	must(verifyAttestation.Exec(ctx, []string{imgName}), t)
 }
 
