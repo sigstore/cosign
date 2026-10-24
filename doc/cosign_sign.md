@@ -18,7 +18,7 @@ cosign sign [flags]
 ### Examples
 
 ```
-  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+  cosign sign [--key <key path>|<kms uri>] [-a key=value] [--upload=true|false] [-y] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -58,12 +58,6 @@ cosign sign [flags]
 
   # sign a container image and upload to the transparency log
   cosign sign --key cosign.key <IMAGE DIGEST>
-
-  # sign a container image and skip uploading to the transparency log
-  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
-
-  # sign a container image and honor the creation timestamp of the signature
-  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options
@@ -80,6 +74,7 @@ cosign sign [flags]
       --identity-token string                           identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --k8s-keychain                                    whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                      path to the private key file, KMS URI or Kubernetes Secret
+      --no-signing-config                               do not use a signing config or connect to any Sigstore services
       --oidc-client-id string                           OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                  Path to file containing OIDC client secret for application
       --oidc-disable-ambient-providers                  Disable ambient OIDC providers. When true, ambient credentials will not be read
