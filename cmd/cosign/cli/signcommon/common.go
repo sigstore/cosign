@@ -567,6 +567,24 @@ func LoadSigningConfigAndTrustedMaterial(ctx context.Context, ko *options.KeyOpt
 	return nil
 }
 
+// RequireFulcioForCertificate returns an error when keyless or certificate-based signing is
+// requested and the signing config has no Fulcio certificate authority.
+func RequireFulcioForCertificate(ko options.KeyOpts) error {
+	var signType string
+	switch {
+	case ko.KeyRef == "" && !ko.Sk:
+		signType = "keyless"
+	case ko.IssueCertificateForExistingKey:
+		signType = "certificate-based"
+	default:
+		return nil
+	}
+	if ko.SigningConfig != nil && len(ko.SigningConfig.FulcioCertificateAuthorityURLs()) > 0 {
+		return nil
+	}
+	return fmt.Errorf("%s signing requires a signing config with a Fulcio certificate authority", signType)
+}
+
 func signingConfigHasServices(sc *root.SigningConfig) bool {
 	if sc == nil {
 		return false
@@ -676,6 +694,22 @@ func NewLegacyBundleFromProtoBundleComponents(bc *BundleComponents) ([]byte, err
 	}
 
 	return json.Marshal(signedPayload)
+}
+
+// NewEmptySigningConfig returns a signing config with no services configured.
+func NewEmptySigningConfig() *root.SigningConfig {
+	// root.NewSigningConfig only errors when an unsupported media type is provided.
+	// Since root.SigningConfigMediaType02 is a supported constant, this call cannot fail.
+	sc, _ := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+		nil,
+		root.ServiceConfiguration{Selector: prototrustroot.ServiceSelector_ANY},
+	)
+	return sc
 }
 
 // NewSigningConfigFromKeyOpts creates a signing config from key options.
