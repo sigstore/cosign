@@ -32,6 +32,7 @@ import (
 	"strings"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/blob"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
@@ -118,11 +119,23 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	co.NewBundleFormat = c.KeyOpts.NewBundleFormat && checkNewBundle(c.BundlePath, co.BundleOptions()...)
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
 
+	var sigstoreBundle *sgbundle.Bundle
+	hashAlgorithm := c.HashAlgorithm
+	if co.NewBundleFormat {
+		sigstoreBundle, err = sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
+		if err != nil {
+			return err
+		}
+		if hashAlgorithm == 0 {
+			hashAlgorithm = signcommon.ProtoHashAlgoToHash(sigstoreBundle.GetMessageSignature().GetMessageDigest().GetAlgorithm())
+		}
+	}
+
 	// User provides a key or certificate. Otherwise, verification requires a Fulcio certificate
 	// provided in an attached bundle or OCI annotation.
 	var closeSV func()
 	var cert *x509.Certificate
-	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", c.HashAlgorithm, c.Sk, true, co)
+	co.SigVerifier, cert, closeSV, err = LoadVerifierFromKeyOrCert(ctx, c.KeyRef, c.Slot, c.CertRef, "", hashAlgorithm, c.Sk, true, co)
 	if err != nil {
 		return fmt.Errorf("loading verifier from key opts: %w", err)
 	}
@@ -138,11 +151,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 
 	if co.NewBundleFormat {
-		bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
-		if err != nil {
-			return err
-		}
-
 		var artifactPolicyOption sgverify.ArtifactPolicyOption
 		blobBytes, err := payloadBytes(blobRef)
 		if err != nil {
@@ -155,7 +163,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 			artifactPolicyOption = sgverify.WithArtifact(bytes.NewReader(blobBytes))
 		}
 
-		_, err = cosign.VerifyNewBundle(ctx, co, artifactPolicyOption, bundle)
+		_, err = cosign.VerifyNewBundle(ctx, co, artifactPolicyOption, sigstoreBundle)
 		if err != nil {
 			return err
 		}

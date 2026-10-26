@@ -2896,3 +2896,31 @@ func TestVerifyImageSignatureWithBundleBodyMissingHash(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndUnpackCertWithP384(t *testing.T) {
+	rootCert, rootKey, err := test.GenerateRootCa()
+	require.NoError(t, err)
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	leafPriv, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+	leafCert, err := test.GenerateLeafCertWithExpiration("subject@mail.com", "oidc-issuer", time.Now(), leafPriv, rootCert, rootKey)
+	require.NoError(t, err)
+
+	verifier, err := ValidateAndUnpackCert(leafCert, &CheckOpts{
+		RootCerts:  rootPool,
+		IgnoreSCT:  true,
+		IgnoreTlog: true,
+		Identities: []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}},
+	})
+	require.NoError(t, err)
+
+	signer, err := signature.LoadDefaultSignerVerifier(leafPriv)
+	require.NoError(t, err)
+	msg := []byte("p384 cert verification payload")
+	sig, err := signer.SignMessage(bytes.NewReader(msg))
+	require.NoError(t, err)
+	require.NoError(t, verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)))
+}
+
