@@ -239,8 +239,8 @@ github.com/dgraph-io/ristretto/v2 v2.2.0/go.mod h1:RZrm63UmcBAaYWC1DotLYBmTvgkrs
 github.com/dgryski/trifles v0.0.0-20230903005119-f50d829f2e54 h1:SG7nF6SRlWhcT7cNTs5R6Hk4V2lcmLz2NsG2VnInyNo=
 github.com/dgryski/trifles v0.0.0-20230903005119-f50d829f2e54/go.mod h1:if7Fbed8SFyPtHLHbg49SI7NAdJiC5WIA09pe59rfAA=
 github.com/digitorus/pkcs7 v0.0.0-20230713084857-e76b763bdc49/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
-github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 h1:ge14PCmCvPjpMQMIAH7uKg0lrtNSOdpYsRXlwk3QbaE=
-github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352/go.mod h1:SKVExuS+vpu2l9IoOc0RwqE7NYnb0JlcFHFnEJkVDzc=
+github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77 h1:ellGgwdFy8F+Fn/AElhKzTysK1/Js7S9ZmMnSu2gSS0=
+github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77/go.mod h1:OQvyvldkvDCxGsUPLSibXqM4B/Pz5RaXQP4CPo5LXs4=
 github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 h1:lxmTCgmHE1GUYL7P0MlNa00M67axePTq+9nBSGddR8I=
 github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7/go.mod h1:GvWntX9qiTlOud0WkQ6ewFm0LPy5JUR1Xo0Ngbd1w6Y=
 github.com/dimchansky/utfbom v1.1.1 h1:vV6w1AhK4VMnhBno/TPVCoK9U/LP0PkLCS9tbxHdi/U=
@@ -284,8 +284,8 @@ github.com/fsnotify/fsnotify v1.10.1 h1:b0/UzAf9yR5rhf3RPm9gf3ehBPpf0oZKIjtpKrx5
 github.com/fsnotify/fsnotify v1.10.1/go.mod h1:TLheqan6HD6GBK6PrDWyDPBaEV8LspOxvPSjC+bVfgo=
 github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
 github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
-github.com/go-chi/chi/v5 v5.3.2 h1:5YQkICvTCSZ25hoRsyJazN0scjzKGiu4VAUc7H1o1nY=
-github.com/go-chi/chi/v5 v5.3.2/go.mod h1:R+tYY2hNuVUUjxoPtqUdgBqevM9s9njzkTLutVsOCto=
+github.com/go-chi/chi/v5 v5.4.0 h1:+ufzvFTGKyin26Or5DLrlIDq4ygIDBVcj7oVNeeaYFE=
+github.com/go-chi/chi/v5 v5.4.0/go.mod h1:d1IG7GtKPSjPyBP365PH8sAGVHk3qfB/IhjFNRH1wWM=
 github.com/go-jose/go-jose/v4 v4.1.6 h1:sNRkftxFJxwsILiQukqp5z83QBSmntVwmgRY7AqBDO4=
 github.com/go-jose/go-jose/v4 v4.1.6/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -627,8 +627,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.1 h1:Ab4K/QqBmlmOu5X05q
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.1/go.mod h1:db/U8Hp9wrarN12CE99SdDEef9FCsgyGTD2gaFRfep4=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.1 h1:WIgn5z+Wx9ZM8MPTZlMIJ5YXZq36VrcYXFfCCokMqGc=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.1/go.mod h1:byZFStGl4JcpWux75DD7gmpYyYjyy2BmkjsJhdSA8UE=
-github.com/sigstore/timestamp-authority/v2 v2.1.5 h1:VryyxIBepZ2ALtvkAAjBf9IF33iI6wX7ifiVWeBVhog=
-github.com/sigstore/timestamp-authority/v2 v2.1.5/go.mod h1:/rLXKc3T8+DtQYGqVNoCw/Z4OOcEe8Y8ED8/dXetaWw=
+github.com/sigstore/timestamp-authority/v2 v2.2.0 h1:8q0R5iKss8YxbdoMM929G3djst/yXkdERTQavyLzBiQ=
+github.com/sigstore/timestamp-authority/v2 v2.2.0/go.mod h1:KdNxJI1HURK3EUaOjy3S+dfqoia/Iv/DtcvSR1/R1TI=
 github.com/sirupsen/logrus v1.10.2 h1:G2SED73/qrAu6YwbdxOD6peLkCBI3z7L+ykJFTXJBBo=
 github.com/sirupsen/logrus v1.10.2/go.mod h1:SLEg8TqYulVKKfIGHldVp2K2aYz2DKSVBq4g/H5bR7Q=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d/go.mod h1:OnSkiWE9lh6wB0YB77sQom3nweQdgAjqCqsofrRNTgc=

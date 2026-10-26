@@ -42,7 +42,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.1
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.1
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.1
-	github.com/sigstore/timestamp-authority/v2 v2.1.5
+	github.com/sigstore/timestamp-authority/v2 v2.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
@@ -142,7 +142,7 @@ require (
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
-	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
+	github.com/digitorus/pkcs7 v0.0.0-20260821105541-05f79448fa77 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v29.7.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
@@ -152,7 +152,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-chi/chi/v5 v5.3.2 // indirect
+	github.com/go-chi/chi/v5 v5.4.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v1.0.0 // indirect
