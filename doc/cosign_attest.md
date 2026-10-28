@@ -81,7 +81,7 @@ cosign attest [flags]
       --timestamp-client-key string      path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
       --timestamp-server-name string     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
-      --type string                      specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
+      --type string                      specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|syft|vuln|openvex|custom) or an URI (default "custom")
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```
 
