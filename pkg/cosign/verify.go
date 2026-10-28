@@ -178,6 +178,10 @@ type CheckOpts struct {
 	// NewBundleFormat enables the new bundle format (Cosign Bundle Spec) and the new verifier.
 	NewBundleFormat bool
 
+	// BundlePredicateType filters new-format bundles by their manifest predicate type.
+	// Bundles without this annotation are still considered for backwards compatibility.
+	BundlePredicateType string
+
 	// AllowCertificateChain permits bundles with version >= v0.3 to contain
 	// X.509 certificate chains in the verification material.
 	AllowCertificateChain bool
@@ -1746,6 +1750,16 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 }
 
 func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOpts []ociremote.Option, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	return getBundles(signedImgRef, registryClientOpts, "", nameOpts...)
+}
+
+// GetBundlesWithPredicateType retrieves bundles matching a predicate type.
+// Referrers without a predicate-type annotation remain eligible for parsing.
+func GetBundlesWithPredicateType(_ context.Context, signedImgRef name.Reference, registryClientOpts []ociremote.Option, predicateType string, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
+	return getBundles(signedImgRef, registryClientOpts, predicateType, nameOpts...)
+}
+
+func getBundles(signedImgRef name.Reference, registryClientOpts []ociremote.Option, predicateType string, nameOpts ...name.Option) ([]*sgbundle.Bundle, *v1.Hash, error) {
 	// This is a carefully optimized sequence for fetching the signatures of the
 	// entity that minimizes registry requests when supplied with a digest input
 	digest, err := ociremote.ResolveDigest(signedImgRef, registryClientOpts...)
@@ -1778,8 +1792,8 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 		if err != nil {
 			return nil, nil, err
 		}
-		bundle, err := ociremote.Bundle(st, registryClientOpts...)
-		if err != nil {
+		bundle, matchesPredicateType, err := ociremote.BundleWithPredicateType(st, predicateType, registryClientOpts...)
+		if err != nil || !matchesPredicateType {
 			// There may be non-Sigstore referrers in the index, so we can ignore them.
 			// TODO: Should we surface any errors here (e.g. if the bundle is invalid)?
 			continue
@@ -1943,7 +1957,7 @@ func getLocalBundleDescriptors(path string) ([]bundleDescriptor, *v1.Hash, error
 
 // verifyImageAttestationsSigstoreBundle verifies attestations from attached sigstore bundles
 func verifyImageAttestationsSigstoreBundle(ctx context.Context, signedImgRef name.Reference, co *CheckOpts, nameOpts ...name.Option) (checkedAttestations []oci.Signature, atLeastOneBundleVerified bool, err error) {
-	bundles, hash, err := GetBundles(ctx, signedImgRef, co.RegistryClientOpts, nameOpts...)
+	bundles, hash, err := GetBundlesWithPredicateType(ctx, signedImgRef, co.RegistryClientOpts, co.BundlePredicateType, nameOpts...)
 	if err != nil {
 		return nil, false, err
 	}
