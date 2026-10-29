@@ -31,6 +31,8 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestSignBlobCmd(t *testing.T) {
@@ -50,6 +52,7 @@ func TestSignBlobCmd(t *testing.T) {
 	if err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", ""); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
+	assertOfflineBundle(t, bundlePath)
 
 	// Test signing with a certificate
 	rootCert, rootKey, _ := test.GenerateRootCa()
@@ -140,6 +143,29 @@ func readBundleSignature(t *testing.T, bundlePath string) []byte {
 		t.Fatalf("failed to decode signature: %v", err)
 	}
 	return sig
+}
+
+func assertOfflineBundle(t *testing.T, bundlePath string) {
+	t.Helper()
+	bundleBytes, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to read bundle: %v", err)
+	}
+	var bundle protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+		t.Fatalf("failed to unmarshal bundle: %v", err)
+	}
+	vm := bundle.GetVerificationMaterial()
+	// Public key hint rules out a certificate or certificate chain (content is a oneof field).
+	if vm.GetPublicKey() == nil {
+		t.Errorf("expected a public key hint, got %T", vm.GetContent())
+	}
+	if n := len(vm.GetTlogEntries()); n != 0 {
+		t.Errorf("expected no transparency log entries, got %d", n)
+	}
+	if n := len(vm.GetTimestampVerificationData().GetRfc3161Timestamps()); n != 0 {
+		t.Errorf("expected no RFC 3161 timestamps, got %d", n)
+	}
 }
 
 func assertEd25519Sig(t *testing.T, pub ed25519.PublicKey, msg, sig []byte) {
