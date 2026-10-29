@@ -76,11 +76,11 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagRequired("bundle")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
-		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format")
+		"whether to use a TUF-provided signing config for the service URLs")
 	_ = cmd.Flags().MarkDeprecated("use-signing-config", "an offline signing flag will be added in the future; TUF will continue to provide a signing config by default if one is not provided manually")
 
 	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
-		"path to a signing config file. Must provide --bundle, which will output verification material in the new format")
+		"path to a signing config file")
 
 	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
 
