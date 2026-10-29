@@ -62,10 +62,6 @@ func SignBlob() *cobra.Command {
 				return &options.KeyParseError{}
 			}
 
-			if o.BundlePath == "" {
-				return fmt.Errorf("please specify --bundle")
-			}
-
 			// Check if the algorithm is in the list of supported algorithms
 			supportedAlgorithms := cosign.GetSupportedAlgorithms()
 			isValid := false

@@ -73,6 +73,7 @@ func (o *SignBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
+	_ = cmd.MarkFlagRequired("bundle")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format")
