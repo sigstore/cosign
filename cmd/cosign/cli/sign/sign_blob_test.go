@@ -28,9 +28,11 @@ import (
 
 	"github.com/secure-systems-lab/go-securesystemslib/encrypted"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	"github.com/sigstore/sigstore-go/pkg/root"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestSignBlobCmd(t *testing.T) {
@@ -47,19 +49,10 @@ func TestSignBlobCmd(t *testing.T) {
 	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 
 	// Test happy path
-	_, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", false)
-	if err != nil {
+	if err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", ""); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-
-	// Test file outputs
-	keyOpts.NewBundleFormat = true
-	sigPath := filepath.Join(td, "output.sig")
-	certPath := filepath.Join(td, "output.pem")
-	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", false, sigPath, certPath, false)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	assertOfflineBundle(t, bundlePath)
 
 	// Test signing with a certificate
 	rootCert, rootKey, _ := test.GenerateRootCa()
@@ -81,8 +74,7 @@ func TestSignBlobCmd(t *testing.T) {
 	certPrivKeyRef := writeFile(t, td, string(pemBytes), "certkey.pem")
 	keyOpts.KeyRef = certPrivKeyRef
 
-	_, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, signCertPath, "", false, "", "", false)
-	if err != nil {
+	if err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, signCertPath, ""); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
@@ -105,53 +97,22 @@ func TestSignBlobCmd(t *testing.T) {
 
 	// Test signing using Ed25519 key with custom signing config and no transparency log upload
 	edKeyRef := writeFile(t, td, string(pemBytes), "ed_key.pem")
-	keyOpts = options.KeyOpts{KeyRef: edKeyRef, BundlePath: bundlePath}
-	sc, err := root.NewSigningConfig(
-		root.SigningConfigMediaType02,
-		nil,
-		nil,
-		nil,
-		root.ServiceConfiguration{},
-		nil,
-		root.ServiceConfiguration{},
-	)
-	if err != nil {
-		t.Fatal(err)
+	keyOpts = options.KeyOpts{
+		KeyRef:        edKeyRef,
+		BundlePath:    bundlePath,
+		SigningConfig: signcommon.NewEmptySigningConfig(),
 	}
-	keyOpts.SigningConfig = sc
-	sigBytes, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", true)
-	if err != nil {
+	if err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", ""); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	decodedSig, err := base64.StdEncoding.DecodeString(string(sigBytes))
-	if err != nil {
-		t.Fatalf("failed to decode base64 signature: %v", err)
-	}
-	if !ed25519.Verify(pub, blob, decodedSig) {
-		errString := "expected ed25519 signature"
-		if ed25519.VerifyWithOptions(pub, blob, decodedSig, &ed25519.Options{Hash: crypto.SHA512}) == nil {
-			errString += ", received ed25519ph signature"
-		}
-		t.Fatal("signature verification failed: " + errString)
-	}
+	assertEd25519Sig(t, pub, blob, readBundleSignature(t, bundlePath))
 
 	// Test signing using Ed25519 key with default signing config and no transparency log upload
 	keyOpts = options.KeyOpts{KeyRef: edKeyRef, BundlePath: bundlePath}
-	sigBytes, err = SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", false)
-	if err != nil {
+	if err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", ""); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	decodedSig, err = base64.StdEncoding.DecodeString(string(sigBytes))
-	if err != nil {
-		t.Fatalf("failed to decode base64 signature: %v", err)
-	}
-	if !ed25519.Verify(pub, blob, decodedSig) {
-		errString := "expected ed25519 signature"
-		if ed25519.VerifyWithOptions(pub, blob, decodedSig, &ed25519.Options{Hash: crypto.SHA512}) == nil {
-			errString += ", received ed25519ph signature"
-		}
-		t.Fatal("signature verification failed: " + errString)
-	}
+	assertEd25519Sig(t, pub, blob, readBundleSignature(t, bundlePath))
 }
 
 func writeFile(t *testing.T, td string, blob string, name string) string {
@@ -163,42 +124,58 @@ func writeFile(t *testing.T, td string, blob string, name string) string {
 	return blobPath
 }
 
-func TestSignBlobCmd_LegacyBundleNoCert(t *testing.T) {
-	td := t.TempDir()
-	bundlePath := filepath.Join(td, "legacy-bundle.json")
-
-	keys, _ := cosign.GenerateKeyPair(nil)
-	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
-
-	blob := []byte("foo")
-	blobPath := writeFile(t, td, string(blob), "foo.txt")
-
-	rootOpts := &options.RootOptions{}
-	keyOpts := options.KeyOpts{
-		KeyRef:          keyRef,
-		BundlePath:      bundlePath,
-		NewBundleFormat: false,
-	}
-
-	_, err := SignBlobCmd(t.Context(), rootOpts, keyOpts, blobPath, "", "", true, "", "", false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
+func readBundleSignature(t *testing.T, bundlePath string) []byte {
+	t.Helper()
 	bundleBytes, err := os.ReadFile(bundlePath)
 	if err != nil {
-		t.Fatalf("failed to read written bundle file: %v", err)
+		t.Fatalf("failed to read bundle: %v", err)
 	}
+	var bundle struct {
+		MessageSignature struct {
+			Signature string `json:"signature"`
+		} `json:"messageSignature"`
+	}
+	if err := json.Unmarshal(bundleBytes, &bundle); err != nil {
+		t.Fatalf("failed to unmarshal bundle: %v", err)
+	}
+	sig, err := base64.StdEncoding.DecodeString(bundle.MessageSignature.Signature)
+	if err != nil {
+		t.Fatalf("failed to decode signature: %v", err)
+	}
+	return sig
+}
 
-	var payload cosign.LocalSignedPayload
-	if err := json.Unmarshal(bundleBytes, &payload); err != nil {
-		t.Fatalf("failed to unmarshal legacy bundle: %v", err)
+func assertOfflineBundle(t *testing.T, bundlePath string) {
+	t.Helper()
+	bundleBytes, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to read bundle: %v", err)
 	}
+	var bundle protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+		t.Fatalf("failed to unmarshal bundle: %v", err)
+	}
+	vm := bundle.GetVerificationMaterial()
+	// Public key hint rules out a certificate or certificate chain (content is a oneof field).
+	if vm.GetPublicKey() == nil {
+		t.Errorf("expected a public key hint, got %T", vm.GetContent())
+	}
+	if n := len(vm.GetTlogEntries()); n != 0 {
+		t.Errorf("expected no transparency log entries, got %d", n)
+	}
+	if n := len(vm.GetTimestampVerificationData().GetRfc3161Timestamps()); n != 0 {
+		t.Errorf("expected no RFC 3161 timestamps, got %d", n)
+	}
+}
 
-	if payload.Cert != "" {
-		t.Fatalf("expected empty cert field in legacy bundle when signing with a key without certificate, got: %q", payload.Cert)
+func assertEd25519Sig(t *testing.T, pub ed25519.PublicKey, msg, sig []byte) {
+	t.Helper()
+	if ed25519.Verify(pub, msg, sig) {
+		return
 	}
-	if payload.Base64Signature == "" {
-		t.Fatal("expected non-empty Base64Signature in legacy bundle")
+	errString := "expected ed25519 signature"
+	if ed25519.VerifyWithOptions(pub, msg, sig, &ed25519.Options{Hash: crypto.SHA512}) == nil {
+		errString += ", received ed25519ph signature"
 	}
+	t.Fatal("signature verification failed: " + errString)
 }

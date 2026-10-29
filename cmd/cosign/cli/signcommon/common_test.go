@@ -824,3 +824,71 @@ func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
 		assert.Contains(t, err.Error(), "getting signing config from TUF")
 	})
 }
+
+func TestRequireFulcioForCertificate(t *testing.T) {
+	withFulcio := mustSigningConfigWithFulcio(t, options.DefaultFulcioURL)
+	withoutFulcio := mustSigningConfigWithRekor(t, options.DefaultRekorURL)
+
+	tests := []struct {
+		name          string
+		ko            options.KeyOpts
+		wantErrSubstr string
+	}{
+		{
+			name: "keyless with Fulcio",
+			ko:   options.KeyOpts{SigningConfig: withFulcio},
+		},
+		{
+			name:          "keyless without Fulcio",
+			ko:            options.KeyOpts{SigningConfig: withoutFulcio},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with empty signing config",
+			ko:            options.KeyOpts{SigningConfig: NewEmptySigningConfig()},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with nil signing config",
+			ko:            options.KeyOpts{},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name: "key without Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with nil signing config",
+			ko:   options.KeyOpts{KeyRef: "cosign.key"},
+		},
+		{
+			name: "security key without Fulcio",
+			ko:   options.KeyOpts{Sk: true, SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with certificate and Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withFulcio},
+		},
+		{
+			name:          "key with certificate without Fulcio",
+			ko:            options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withoutFulcio},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "security key with certificate and nil signing config",
+			ko:            options.KeyOpts{Sk: true, IssueCertificateForExistingKey: true},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireFulcioForCertificate(tt.ko)
+			if tt.wantErrSubstr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, tt.wantErrSubstr)
+		})
+	}
+}
