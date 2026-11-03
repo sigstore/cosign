@@ -132,6 +132,17 @@ func TestOptions(t *testing.T) {
 			ROpt:              defaultOptions,
 			BundleOpts:        []sgbundle.Option{sgbundle.AllowCertificateChain()},
 		},
+	}, {
+		name: "name options option",
+		opts: []Option{WithNameOptions(name.Insecure)},
+		want: &options{
+			SignatureSuffix:   SignatureTagSuffix,
+			AttestationSuffix: AttestationTagSuffix,
+			SBOMSuffix:        SBOMTagSuffix,
+			TargetRepository:  repo,
+			ROpt:              defaultOptions,
+			NameOpts:          []name.Option{name.Insecure},
+		},
 	}}
 
 	for _, test := range tests {
@@ -234,6 +245,9 @@ func optionsEqual(o1, o2 *options) bool {
 		return false
 	}
 	if o1.TagPrefix != o2.TagPrefix {
+		return false
+	}
+	if o1.TargetRepository != o2.TargetRepository {
 		return false
 	}
 	if !slicesEqual(o1.ROpt, o2.ROpt) {

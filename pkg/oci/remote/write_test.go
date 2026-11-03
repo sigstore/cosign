@@ -686,6 +686,50 @@ func TestWriteSignaturesExperimentalOCI(t *testing.T) {
 	if !strings.Contains(string(manifestBytes), `"artifactType"`) {
 		t.Errorf("Expected manifest JSON to contain artifactType field, got: %s", string(manifestBytes))
 	}
+
+	// Verify WithTargetRepository and WithNameOptions(name.Insecure) preserve the HTTP scheme
+	// on both the subject HEAD request and the target repository layer/manifest uploads.
+	httpDigest := name.MustParseReference("registry.local:5000/test/image@sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", name.Insecure).(name.Digest)
+	targetRepo, err := name.NewRepository("registry.local:5000/target/repo", name.Insecure)
+	if err != nil {
+		t.Fatalf("name.NewRepository() = %v", err)
+	}
+	var headRef name.Reference
+	remoteHead = func(ref name.Reference, _ ...remote.Option) (*v1.Descriptor, error) {
+		headRef = ref
+		return &v1.Descriptor{
+			MediaType: types.DockerManifestSchema2,
+			Digest:    v1.Hash{Algorithm: "sha256", Hex: "abcdef1234567890"},
+			Size:      100,
+		}, nil
+	}
+	var layerRepos []string
+	remoteWriteLayer = func(repo name.Repository, _ v1.Layer, _ ...remote.Option) error {
+		layerRepos = append(layerRepos, repo.Name())
+		return nil
+	}
+	var putRef name.Reference
+	remotePut = func(ref name.Reference, _ remote.Taggable, _ ...remote.Option) error {
+		putRef = ref
+		return nil
+	}
+	if err := WriteSignaturesExperimentalOCI(httpDigest, si, WithTargetRepository(targetRepo), WithNameOptions(name.Insecure)); err != nil {
+		t.Fatalf("WriteSignaturesExperimentalOCI(WithTargetRepository) = %v", err)
+	}
+	if headRef == nil || headRef.Context().Scheme() != "http" {
+		t.Errorf("remoteHead ref = %v (scheme %q), want http scheme", headRef, headRef.Context().Scheme())
+	}
+	for _, gotRepo := range layerRepos {
+		if gotRepo != targetRepo.Name() {
+			t.Errorf("remoteWriteLayer repo = %q, want %q", gotRepo, targetRepo.Name())
+		}
+	}
+	if putRef == nil || putRef.Context().Name() != targetRepo.Name() {
+		t.Errorf("remotePut ref = %v, want repo %q", putRef, targetRepo.Name())
+	}
+	if putRef.Context().Scheme() != "http" {
+		t.Errorf("remotePut scheme = %q, want http", putRef.Context().Scheme())
+	}
 }
 
 // stubSignedImageIndex is a SignedImageIndex with no image, signatures, or attestations,
