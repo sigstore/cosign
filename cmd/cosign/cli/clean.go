@@ -63,19 +63,22 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	}
 
 	remoteOpts := regOpts.GetRegistryClientOpts(ctx)
-	ociRemoteOpts := ociremote.WithRemoteOptions(remoteOpts...)
-
-	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts)
+	ociRemoteOpts, err := regOpts.ClientOpts(ctx)
 	if err != nil {
 		return err
 	}
 
-	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts)
+	sigRef, err := ociremote.SignatureTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
 
-	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts)
+	attRef, err := ociremote.AttestationTag(ref, ociRemoteOpts...)
+	if err != nil {
+		return err
+	}
+
+	sbomRef, err := ociremote.SBOMTag(ref, ociRemoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -84,12 +87,16 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 	digest, ok := ref.(name.Digest)
 	if !ok {
 		var err error
-		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts)
+		digest, err = ociremote.ResolveDigest(ref, ociRemoteOpts...)
 		if err != nil {
 			return fmt.Errorf("resolving digest: %w", err)
 		}
 	}
-	idx, err := remote.Referrers(digest, remoteOpts...)
+	targetRepo := ref.Context()
+	if overrideRepo := ociremote.TargetRepositoryFromOptions(ociRemoteOpts...); (overrideRepo != name.Repository{}) {
+		targetRepo = overrideRepo
+	}
+	idx, err := remote.Referrers(targetRepo.Digest(digest.DigestStr()), remoteOpts...)
 	if err != nil {
 		return err
 	}
@@ -99,8 +106,8 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 		if err != nil {
 			return err
 		}
-		referrerDigestStr := fmt.Sprintf("%s@%s", ref.Context().Name(), imgDigest.String())
-		referrerDigest, err := name.NewDigest(referrerDigestStr)
+		referrerDigestStr := fmt.Sprintf("%s@%s", targetRepo.Name(), imgDigest.String())
+		referrerDigest, err := name.NewDigest(referrerDigestStr, regOpts.NameOptions()...)
 		if err != nil {
 			return err
 		}
@@ -113,8 +120,8 @@ func CleanCmd(ctx context.Context, regOpts options.RegistryOptions, cleanType op
 		}
 		if idxManifest != nil {
 			for _, manifest := range idxManifest.Manifests {
-				layerDigestStr := fmt.Sprintf("%s@%s", ref.Context().Name(), manifest.Digest.String())
-				layerDigest, err := name.NewDigest(layerDigestStr)
+				layerDigestStr := fmt.Sprintf("%s@%s", targetRepo.Name(), manifest.Digest.String())
+				layerDigest, err := name.NewDigest(layerDigestStr, regOpts.NameOptions()...)
 				if err != nil {
 					return err
 				}

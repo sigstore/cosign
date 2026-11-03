@@ -223,7 +223,12 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	}
 
 	if signOpts.Upload {
-		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
+		repo, _ := ociremote.GetEnvTargetRepository(regOpts.NameOptions()...)
+		if repo.RepositoryStr() == "" {
+			ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
+		} else {
+			ui.Infof(ctx, "Pushing signature to: %s", repo.RepositoryStr())
+		}
 		if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
 			return err
 		}
@@ -440,7 +445,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Check if we are overriding the signatures repository location
-	repo, _ := ociremote.GetEnvTargetRepository()
+	repo, _ := ociremote.GetEnvTargetRepository(signOpts.Registry.NameOptions()...)
 	if repo.RepositoryStr() == "" {
 		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
 	} else {

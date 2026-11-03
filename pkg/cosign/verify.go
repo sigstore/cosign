@@ -1722,12 +1722,13 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 			// TODO: if there is more than 1 result.. what does that even mean?
 			ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", numResults, artifactType)
 		}
+		bundleRepo := digest.Repository
+		if targetRepo := ociremote.TargetRepositoryFromOptions(co.RegistryClientOpts...); (targetRepo != name.Repository{}) {
+			bundleRepo = targetRepo
+		}
 		// TODO: do this smarter using "created" annotations
 		lastResult := results[numResults-1]
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
-		if err != nil {
-			return nil, false, err
-		}
+		st := bundleRepo.Digest(lastResult.Digest.String())
 		sigs, err = ociremote.Signatures(st, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
@@ -1774,9 +1775,14 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", bundleRepo, result.Digest.String()), nameOpts...)
-		if err != nil {
-			return nil, nil, err
+		var st name.Reference
+		if len(nameOpts) > 0 {
+			st, err = name.ParseReference(fmt.Sprintf("%s@%s", bundleRepo, result.Digest.String()), nameOpts...)
+			if err != nil {
+				return nil, nil, err
+			}
+		} else {
+			st = bundleRepo.Digest(result.Digest.String())
 		}
 		bundle, err := ociremote.Bundle(st, registryClientOpts...)
 		if err != nil {

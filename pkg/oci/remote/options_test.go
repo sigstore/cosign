@@ -151,6 +151,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 		desc string
 
 		envVal string
+		opts   []name.Option
 
 		want    name.Repository
 		wantErr error
@@ -161,6 +162,14 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			envVal: "gcr.io/distroless",
 
 			want: name.MustParseReference("gcr.io/distroless").Context(),
+		},
+		{
+			desc: "good insecure",
+
+			envVal: "registry.local:5000/knative",
+			opts:   []name.Option{name.Insecure},
+
+			want: name.MustParseReference("registry.local:5000/knative", name.Insecure).Context(),
 		},
 		{
 			desc: "bad",
@@ -188,7 +197,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			defer os.Setenv("COSIGN_REPOSITORY", ev)
 			os.Setenv("COSIGN_REPOSITORY", tc.envVal)
 
-			got, err := GetEnvTargetRepository()
+			got, err := GetEnvTargetRepository(tc.opts...)
 
 			if !errors.Is(err, tc.wantErr) {
 				if tc.wantErr == nil || err == nil || tc.wantErr.Error() != err.Error() {

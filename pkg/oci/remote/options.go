@@ -142,9 +142,9 @@ func TargetRepositoryFromOptions(opts ...Option) name.Repository {
 // GetEnvTargetRepository returns the Repository specified by
 // `os.Getenv(RepoOverrideEnvKey)`, or the empty value if not set.
 // Returns an error if the value is set but cannot be parsed.
-func GetEnvTargetRepository() (name.Repository, error) {
+func GetEnvTargetRepository(opts ...name.Option) (name.Repository, error) {
 	if ro := env.Getenv(env.VariableRepository); ro != "" {
-		repo, err := name.NewRepository(ro)
+		repo, err := name.NewRepository(ro, opts...)
 		if err != nil {
 			// A bare registry (e.g. "registry.example.com:5000", with no
 			// repository path) has no '/' to split on, so name.NewRepository
