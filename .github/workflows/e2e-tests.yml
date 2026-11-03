@@ -128,6 +128,8 @@ jobs:
 
       - name: Acceptance Tests
         run: go test -tags=e2e,kms -v ./test/...
+        env:
+          TUF_ROOT_JSON: ${{ github.workspace }}/root.json
 
   e2e-registry:
     runs-on: ubuntu-latest

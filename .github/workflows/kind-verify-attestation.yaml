@@ -126,7 +126,7 @@ jobs:
       run: |
         ./cosign signing-config create \
             --fulcio="url=${FULCIO_URL},api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
-            --rekor="url=${REKOR_URL},api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
+            --rekor="url=${REKOR_URL},api-version=2,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
             --rekor-config="ANY" \
             --tsa="url=${TSA_URL}/api/v1/timestamp,api-version=1,start-time=2024-01-01T00:00:00Z,operator=sigstore.dev" \
             --tsa-config="EXACT:1" \
