@@ -37,12 +37,40 @@ import (
 	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 )
 
 const (
 	oci11Var    = "OCI11"
 	rekorURLVar = "REKOR_URL"
 )
+
+func newRekorV2SigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
+	t.Helper()
+	rekorServices := []root.Service{
+		{
+			URL:                 rekorURL,
+			MajorAPIVersion:     2,
+			ValidityPeriodStart: time.Now().Add(-time.Hour),
+		},
+	}
+	rekorConfig := root.ServiceConfiguration{
+		Selector: prototrustroot.ServiceSelector_ANY,
+		Count:    1,
+	}
+	sc, err := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		rekorServices,
+		rekorConfig,
+		nil,
+		root.ServiceConfiguration{},
+	)
+	must(err, t)
+	return sc
+}
 
 func TestInsecureRegistry(t *testing.T) {
 	if os.Getenv("COSIGN_TEST_REPO") == "" {
@@ -72,17 +100,17 @@ func TestInsecureRegistry(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
+		SigningConfig:    newRekorV2SigningConfig(t, rekorURL),
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
 	must(err, t)
 	ko.TrustedMaterial = trustedMaterial
 
-	// Sign without bundle format
+	// Sign without bundle format (legacy format does not support Rekor v2)
 	so := options.SignOptions{
 		Upload:     true,
-		TlogUpload: true,
+		TlogUpload: false,
 	}
 	mustErr(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	so.Registry = options.RegistryOptions{
@@ -95,10 +123,11 @@ func TestInsecureRegistry(t *testing.T) {
 		}
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verify(pubKey, imgName, true, nil, "", true), t)
 	cmd := cliverify.VerifyCommand{
 		KeyRef:      pubKey,
 		CheckClaims: true,
+		IgnoreTlog:  true,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -115,9 +144,12 @@ func TestInsecureRegistry(t *testing.T) {
 	cleanup2 := makeImageIndexWithInsecureRegistry(t, imgName)
 	defer cleanup2()
 
+	ko.SigningConfig = newRekorV2SigningConfig(t, rekorURL)
 	so.NewBundleFormat = true
+	so.TlogUpload = true
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
 	cmd.NewBundleFormat = true
+	cmd.IgnoreTlog = false
 	must(cmd.Exec(context.Background(), []string{imgName}), t)
 }
 
@@ -147,7 +179,7 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
+		SigningConfig:    newRekorV2SigningConfig(t, rekorURL),
 		SkipConfirmation: true,
 	}
 	trustedMaterial, err := cosign.TrustedRoot()
@@ -160,14 +192,14 @@ func TestAttestInsecureRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Attest without bundle
+	// Attest without bundle (legacy format does not support Rekor v2)
 	attestCmd := attest.AttestCommand{
 		KeyOpts:        ko,
 		PredicatePath:  slsaAttestationPath,
 		PredicateType:  "slsaprovenance",
 		Timeout:        30 * time.Second,
 		RekorEntryType: "dsse",
-		TlogUpload:     true,
+		TlogUpload:     false,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -177,6 +209,7 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	verifyAttestation := cliverify.VerifyAttestationCommand{
 		KeyRef:        pubKey,
 		PredicateType: "slsaprovenance",
+		IgnoreTlog:    true,
 		RegistryOptions: options.RegistryOptions{
 			AllowInsecure:     true,
 			AllowHTTPRegistry: true,
@@ -190,7 +223,9 @@ func TestAttestInsecureRegistry(t *testing.T) {
 	defer cleanup2()
 
 	ko.NewBundleFormat = true
+	ko.SigningConfig = newRekorV2SigningConfig(t, rekorURL)
 	attestCmd.KeyOpts = ko
+	attestCmd.TlogUpload = true
 	must(attestCmd.Exec(ctx, imgName), t)
 	verifyAttestation.CommonVerifyOptions.NewBundleFormat = true
 	verifyAttestation.IgnoreTlog = false
@@ -229,7 +264,7 @@ func TestAttachInsecureRegistry(t *testing.T) {
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
 		PassFunc:         passFunc,
-		RekorURL:         rekorURL,
+		SigningConfig:    newRekorV2SigningConfig(t, rekorURL),
 		SkipConfirmation: true,
 		NewBundleFormat:  true,
 		BundlePath:       bundlePath,

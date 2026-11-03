@@ -97,7 +97,7 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.41"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -128,12 +128,14 @@ jobs:
 
       - name: Acceptance Tests
         run: go test -tags=e2e,kms -v ./test/...
+        env:
+          TUF_ROOT_JSON: ${{ github.workspace }}/root.json
 
   e2e-registry:
     runs-on: ubuntu-latest
 
     env:
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.41"
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
