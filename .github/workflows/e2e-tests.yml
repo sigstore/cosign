@@ -97,7 +97,6 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.41"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -118,8 +117,11 @@ jobs:
 
       - uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
 
+      - name: Extract version of scaffolding to use
+        run: echo "SCAFFOLDING_RELEASE_VERSION=$(awk '/sigstore\/scaffolding\/actions\/setup@/{print $NF; exit}' .github/workflows/e2e-tests.yml)" >> $GITHUB_ENV
+
       - name: Install cluster + sigstore
-        uses: sigstore/scaffolding/actions/setup@main
+        uses: sigstore/scaffolding/actions/setup@c9e7cb4a331fad6ff917e0f912a37035487f6d55 # v0.7.41
         with:
           version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
@@ -133,9 +135,6 @@ jobs:
 
   e2e-registry:
     runs-on: ubuntu-latest
-
-    env:
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.41"
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -156,8 +155,11 @@ jobs:
       with:
         mirror: mirror.gcr.io
 
+    - name: Extract version of scaffolding to use
+      run: echo "SCAFFOLDING_RELEASE_VERSION=$(awk '/sigstore\/scaffolding\/actions\/setup@/{print $NF; exit}' .github/workflows/e2e-tests.yml)" >> $GITHUB_ENV
+
     - name: Install cluster + sigstore
-      uses: sigstore/scaffolding/actions/setup@main
+      uses: sigstore/scaffolding/actions/setup@c9e7cb4a331fad6ff917e0f912a37035487f6d55 # v0.7.41
       with:
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
