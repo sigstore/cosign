@@ -44,7 +44,6 @@ jobs:
 
     env:
       KO_DOCKER_REPO: "registry.local:5000/policy-controller"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.41"
       GO111MODULE: on
       GOFLAGS: -ldflags=-s -ldflags=-w
       KOCACHE: ~/ko
@@ -74,8 +73,11 @@ jobs:
       run: |
         make cosign
 
+    - name: Extract version of scaffolding to use
+      run: echo "SCAFFOLDING_RELEASE_VERSION=$(awk '/sigstore\/scaffolding\/actions\/setup@/{print $NF; exit}' .github/workflows/kind-verify-attestation.yaml)" >> $GITHUB_ENV
+
     - name: Install cluster + sigstore
-      uses: sigstore/scaffolding/actions/setup@main
+      uses: sigstore/scaffolding/actions/setup@c9e7cb4a331fad6ff917e0f912a37035487f6d55 # v0.7.41
       with:
         k8s-version: ${{ matrix.k8s-version }}
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
