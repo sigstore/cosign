@@ -105,12 +105,15 @@ func (o *RegistryOptions) ClientOpts(ctx context.Context) ([]ociremote.Option, e
 	if o.RefOpts.TagPrefix != "" {
 		opts = append(opts, ociremote.WithPrefix(o.RefOpts.TagPrefix))
 	}
-	targetRepoOverride, err := ociremote.GetEnvTargetRepository()
+	targetRepoOverride, err := ociremote.GetEnvTargetRepository(o.NameOptions()...)
 	if err != nil {
 		return nil, err
 	}
 	if (targetRepoOverride != name.Repository{}) {
 		opts = append(opts, ociremote.WithTargetRepository(targetRepoOverride))
+	}
+	if nameOpts := o.NameOptions(); len(nameOpts) > 0 {
+		opts = append(opts, ociremote.WithNameOptions(nameOpts...))
 	}
 	return opts, nil
 }

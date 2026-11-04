@@ -31,13 +31,21 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign/fulcio/fulcioroots"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
@@ -472,5 +480,125 @@ func TestVerifySkWithoutIdentities(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "opening piv token") {
 		t.Fatalf("expected PIV error, got: %v", err)
+	}
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestSignAndVerifyWithHTTPTargetRepository(t *testing.T) {
+	r := registry.New(registry.WithReferrersSupport(true))
+	s := httptest.NewServer(r)
+	defer s.Close()
+
+	u, err := url.Parse(s.URL)
+	assert.NoError(t, err)
+	host := u.Host
+
+	// Route registry.local:5000 over HTTP to the in-memory registry.
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		reqClone := req.Clone(req.Context())
+		reqClone.URL.Host = host
+		reqClone.Host = host
+		return http.DefaultTransport.RoundTrip(reqClone)
+	})
+
+	td := t.TempDir()
+	keys, err := cosign.GenerateKeyPair(func(bool) ([]byte, error) { return nil, nil })
+	assert.NoError(t, err)
+	privKeyPath := filepath.Join(td, "cosign.key")
+	pubKeyPath := filepath.Join(td, "cosign.pub")
+	assert.NoError(t, os.WriteFile(privKeyPath, keys.PrivateBytes, 0o600))
+	assert.NoError(t, os.WriteFile(pubKeyPath, keys.PublicBytes, 0o600))
+
+	ro := &options.RootOptions{Timeout: options.DefaultTimeout}
+	ko := options.KeyOpts{
+		KeyRef:           privKeyPath,
+		PassFunc:         func(bool) ([]byte, error) { return nil, nil },
+		SkipConfirmation: true,
+	}
+	regOpts := options.RegistryOptions{
+		AllowHTTPRegistry:  true,
+		RegistryClientOpts: []remote.Option{remote.WithTransport(rt)},
+	}
+
+	for _, tc := range []struct {
+		name              string
+		newBundleFormat   bool
+		experimentalOCI11 bool
+	}{
+		{name: "legacy", newBundleFormat: false},
+		{name: "new-bundle-format", newBundleFormat: true},
+		{name: "oci-1-1-referrers", newBundleFormat: false, experimentalOCI11: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			targetRepoStr := fmt.Sprintf("registry.local:5000/target/%s", tc.name)
+			t.Setenv("COSIGN_REPOSITORY", targetRepoStr)
+
+			// Write the image both to the loopback host (which does not need name.Insecure)
+			// and to registry.local:5000 (which requires name.Insecure / AllowHTTPRegistry).
+			loopbackImgRefStr := fmt.Sprintf("%s/source/%s:latest", host, tc.name)
+			loopbackImgRef, err := name.ParseReference(loopbackImgRefStr)
+			assert.NoError(t, err)
+			assert.NoError(t, remote.Write(loopbackImgRef, empty.Image, remote.WithTransport(rt)))
+
+			imgRefStr := fmt.Sprintf("registry.local:5000/source/%s:latest", tc.name)
+			imgRef, err := name.ParseReference(imgRefStr, name.Insecure)
+			assert.NoError(t, err)
+			assert.NoError(t, remote.Write(imgRef, empty.Image, remote.WithTransport(rt)))
+
+			koCase := ko
+			koCase.NewBundleFormat = tc.newBundleFormat
+
+			so := options.SignOptions{
+				Upload:          true,
+				TlogUpload:      false,
+				NewBundleFormat: tc.newBundleFormat,
+				Registry:        regOpts,
+			}
+			if tc.experimentalOCI11 {
+				so.RegistryExperimental.RegistryReferrersMode = options.RegistryReferrersModeOCI11
+			}
+
+			// Without AllowHTTPRegistry, signing even a loopback source image must fail
+			// specifically when pushing to the HTTP COSIGN_REPOSITORY (registry.local:5000).
+			soNoHTTP := so
+			soNoHTTP.Registry.AllowHTTPRegistry = false
+			assert.Error(t, sign.SignCmd(t.Context(), ro, koCase, soNoHTTP, []string{loopbackImgRefStr}))
+
+			// With AllowHTTPRegistry, signing from HTTP source to HTTP COSIGN_REPOSITORY succeeds.
+			assert.NoError(t, sign.SignCmd(t.Context(), ro, koCase, so, []string{imgRefStr}))
+
+			verifyCmd := VerifyCommand{
+				KeyRef:            pubKeyPath,
+				CheckClaims:       true,
+				IgnoreTlog:        true,
+				HashAlgorithm:     crypto.SHA256,
+				RegistryOptions:   regOpts,
+				ExperimentalOCI11: tc.experimentalOCI11,
+				CommonVerifyOptions: options.CommonVerifyOptions{
+					NewBundleFormat:   tc.newBundleFormat,
+					ExperimentalOCI11: tc.experimentalOCI11,
+				},
+			}
+
+			// Without COSIGN_REPOSITORY set, verification must fail because the signature/bundle
+			// was written to the target repository, not the source repository.
+			t.Setenv("COSIGN_REPOSITORY", "")
+			assert.Error(t, verifyCmd.Exec(t.Context(), []string{imgRefStr}))
+			t.Setenv("COSIGN_REPOSITORY", targetRepoStr)
+
+			// Without AllowHTTPRegistry, verification against the loopback source image must fail
+			// specifically when reading from the HTTP COSIGN_REPOSITORY.
+			verifyNoHTTP := verifyCmd
+			verifyNoHTTP.AllowHTTPRegistry = false
+			assert.Error(t, verifyNoHTTP.Exec(t.Context(), []string{loopbackImgRefStr}))
+
+			// With AllowHTTPRegistry, verification from COSIGN_REPOSITORY succeeds.
+			assert.NoError(t, verifyCmd.Exec(t.Context(), []string{imgRefStr}))
+		})
 	}
 }

@@ -236,7 +236,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	for _, v := range s {
-		if err := remoteWriteLayer(d.Repository, v, o.ROpt...); err != nil {
+		if err := remoteWriteLayer(o.TargetRepository, v, o.ROpt...); err != nil {
 			return err
 		}
 	}
@@ -251,7 +251,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	configLayer := static.NewLayer(configBytes, configDesc.MediaType)
-	if err := remoteWriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
+	if err := remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...); err != nil {
 		return err
 	}
 
@@ -269,7 +269,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc
 	rm := referrerManifest{m, artifactType}
-	targetRef, err := rm.targetRef(d.Repository, opts...)
+	targetRef, err := rm.targetRef(o.TargetRepository, opts...)
 	if err != nil {
 		return err
 	}

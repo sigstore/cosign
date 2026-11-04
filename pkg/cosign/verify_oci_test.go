@@ -18,6 +18,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -177,6 +178,54 @@ func TestGetBundles_WithTargetRepository(t *testing.T) {
 	if !proto.Equal(bundles[0].Bundle, &expected) {
 		t.Errorf("got %v, want %v", bundles[0].Bundle, &expected)
 	}
+
+	// Also test a non-loopback HTTP target repository (e.g. registry.local:5000)
+	// where name.Insecure is required on the target repository and must be
+	// preserved by GetBundles even when nameOpts is omitted.
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		reqClone := req.Clone(req.Context())
+		reqClone.URL.Host = host
+		reqClone.Host = host
+		return http.DefaultTransport.RoundTrip(reqClone)
+	})
+	httpTargetRepo, err := name.NewRepository("registry.local:5000/http-target-repo", name.Insecure)
+	assert.NoError(t, err)
+	err = ociremote.WriteAttestationNewBundleFormat(sourceDigestRef, testAttestation, "https://cosign.sigstore.dev/attestation/v1",
+		ociremote.WithTargetRepository(httpTargetRepo),
+		ociremote.WithNameOptions(name.Insecure),
+		ociremote.WithRemoteOptions(remote.WithTransport(rt)),
+	)
+	assert.NoError(t, err)
+
+	// Without nameOpts, GetBundles preserves httpTargetRepo's Insecure scheme via bundleRepo.Digest().
+	bundles, hash, err = GetBundles(context.Background(), sourceRef, []ociremote.Option{
+		ociremote.WithTargetRepository(httpTargetRepo),
+		ociremote.WithRemoteOptions(remote.WithTransport(rt)),
+	})
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.NotNil(t, hash)
+	if !proto.Equal(bundles[0].Bundle, &expected) {
+		t.Errorf("got %v, want %v", bundles[0].Bundle, &expected)
+	}
+
+	// With name.Insecure passed in nameOpts, GetBundles parses bundleRepo@digest with nameOpts.
+	bundles, hash, err = GetBundles(context.Background(), sourceRef, []ociremote.Option{
+		ociremote.WithTargetRepository(httpTargetRepo),
+		ociremote.WithRemoteOptions(remote.WithTransport(rt)),
+	}, name.Insecure)
+	assert.NoError(t, err)
+	assert.Len(t, bundles, 1)
+	assert.NotNil(t, hash)
+	if !proto.Equal(bundles[0].Bundle, &expected) {
+		t.Errorf("got %v, want %v", bundles[0].Bundle, &expected)
+	}
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 // TODO: This test is getting long and maybe should be refactored into a

@@ -50,7 +50,7 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	var foundMatches bool
 
 	// Try bundles first
-	newBundles, _, err := cosign.GetBundles(ctx, ref, ociremoteOpts)
+	newBundles, _, err := cosign.GetBundles(ctx, ref, ociremoteOpts, regOpts.NameOptions()...)
 	if err == nil && len(newBundles) > 0 {
 		for _, eachBundle := range newBundles {
 			if predicateType != "" {
