@@ -1713,6 +1713,27 @@ func assertRekorV2HashedrekordEntry(t *testing.T, bundlePath string) {
 	}
 }
 
+// assertOfflineBundle asserts that a key-signed bundle file carries no material
+// from online services (certificates, tlog entries, or signed timestamps).
+func assertOfflineBundle(t *testing.T, bundlePath string) {
+	t.Helper()
+	raw, err := os.ReadFile(bundlePath)
+	must(err, t)
+	var pb protobundle.Bundle
+	must(protojson.Unmarshal(raw, &pb), t)
+	vm := pb.GetVerificationMaterial()
+	// Public key hint rules out a certificate or certificate chain (content is a oneof field).
+	if vm.GetPublicKey() == nil {
+		t.Errorf("bundle %s: want a public key hint, got %T", bundlePath, vm.GetContent())
+	}
+	if n := len(vm.GetTlogEntries()); n != 0 {
+		t.Errorf("bundle %s: want no tlog entries, got %d", bundlePath, n)
+	}
+	if n := len(vm.GetTimestampVerificationData().GetRfc3161Timestamps()); n != 0 {
+		t.Errorf("bundle %s: want no RFC 3161 timestamps, got %d", bundlePath, n)
+	}
+}
+
 func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 	tufLocalCache := t.TempDir()
 	t.Setenv("TUF_ROOT", tufLocalCache)
@@ -3727,6 +3748,7 @@ func TestSignBlobNewBundle(t *testing.T) {
 	if err := sign.SignBlobCmd(ctx, ro, ko, blobPath, "", ""); err != nil {
 		t.Fatal(err)
 	}
+	assertOfflineBundle(t, bundlePath)
 
 	// Verify should succeed now that bundle is written
 	must(verifyBlobCmd.Exec(ctx, blobPath), t)
