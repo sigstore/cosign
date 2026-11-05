@@ -73,35 +73,52 @@ func readCapped(r io.Reader) ([]byte, error) {
 }
 
 func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
+	bundle, _, err := BundleWithPredicateType(ref, "", opts...)
+	return bundle, err
+}
+
+// BundleWithPredicateType reads a bundle unless its manifest explicitly
+// declares a different predicate type. A missing annotation keeps the bundle
+// eligible so bundles written by other tools remain verifiable.
+func BundleWithPredicateType(ref name.Reference, predicateType string, opts ...Option) (*sgbundle.Bundle, bool, error) {
 	o := makeOptions(ref.Context(), opts...)
 	img, err := remoteImage(ref, o.ROpt...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	if predicateType != "" {
+		manifest, err := img.Manifest()
+		if err != nil {
+			return nil, false, err
+		}
+		if got := manifest.Annotations[BundlePredicateType]; got != "" && got != predicateType {
+			return nil, false, nil
+		}
 	}
 	layers, err := img.Layers()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if len(layers) != 1 {
-		return nil, errors.New("expected exactly one layer")
+		return nil, false, errors.New("expected exactly one layer")
 	}
 	mediaType, err := layers[0].MediaType()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !strings.HasPrefix(string(mediaType), "application/vnd.dev.sigstore.bundle") {
-		return nil, errors.New("expected bundle layer")
+		return nil, false, errors.New("expected bundle layer")
 	}
 	size, err := layers[0].Size()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if err := payloadsize.CheckSize(uint64(size)); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	layer0, err := layers[0].Uncompressed()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer layer0.Close()
 	// The size checked above is the compressed size the registry declares, and this
@@ -109,20 +126,20 @@ func Bundle(ref name.Reference, opts ...Option) (*sgbundle.Bundle, error) {
 	// does not bound the result.
 	bundleBytes, err := readCapped(layer0)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	pb := &protobundle.Bundle{}
 	if err := protojson.Unmarshal(bundleBytes, pb); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	b, err := sgbundle.NewBundle(pb, o.BundleOpts...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !b.MinVersion("v0.3") {
-		return nil, errors.New("bundle version too old")
+		return nil, false, errors.New("bundle version too old")
 	}
-	return b, nil
+	return b, true, nil
 }
 
 type sigs struct {
