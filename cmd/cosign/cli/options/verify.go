@@ -199,16 +199,11 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 // VerifyBlobOptions is the top level wrapper for the `verify blob` command.
 type VerifyBlobOptions struct {
 	Key        string
-	Signature  string
 	BundlePath string
 
 	SecurityKey         SecurityKeyOptions
 	CertVerify          CertVerifyOptions
-	Rekor               RekorOptions
 	CommonVerifyOptions CommonVerifyOptions
-	SignatureDigest     SignatureDigestOptions
-
-	RFC3161TimestampPath string
 }
 
 var _ Interface = (*VerifyBlobOptions)(nil)
@@ -216,30 +211,16 @@ var _ Interface = (*VerifyBlobOptions)(nil)
 // AddFlags implements Interface
 func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.SecurityKey.AddFlags(cmd)
-	o.Rekor.AddFlags(cmd)
 	o.CertVerify.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
-	o.SignatureDigest.AddFlags(cmd)
-
-	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
 
-	cmd.Flags().StringVar(&o.Signature, "signature", "",
-		"signature content or path or remote URL")
-	_ = cmd.MarkFlagFilename("signature", signatureExts...)
-	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
-
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
-
-	cmd.Flags().StringVar(&o.RFC3161TimestampPath, "rfc3161-timestamp", "",
-		"path to RFC3161 timestamp FILE")
-	// _ = cmd.MarkFlagFilename("rfc3161-timestamp") // no typical extensions
-	_ = cmd.Flags().MarkDeprecated("rfc3161-timestamp", "please use --bundle to provide the output bundle location, which will include the signed timestamp")
 }
 
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.
