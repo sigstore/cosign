@@ -98,6 +98,9 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}
+	if co.TrustedMaterial == nil && !vOfflineKey {
+		return fmt.Errorf("a trusted root is required for verification; provide one via --trusted-root")
+	}
 
 	bundle, err := sgbundle.LoadJSONFromPath(c.BundlePath, co.BundleOptions()...)
 	if err != nil {

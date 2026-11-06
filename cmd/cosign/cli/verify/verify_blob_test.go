@@ -320,6 +320,59 @@ func TestVerifyBlobWithUnsetHashAlgorithmMatchesKeyDefault(t *testing.T) {
 	}
 }
 
+func TestVerifyBlobKeyRequiresTrustedRoot(t *testing.T) {
+	setBrokenTrustedRootTUFEnv(t)
+
+	td := t.TempDir()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer, err := signature.LoadECDSASignerVerifier(priv, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubPEM, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyPath := writeBlobFile(t, td, string(pubPEM), "key.pub")
+
+	blob := "someblob"
+	blobPath := writeBlobFile(t, td, blob, "blob.txt")
+	sig, err := signer.SignMessage(bytes.NewReader([]byte(blob)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundlePath := makeLocalNewBundle(t, sig, sha256.Sum256([]byte(blob)))
+
+	// Only offline verification with a key (transparency log ignored, no signed
+	// timestamps) works without a trusted root.
+	for _, tc := range []struct {
+		name                string
+		ignoreTlog          bool
+		useSignedTimestamps bool
+	}{
+		{name: "transparency log"},
+		{name: "signed timestamps", ignoreTlog: true, useSignedTimestamps: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := VerifyBlobCmd{
+				KeyOpts: options.KeyOpts{
+					KeyRef:     keyPath,
+					BundlePath: bundlePath,
+				},
+				IgnoreTlog:          tc.ignoreTlog,
+				UseSignedTimestamps: tc.useSignedTimestamps,
+			}
+			err := cmd.Exec(context.Background(), blobPath)
+			if err == nil || !strings.Contains(err.Error(), "trusted root") {
+				t.Fatalf("expected an error about the missing trusted root, got: %v", err)
+			}
+		})
+	}
+}
+
 func makeLocalNewBundle(t *testing.T, sig []byte, digest [32]byte) string {
 	return makeLocalNewBundleWithAlgorithm(t, sig, digest[:], protocommon.HashAlgorithm_SHA2_256)
 }
