@@ -1000,12 +1000,6 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 	return cryptoutils.MarshalPublicKeyToPEM(pub)
 }
 
-// VerifyBlobSignature verifies a blob signature.
-func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
-	// The hash of the artifact is unused.
-	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
-}
-
 // VerifyImageSignature verifies a signature
 func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
 	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
