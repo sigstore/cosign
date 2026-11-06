@@ -221,6 +221,7 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
+	_ = cmd.MarkFlagRequired("bundle")
 }
 
 // VerifyDockerfileOptions is the top level wrapper for the `dockerfile verify` command.

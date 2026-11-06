@@ -61,10 +61,6 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		return &options.PubKeyParseError{}
 	}
 
-	if c.BundlePath == "" {
-		return fmt.Errorf("please specify --bundle")
-	}
-
 	var identities []cosign.Identity
 	var err error
 	if c.KeyRef == "" && !c.Sk {

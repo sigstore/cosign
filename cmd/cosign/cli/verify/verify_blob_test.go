@@ -119,14 +119,6 @@ func TestVerifyBlob(t *testing.T) {
 			expectedErr: "invalid signature",
 		},
 		{
-			name:        "missing bundle path",
-			blobRef:     writeBlobFile(t, td, string(blobBytes), "blob.txt"),
-			key:         pubKeyBytes,
-			bundlePath:  "",
-			shouldErr:   true,
-			expectedErr: "please specify --bundle",
-		},
-		{
 			name:       "non-existent bundle path",
 			blobRef:    writeBlobFile(t, td, string(blobBytes), "blob.txt"),
 			key:        pubKeyBytes,
