@@ -33,9 +33,9 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 )
 
-// LoadPublicKey is a wrapper for VerifierForKeyRef, hardcoding SHA256 as the hash algorithm
+// LoadPublicKey is a wrapper for VerifierForKeyRef, using the key's default hash algorithm
 func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verifier, err error) {
-	return VerifierForKeyRef(ctx, keyRef, crypto.SHA256)
+	return VerifierForKeyRef(ctx, keyRef, 0)
 }
 
 // VerifierForKeyRef parses the given keyRef, loads the key and returns an appropriate
@@ -43,10 +43,25 @@ func LoadPublicKey(ctx context.Context, keyRef string) (verifier signature.Verif
 func VerifierForKeyRef(ctx context.Context, keyRef string, hashAlgorithm crypto.Hash) (verifier signature.Verifier, err error) {
 	// The key could be plaintext, in a file, at a URL, or in KMS.
 	var perr *kms.ProviderNotFoundError
-	kmsKey, err := kms.Get(ctx, keyRef, hashAlgorithm)
+	kmsHash := hashAlgorithm
+	if kmsHash == 0 {
+		kmsHash = crypto.SHA256
+	}
+	kmsKey, err := kms.Get(ctx, keyRef, kmsHash)
 	switch {
 	case err == nil:
 		// KMS specified
+		if hashAlgorithm == 0 {
+			if pubKey, pubErr := kmsKey.PublicKey(); pubErr == nil {
+				if algo, algoErr := signature.GetDefaultAlgorithmDetails(pubKey); algoErr == nil && algo.GetHashType() != kmsHash {
+					defaultKMSKey, defaultErr := kms.Get(ctx, keyRef, algo.GetHashType())
+					if defaultErr != nil {
+						return nil, defaultErr
+					}
+					return defaultKMSKey, nil
+				}
+			}
+		}
 		return kmsKey, nil
 	case errors.As(err, &perr):
 		// We can ignore ProviderNotFoundError; that just means the keyRef

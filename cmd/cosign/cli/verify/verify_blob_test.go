@@ -851,6 +851,127 @@ func TestVerifyBlobWithUnsetHashAlgorithmMatchesKeyDefault(t *testing.T) {
 	}
 }
 
+func TestVerifyBlobWithP384AndNewBundleDigestAlgorithm(t *testing.T) {
+	ctx := context.Background()
+	td := t.TempDir()
+
+	blob := "someblob"
+	blobPath := writeBlobFile(t, td, blob, "blob.txt")
+	digest384 := sha512.Sum384([]byte(blob))
+
+	writeNewBundle384 := func(t *testing.T, sig []byte, name string) string {
+		t.Helper()
+		b := &protobundle.Bundle{
+			MediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+			VerificationMaterial: &protobundle.VerificationMaterial{
+				Content: &protobundle.VerificationMaterial_PublicKey{
+					PublicKey: &protocommon.PublicKeyIdentifier{
+						Hint: "hint",
+					},
+				},
+			},
+			Content: &protobundle.Bundle_MessageSignature{
+				MessageSignature: &protocommon.MessageSignature{
+					MessageDigest: &protocommon.HashOutput{
+						Algorithm: protocommon.HashAlgorithm_SHA2_384,
+						Digest:    digest384[:],
+					},
+					Signature: sig,
+				},
+			},
+		}
+		contents, err := protojson.Marshal(b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bundlePath := filepath.Join(td, name)
+		if err := os.WriteFile(bundlePath, contents, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return bundlePath
+	}
+
+	t.Run("new bundle digest algorithm SHA2_384 overrides key default when flag unset", func(t *testing.T) {
+		priv256, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pubPEM, err := cryptoutils.MarshalPublicKeyToPEM(&priv256.PublicKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keyPath := writeBlobFile(t, td, string(pubPEM), "p256.pub")
+
+		sig, err := ecdsa.SignASN1(rand.Reader, priv256, digest384[:])
+		if err != nil {
+			t.Fatal(err)
+		}
+		bundlePath := writeNewBundle384(t, sig, "p256-sha384.bundle.json")
+
+		cmd := VerifyBlobCmd{
+			KeyOpts: options.KeyOpts{
+				KeyRef:          keyPath,
+				BundlePath:      bundlePath,
+				NewBundleFormat: true,
+			},
+			IgnoreTlog: true,
+		}
+		if err := cmd.Exec(ctx, blobPath); err != nil {
+			t.Fatalf("expected verification with SHA2_384 bundle to succeed without --signature-digest-algorithm, got: %v", err)
+		}
+	})
+
+	t.Run("P-384 leaf certificate verification with unset hash algorithm", func(t *testing.T) {
+		identity := "hello@foo.com"
+		issuer := "issuer"
+		rootCert, rootPriv, err := test.GenerateRootCa()
+		if err != nil {
+			t.Fatal(err)
+		}
+		chain, err := cryptoutils.MarshalCertificatesToPEM([]*x509.Certificate{rootCert})
+		if err != nil {
+			t.Fatal(err)
+		}
+		chainPath := writeBlobFile(t, td, string(chain), "p384-root-chain.pem")
+
+		leafPriv384, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leafCert384, err := test.GenerateLeafCertWithExpiration(identity, issuer, time.Now(), leafPriv384, rootCert, rootPriv)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leafCertPEM, err := cryptoutils.MarshalCertificateToPEM(leafCert384)
+		if err != nil {
+			t.Fatal(err)
+		}
+		certPath := writeBlobFile(t, td, string(leafCertPEM), "p384-leaf.pem")
+
+		sig, err := ecdsa.SignASN1(rand.Reader, leafPriv384, digest384[:])
+		if err != nil {
+			t.Fatal(err)
+		}
+		sigPath := writeBlobFile(t, td, base64.StdEncoding.EncodeToString(sig), "p384-cert.sig")
+
+		cmd := VerifyBlobCmd{
+			CertRef:   certPath,
+			CertChain: chainPath,
+			SigRef:    sigPath,
+			CertVerifyOptions: options.CertVerifyOptions{
+				CertIdentity:   identity,
+				CertOidcIssuer: issuer,
+			},
+			IgnoreSCT:  true,
+			IgnoreTlog: true,
+		}
+		if err := cmd.Exec(ctx, blobPath); err != nil {
+			t.Fatalf("expected P-384 certificate verification to succeed, got: %v", err)
+		}
+	})
+}
+
+
 func makeRekorEntry(t *testing.T, rekorSigner signature.ECDSASignerVerifier,
 	pyld, sig, svBytes []byte, expiryValid bool) *models.LogEntry {
 	ctx := context.Background()

@@ -98,6 +98,9 @@ func LoadVerifierFromKeyOrCert(ctx context.Context, keyRef, slot, certRef, certC
 		}
 		return sigVerifier, nil, sk.Close, nil
 	case certRef != "":
+		if co != nil && hashAlgorithm != 0 && co.HashAlgorithm == 0 {
+			co.HashAlgorithm = hashAlgorithm
+		}
 		cert, err := loadCertFromFileOrURL(certRef)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("loading cert: %w", err)

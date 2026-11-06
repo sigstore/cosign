@@ -32,6 +32,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsignature "github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/sigstore/sigstore/pkg/signature/kms/fake"
 )
 
 func generateKeyFile(t *testing.T, tmpDir string, pf cosign.PassFunc) (privFile, pubFile string) {
@@ -230,3 +231,46 @@ func TestPublicKeyFromKeyRefAutoDetectAlgorithm(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadPublicKeyAndVerifierForKeyRefWithKMSAndDefaultHash(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	priv, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate P-384 key: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), fake.KmsCtxKey{}, priv)
+
+	msg := []byte("p384 test payload")
+	digest := sha512.Sum384(msg)
+	sig, err := ecdsa.SignASN1(rand.Reader, priv, digest[:])
+	if err != nil {
+		t.Fatalf("failed to sign message: %v", err)
+	}
+
+	kmsVerifier, err := VerifierForKeyRef(ctx, fake.ReferenceScheme+"test-key", 0)
+	if err != nil {
+		t.Fatalf("VerifierForKeyRef with unset hashAlgorithm failed: %v", err)
+	}
+	if err := kmsVerifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
+		t.Fatalf("kmsVerifier failed to verify P-384 signature: %v", err)
+	}
+
+	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(&priv.PublicKey)
+	if err != nil {
+		t.Fatalf("failed to marshal public key: %v", err)
+	}
+	pubFile := tmpDir + "/p384.pub"
+	if err := os.WriteFile(pubFile, pemBytes, 0600); err != nil {
+		t.Fatalf("failed to write public key: %v", err)
+	}
+
+	pubVerifier, err := LoadPublicKey(ctx, pubFile)
+	if err != nil {
+		t.Fatalf("LoadPublicKey failed: %v", err)
+	}
+	if err := pubVerifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
+		t.Fatalf("LoadPublicKey verifier failed to verify P-384 signature: %v", err)
+	}
+}
+
