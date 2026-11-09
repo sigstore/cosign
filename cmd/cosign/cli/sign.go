@@ -125,7 +125,6 @@ race conditions or (worse) malicious tampering.
 				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
 				RekorURL:                       o.Rekor.URL,
 				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
@@ -133,6 +132,7 @@ race conditions or (worse) malicious tampering.
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
 				OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
 				OIDCProvider:                   o.OIDC.Provider,
+				BundlePath:                     o.BundlePath,
 				SkipConfirmation:               o.SkipConfirmation,
 				TSAClientCACert:                o.TSAClientCACert,
 				TSAClientCert:                  o.TSAClientCert,
@@ -142,7 +142,7 @@ race conditions or (worse) malicious tampering.
 				IssueCertificateForExistingKey: o.IssueCertificate,
 				NewBundleFormat:                o.NewBundleFormat,
 			}
-			if err := signcommon.LoadTrustedMaterialAndSigningConfig(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
+			if err := signcommon.LoadSigningConfigAndTrustedMaterial(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 

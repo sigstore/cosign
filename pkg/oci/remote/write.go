@@ -30,7 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	ociexperimental "github.com/sigstore/cosign/v3/internal/pkg/oci/remote"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	bundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle/types"
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	ctypes "github.com/sigstore/cosign/v3/pkg/types"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
@@ -91,9 +91,11 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 	if atts != nil { // will be nil if there are no associated attestations
 		attsTag, err := AttestationTag(ref, opts...)
 		if err != nil {
-			return fmt.Errorf("sigs tag: %w", err)
+			return fmt.Errorf("atts tag: %w", err)
 		}
-		return remoteWrite(attsTag, atts, o.ROpt...)
+		if err := remoteWrite(attsTag, atts, o.ROpt...); err != nil {
+			return err
+		}
 	}
 
 	// Look for any referring artifacts
@@ -131,10 +133,23 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 				}
 			}
 			if predicateType != "" {
-				// Write the empty layer
+				// Write the empty config layer
 				_, _, err := writeEmptyConfigLayer(o)
 				if err != nil {
 					return err
+				}
+
+				// Write bundle layers before the manifest (registries require blobs first)
+				for _, layer := range manifest.Layers {
+					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
+					bundleBytes, err := os.ReadFile(bundlePath)
+					if err != nil {
+						return err
+					}
+					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
+					if err := remoteWriteLayer(o.TargetRepository, layer, o.ROpt...); err != nil {
+						return err
+					}
 				}
 
 				// Write the manifest
@@ -145,20 +160,6 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, d
 				}
 				if err := remotePut(targetRef, m, o.ROpt...); err != nil {
 					return fmt.Errorf("failed to upload manifest: %w", err)
-				}
-
-				// Write bundle layers
-				for _, layer := range manifest.Layers {
-					bundlePath := filepath.Join(directory, "blobs", "sha256", layer.Digest.Hex)
-					bundleBytes, err := os.ReadFile(bundlePath)
-					if err != nil {
-						return err
-					}
-					layer := static.NewLayer(bundleBytes, types.MediaType(bundle.BundleV03MediaType))
-					err = remoteWriteLayer(o.TargetRepository, layer, o.ROpt...)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
@@ -235,7 +236,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	for _, v := range s {
-		if err := remoteWriteLayer(d.Repository, v, o.ROpt...); err != nil {
+		if err := remoteWriteLayer(o.TargetRepository, v, o.ROpt...); err != nil {
 			return err
 		}
 	}
@@ -250,7 +251,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 		return err
 	}
 	configLayer := static.NewLayer(configBytes, configDesc.MediaType)
-	if err := remoteWriteLayer(d.Repository, configLayer, o.ROpt...); err != nil {
+	if err := remoteWriteLayer(o.TargetRepository, configLayer, o.ROpt...); err != nil {
 		return err
 	}
 
@@ -268,7 +269,7 @@ func WriteSignaturesExperimentalOCI(d name.Digest, se oci.SignedEntity, opts ...
 	m.Config.MediaType = types.MediaType(artifactType)
 	m.Subject = desc
 	rm := referrerManifest{m, artifactType}
-	targetRef, err := rm.targetRef(d.Repository, opts...)
+	targetRef, err := rm.targetRef(o.TargetRepository, opts...)
 	if err != nil {
 		return err
 	}
@@ -352,6 +353,9 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			MediaType: mediaType,
 			Digest:    layerDigest,
 			Size:      layerSize,
+			Annotations: map[string]string{
+				"org.opencontainers.image.title": fmt.Sprintf("%s-%s.sigstore.json", layerDigest.Algorithm, layerDigest.Hex),
+			},
 		}
 		// Preserve per-layer annotations when available (e.g. from oci.Signature
 		// objects that carry certificate, chain, and RFC3161 timestamp annotations).
@@ -359,7 +363,9 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			Annotations() (map[string]string, error)
 		}); ok {
 			if ann, err := al.Annotations(); err == nil && len(ann) > 0 {
-				layerDescriptors[i].Annotations = ann
+				for k, v := range ann {
+					layerDescriptors[i].Annotations[k] = v
+				}
 			}
 		}
 	}

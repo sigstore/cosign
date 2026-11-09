@@ -1040,7 +1040,7 @@ func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name
 		if err != nil {
 			return nil, err
 		}
-		payload, err = ObsoletePayload(ctx, digest)
+		payload, err = ObsoletePayload(ctx, digest, co.Annotations)
 		if err != nil {
 			return nil, err
 		}
@@ -1541,26 +1541,47 @@ func extractEntryImpl(bundleBody string) (rekor_types.EntryImpl, error) {
 	return rekor_types.UnmarshalEntry(pe)
 }
 
+func hashFields(algorithm, value *string) (string, string, error) {
+	if algorithm == nil || value == nil {
+		return "", "", errors.New("bundle entry hash is missing its algorithm or value")
+	}
+	return *algorithm, *value, nil
+}
+
 func bundleHash(bundleBody, _ string) (string, string, error) {
 	ei, err := extractEntryImpl(bundleBody)
 	if err != nil {
 		return "", "", err
 	}
 
+	// The Rekor models mark these hash fields required, but each entry type's
+	// own validation decides what is enforced, and some accept an entry that
+	// carries no hash at all.
 	switch entry := ei.(type) {
 	case *dsse_v001.V001Entry:
-		return *entry.DSSEObj.EnvelopeHash.Algorithm, *entry.DSSEObj.EnvelopeHash.Value, nil
+		if h := entry.DSSEObj.EnvelopeHash; h != nil {
+			return hashFields(h.Algorithm, h.Value)
+		}
 	case *hashedrekord_v001.V001Entry:
-		return *entry.HashedRekordObj.Data.Hash.Algorithm, *entry.HashedRekordObj.Data.Hash.Value, nil
+		if d := entry.HashedRekordObj.Data; d != nil && d.Hash != nil {
+			return hashFields(d.Hash.Algorithm, d.Hash.Value)
+		}
 	case *intoto_v001.V001Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		if c := entry.IntotoObj.Content; c != nil && c.Hash != nil {
+			return hashFields(c.Hash.Algorithm, c.Hash.Value)
+		}
 	case *intoto_v002.V002Entry:
-		return *entry.IntotoObj.Content.Hash.Algorithm, *entry.IntotoObj.Content.Hash.Value, nil
+		if c := entry.IntotoObj.Content; c != nil && c.Hash != nil {
+			return hashFields(c.Hash.Algorithm, c.Hash.Value)
+		}
 	case *rekord_v001.V001Entry:
-		return *entry.RekordObj.Data.Hash.Algorithm, *entry.RekordObj.Data.Hash.Value, nil
+		if d := entry.RekordObj.Data; d != nil && d.Hash != nil {
+			return hashFields(d.Hash.Algorithm, d.Hash.Value)
+		}
 	default:
 		return "", "", errors.New("unsupported type")
 	}
+	return "", "", errors.New("no hash found in bundle entry")
 }
 
 // bundleSig extracts the signature from the rekor bundle body
@@ -1701,12 +1722,13 @@ func verifyImageSignaturesExperimentalOCI(ctx context.Context, signedImgRef name
 			// TODO: if there is more than 1 result.. what does that even mean?
 			ui.Warnf(ctx, "there were a total of %d references with artifactType %s\n", numResults, artifactType)
 		}
+		bundleRepo := digest.Repository
+		if targetRepo := ociremote.TargetRepositoryFromOptions(co.RegistryClientOpts...); (targetRepo != name.Repository{}) {
+			bundleRepo = targetRepo
+		}
 		// TODO: do this smarter using "created" annotations
 		lastResult := results[numResults-1]
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", digest.Repository, lastResult.Digest.String()))
-		if err != nil {
-			return nil, false, err
-		}
+		st := bundleRepo.Digest(lastResult.Digest.String())
 		sigs, err = ociremote.Signatures(st, co.RegistryClientOpts...)
 		if err != nil {
 			return nil, false, err
@@ -1753,9 +1775,14 @@ func GetBundles(_ context.Context, signedImgRef name.Reference, registryClientOp
 
 	var bundles = make([]*sgbundle.Bundle, 0, len(index.Manifests))
 	for _, result := range index.Manifests {
-		st, err := name.ParseReference(fmt.Sprintf("%s@%s", bundleRepo, result.Digest.String()), nameOpts...)
-		if err != nil {
-			return nil, nil, err
+		var st name.Reference
+		if len(nameOpts) > 0 {
+			st, err = name.ParseReference(fmt.Sprintf("%s@%s", bundleRepo, result.Digest.String()), nameOpts...)
+			if err != nil {
+				return nil, nil, err
+			}
+		} else {
+			st = bundleRepo.Digest(result.Digest.String())
 		}
 		bundle, err := ociremote.Bundle(st, registryClientOpts...)
 		if err != nil {

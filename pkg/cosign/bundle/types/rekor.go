@@ -1,4 +1,4 @@
-// Copyright 2026 The Sigstore Authors.
+// Copyright 2022 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bundle
+package types
 
-const BundleV03MediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
+// RekorBundle holds metadata about recording a Signature's ephemeral key to
+// a Rekor transparency log.
+type RekorBundle struct {
+	SignedEntryTimestamp []byte
+	Payload              RekorPayload
+}
+
+type RekorPayload struct {
+	Body           interface{} `json:"body"`
+	IntegratedTime int64       `json:"integratedTime"`
+	LogIndex       int64       `json:"logIndex"`
+	LogID          string      `json:"logID"`
+}

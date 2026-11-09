@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
+
+	"github.com/sigstore/cosign/v3/internal/useragent"
 )
 
 // TimestampAuthorityClient should be implemented by clients that want to request timestamp responses
@@ -75,7 +77,6 @@ func GetHTTPTransport(cacertFilename, certFilename, keyFilename, serverName stri
 		DialContext: (&net.Dialer{
 			Timeout:   timeout,
 			KeepAlive: 30 * time.Second,
-			DualStack: true,
 		}).DialContext,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
@@ -135,6 +136,7 @@ func (t *TimestampAuthorityClientImpl) GetTimestampResponse(tsq []byte) ([]byte,
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/timestamp-query")
+	req.Header.Set("User-Agent", useragent.Get())
 
 	tsr, err := client.Do(req)
 	if err != nil {

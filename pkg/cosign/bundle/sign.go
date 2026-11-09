@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/sigstore/cosign/v3/internal/ui"
+	"github.com/sigstore/cosign/v3/internal/useragent"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -101,9 +102,10 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 		}
 		for _, tsaSvc := range tsaSvcs {
 			tsaOpts := &sign.TimestampAuthorityOptions{
-				URL:     tsaSvc.URL,
-				Timeout: 30 * time.Second,
-				Retries: 1,
+				URL:       tsaSvc.URL,
+				Timeout:   30 * time.Second,
+				Retries:   1,
+				UserAgent: useragent.Get(),
 			}
 			if opts.TSAClientTransport != nil {
 				tsaOpts.Transport = opts.TSAClientTransport
@@ -124,10 +126,11 @@ func SignData(ctx context.Context, content sign.Content, keypair sign.Keypair, i
 				usingRekorV2 = true
 			}
 			rekorOpts := &sign.RekorOptions{
-				BaseURL: rekorSvc.URL,
-				Timeout: 90 * time.Second,
-				Retries: 1,
-				Version: rekorSvc.MajorAPIVersion,
+				BaseURL:   rekorSvc.URL,
+				Timeout:   90 * time.Second,
+				Retries:   1,
+				Version:   rekorSvc.MajorAPIVersion,
+				UserAgent: useragent.Get(),
 			}
 			bundleOpts.TransparencyLogs = append(bundleOpts.TransparencyLogs, sign.NewRekor(rekorOpts))
 		}
@@ -232,9 +235,10 @@ func newFulcioProvider(signingConfig *root.SigningConfig) (sign.CertificateProvi
 		return nil, err
 	}
 	fulcioOpts := &sign.FulcioOptions{
-		BaseURL: fulcioSvc.URL,
-		Timeout: 30 * time.Second,
-		Retries: 1,
+		BaseURL:   fulcioSvc.URL,
+		Timeout:   30 * time.Second,
+		Retries:   1,
+		UserAgent: useragent.Get(),
 	}
 	return sign.NewFulcio(fulcioOpts), nil
 }

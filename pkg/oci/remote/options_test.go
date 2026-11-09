@@ -132,6 +132,17 @@ func TestOptions(t *testing.T) {
 			ROpt:              defaultOptions,
 			BundleOpts:        []sgbundle.Option{sgbundle.AllowCertificateChain()},
 		},
+	}, {
+		name: "name options option",
+		opts: []Option{WithNameOptions(name.Insecure)},
+		want: &options{
+			SignatureSuffix:   SignatureTagSuffix,
+			AttestationSuffix: AttestationTagSuffix,
+			SBOMSuffix:        SBOMTagSuffix,
+			TargetRepository:  repo,
+			ROpt:              defaultOptions,
+			NameOpts:          []name.Option{name.Insecure},
+		},
 	}}
 
 	for _, test := range tests {
@@ -151,6 +162,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 		desc string
 
 		envVal string
+		opts   []name.Option
 
 		want    name.Repository
 		wantErr error
@@ -161,6 +173,14 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			envVal: "gcr.io/distroless",
 
 			want: name.MustParseReference("gcr.io/distroless").Context(),
+		},
+		{
+			desc: "good insecure",
+
+			envVal: "registry.local:5000/knative",
+			opts:   []name.Option{name.Insecure},
+
+			want: name.MustParseReference("registry.local:5000/knative", name.Insecure).Context(),
 		},
 		{
 			desc: "bad",
@@ -174,6 +194,12 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			envVal: "",
 			want:   name.Repository{},
 		},
+		{
+			desc: "registry without repository path",
+
+			envVal:  "registry.example.com:5000",
+			wantErr: errors.New(`parsing $COSIGN_REPOSITORY: "registry.example.com:5000" looks like a registry, but COSIGN_REPOSITORY must be a full repository (registry plus path), e.g. "registry.example.com:5000/my-repo": repository can only contain the characters ` + "`abcdefghijklmnopqrstuvwxyz0123456789_-./`" + `: registry.example.com:5000`),
+		},
 	}
 
 	for _, tc := range tests {
@@ -182,7 +208,7 @@ func TestGetEnvTargetRepository(t *testing.T) {
 			defer os.Setenv("COSIGN_REPOSITORY", ev)
 			os.Setenv("COSIGN_REPOSITORY", tc.envVal)
 
-			got, err := GetEnvTargetRepository()
+			got, err := GetEnvTargetRepository(tc.opts...)
 
 			if !errors.Is(err, tc.wantErr) {
 				if tc.wantErr == nil || err == nil || tc.wantErr.Error() != err.Error() {
@@ -219,6 +245,9 @@ func optionsEqual(o1, o2 *options) bool {
 		return false
 	}
 	if o1.TagPrefix != o2.TagPrefix {
+		return false
+	}
+	if o1.TargetRepository != o2.TargetRepository {
 		return false
 	}
 	if !slicesEqual(o1.ROpt, o2.ROpt) {

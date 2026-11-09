@@ -31,14 +31,14 @@ jobs:
       contents: read
 
     container:
-      image: ghcr.io/sigstore/cosign/cosign:v3.1.1-dev@sha256:0dcd21d8b6464a526e3225f44c50f34687e861dcf010f566b3caa4f0e5cd898a
+      image: ghcr.io/sigstore/cosign/cosign:v3.1.4-dev@sha256:8af1a2cf9fba903fdfc6bdafdc25f7b13ef34ad722095543ea787fb96f7240c1
 
     steps:
       - name: Check Signature
         run: |
-          cosign verify ghcr.io/gythialy/golang-cross:v1.26.4-0@sha256:638b15f32291895696ec579e36cbf37ee186374f828e4a211072558b816c3c7e \
+          cosign verify ghcr.io/gythialy/golang-cross:v1.27.3-0@sha256:c33ed060bb1817f4eed7957e3a22515823d194873a820722761ab5712298612e \
           --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/release-golang-cross.yml@refs/tags/v1.26.4-0"
+          --certificate-identity "https://github.com/gythialy/golang-cross/.github/workflows/builder.yml@refs/tags/v1.27.3-0"
         env:
           TUF_ROOT: /tmp
 
@@ -51,13 +51,13 @@ jobs:
       contents: read
 
     container:
-      image: ghcr.io/gythialy/golang-cross:v1.26.4-0@sha256:638b15f32291895696ec579e36cbf37ee186374f828e4a211072558b816c3c7e
+      image: ghcr.io/gythialy/golang-cross:v1.27.3-0@sha256:c33ed060bb1817f4eed7957e3a22515823d194873a820722761ab5712298612e
       volumes:
         - /usr:/host_usr
         - /opt:/host_opt
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -97,6 +97,7 @@ jobs:
         run: make snapshot
         env:
           PROJECT_ID: honk-fake-project
+          GOTOOLCHAIN: go1.27.3
           RUNTIME_IMAGE: gcr.io/distroless/static-debian13:nonroot
 
       - name: check binaries

@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
@@ -73,10 +74,12 @@ func TestCreateCmd(t *testing.T) {
 
 	bundleCreate := CreateCmd{
 		Artifact:      artifactPath,
-		KeyRef:        publicKeyPath,
-		IgnoreTlog:    true,
 		Out:           outPath,
 		SignaturePath: sigPath,
+		CommonBundleCreateOptions: options.CommonBundleCreateOptions{
+			KeyRef:     publicKeyPath,
+			IgnoreTlog: true,
+		},
 	}
 
 	err = bundleCreate.Exec(ctx)
@@ -121,8 +124,10 @@ func TestCreateCmd(t *testing.T) {
 	bundleCreate = CreateCmd{
 		Artifact:   artifactPath,
 		BundlePath: bundlePath,
-		IgnoreTlog: true,
 		Out:        outPath,
+		CommonBundleCreateOptions: options.CommonBundleCreateOptions{
+			IgnoreTlog: true,
+		},
 	}
 
 	err = bundleCreate.Exec(ctx)
@@ -224,8 +229,10 @@ func TestCreateCmd_FailOnIgnoreTlogWithSET(t *testing.T) {
 			bundleCreate := CreateCmd{
 				Artifact:   artifactPath,
 				BundlePath: tt.bundlePath,
-				IgnoreTlog: tt.ignoreTlog,
 				Out:        outPath,
+				CommonBundleCreateOptions: options.CommonBundleCreateOptions{
+					IgnoreTlog: tt.ignoreTlog,
+				},
 			}
 
 			err := bundleCreate.Exec(ctx)

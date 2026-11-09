@@ -139,9 +139,12 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
-		if !c.TlogUpload {
-			c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
-		}
+	}
+	if !signcommon.ShouldUploadToTlog(ctx, c.KeyOpts, digest, c.TlogUpload) {
+		c.SigningConfig = c.SigningConfig.WithRekorLogURLs()
+	}
+	if err := signcommon.ConfirmPrivacyStatement(ctx, c.KeyOpts); err != nil {
+		return err
 	}
 
 	bundleBytes, pubKey, hashAlgProto, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)

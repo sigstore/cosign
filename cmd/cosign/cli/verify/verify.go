@@ -104,6 +104,11 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		return &options.KeyAndIdentityParseError{}
 	}
 
+	// key and security key are mutually exclusive
+	if options.NOf(c.KeyRef, c.Sk) > 1 {
+		return &options.PubKeyParseError{}
+	}
+
 	var identities []cosign.Identity
 	if c.KeyRef == "" && !c.Sk {
 		identities, err = c.Identities()

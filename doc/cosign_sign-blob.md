@@ -1,6 +1,6 @@
 ## cosign sign-blob
 
-Sign the supplied blob, outputting the base64-encoded signature to stdout
+Sign the supplied blob, outputting the signature bundle to a file
 
 ```
 cosign sign-blob [flags]
@@ -9,25 +9,28 @@ cosign sign-blob [flags]
 ### Examples
 
 ```
-  cosign sign-blob --key <key path>|<kms uri> <blob>
+  cosign sign-blob [--key <key path>|<kms uri>] --bundle <bundle.json> <blob>
+
+  # sign a blob keylessly
+  cosign sign-blob --bundle <bundle.json> <FILE>
 
   # sign a blob with a local key pair file
-  cosign sign-blob --key cosign.key <FILE>
+  cosign sign-blob --key cosign.key --bundle <bundle.json> <FILE>
 
   # sign a blob with a key stored in an environment variable
-  cosign sign-blob --key env://[ENV_VAR] <FILE>
+  cosign sign-blob --key env://[ENV_VAR] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Azure Key Vault
-  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] <FILE>
+  cosign sign-blob --key azurekms://[VAULT_NAME][VAULT_URI]/[KEY] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in AWS KMS
-  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] <FILE>
+  cosign sign-blob --key awskms://[ENDPOINT]/[ID/ALIAS/ARN] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Google Cloud KMS
-  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] <FILE>
+  cosign sign-blob --key gcpkms://projects/[PROJECT]/locations/global/keyRings/[KEYRING]/cryptoKeys/[KEY] --bundle <bundle.json> <FILE>
 
   # sign a blob with a key pair stored in Hashicorp Vault
-  cosign sign-blob --key hashivault://[KEY] <FILE>
+  cosign sign-blob --key hashivault://[KEY] --bundle <bundle.json> <FILE>
 ```
 
 ### Options
@@ -46,7 +49,7 @@ cosign sign-blob [flags]
       --oidc-provider string             Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string         OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
       --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
-      --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
+      --signing-config string            path to a signing config file
       --sk                               whether to use a hardware security key
       --slot string                      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-client-cacert string   path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server

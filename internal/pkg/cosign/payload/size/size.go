@@ -21,16 +21,23 @@ import (
 
 const defaultMaxSize = uint64(134217728) // 128MiB
 
-func CheckSize(size uint64) error {
+// MaxSize returns the configured maximum layer size in bytes. Callers that read
+// a decompressed stream need the limit itself, because the size a registry
+// declares is the compressed size and so does not bound what the read produces.
+func MaxSize() uint64 {
 	maxSize := defaultMaxSize
 	maxSizeOverride, exists := env.LookupEnv(env.VariableMaxAttachmentSize)
 	if exists {
-		var err error
-		maxSize, err = humanize.ParseBytes(maxSizeOverride)
-		if err != nil {
-			maxSize = defaultMaxSize
+		parsed, err := humanize.ParseBytes(maxSizeOverride)
+		if err == nil {
+			maxSize = parsed
 		}
 	}
+	return maxSize
+}
+
+func CheckSize(size uint64) error {
+	maxSize := MaxSize()
 	if size > maxSize {
 		return NewMaxLayerSizeExceeded(size, maxSize)
 	}

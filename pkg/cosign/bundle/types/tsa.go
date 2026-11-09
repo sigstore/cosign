@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bundle
+package types
 
 // RFC3161Timestamp holds metadata about timestamp RFC3161 verification data.
 type RFC3161Timestamp struct {

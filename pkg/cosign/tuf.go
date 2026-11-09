@@ -15,23 +15,31 @@
 package cosign
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/cosign/v3/internal/useragent"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/sigstore/sigstore-go/pkg/tuf"
+	"github.com/theupdateframework/go-tuf/v2/metadata/fetcher"
 )
 
 func TrustedRoot() (root.TrustedMaterial, error) {
+	return TrustedRootWithContext(context.Background())
+}
+
+// TrustedRootWithContext returns a trusted root that refreshes from TUF until ctx is done.
+func TrustedRootWithContext(ctx context.Context) (root.TrustedMaterial, error) {
 	opts, err := setTUFOpts()
 	if err != nil {
 		return nil, fmt.Errorf("error setting TUF options: %w", err)
 	}
-	tr, err := root.NewLiveTrustedRoot(opts)
+	tr, err := root.NewLiveTrustedRoot(opts.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("error getting live trusted root: %w", err)
 	}
@@ -77,6 +85,12 @@ func setTUFOpts() (*tuf.Options, error) {
 	if tufCacheDir := env.Getenv(env.VariableTUFRootDir); tufCacheDir != "" { //nolint:forbidigo
 		opts.CachePath = tufCacheDir
 	}
+
+	// Set custom fetcher with cosign user-agent
+	f := fetcher.NewDefaultFetcher()
+	f.SetHTTPUserAgent(useragent.Get())
+	opts.Fetcher = f
+
 	err := setTUFMirror(opts)
 	if err != nil {
 		return nil, fmt.Errorf("error setting TUF mirror: %w", err)

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -210,7 +211,7 @@ func Test_ParseOCIReference(t *testing.T) {
 	}
 }
 
-func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
+func mustSigningConfigWithRekor(t *testing.T, rekorURL string) *root.SigningConfig {
 	t.Helper()
 	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{RekorURL: rekorURL})
 	if err != nil {
@@ -219,36 +220,137 @@ func mustSigningConfig(t *testing.T, rekorURL string) *root.SigningConfig {
 	return sc
 }
 
-func TestShouldUploadToTlog_PublicInstanceStatement(t *testing.T) {
+func mustSigningConfigWithFulcio(t *testing.T, fulcioURL string) *root.SigningConfig {
+	t.Helper()
+	sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: fulcioURL})
+	if err != nil {
+		t.Fatalf("creating signing config: %v", err)
+	}
+	return sc
+}
+
+func TestConfirmPrivacyStatement(t *testing.T) {
 	tests := []struct {
 		name          string
 		signingConfig *root.SigningConfig
+		keyRef        string
+		sk            bool
 		wantWarning   bool
 	}{
-		{"custom Rekor URL skips public instance statement", mustSigningConfig(t, "http://localhost:3000"), false},
-		{"region-specific public good URL shows public instance statement", mustSigningConfig(t, "https://rekor.us-central1.sigstore.dev"), true},
-		{"staging public good signing config shows public instance statement", mustSigningConfig(t, "https://rekor.sigstage.dev"), true},
-		{"nil signing config skips public instance statement", nil, false},
+		{
+			name:          "custom Rekor URL with key skips public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "http://localhost:3000"),
+			keyRef:        "cosign.key",
+			wantWarning:   false,
+		},
+		{
+			name:          "region-specific public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.us-central1.sigstore.dev"),
+			keyRef:        "cosign.key",
+			wantWarning:   true,
+		},
+		{
+			name:          "staging public good Rekor URL shows public instance statement",
+			signingConfig: mustSigningConfigWithRekor(t, "https://rekor.sigstage.dev"),
+			keyRef:        "cosign.key",
+			wantWarning:   true,
+		},
+		{
+			name:          "cleared public good Rekor URL with key skips statement",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL).WithRekorLogURLs(),
+			keyRef:        "cosign.key",
+			wantWarning:   false,
+		},
+		{
+			name:          "keyless with public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with staging public good Fulcio URL shows public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "https://fulcio.sigstage.dev"),
+			wantWarning:   true,
+		},
+		{
+			name:          "keyless with custom Fulcio URL skips public instance statement",
+			signingConfig: mustSigningConfigWithFulcio(t, "http://localhost:5555"),
+			wantWarning:   false,
+		},
+		{
+			name:          "public good Fulcio URL with key and without Rekor URL skips statement",
+			signingConfig: mustSigningConfigWithFulcio(t, options.DefaultFulcioURL),
+			keyRef:        "cosign.key",
+			wantWarning:   false,
+		},
+		{
+			name:          "nil signing config skips public instance statement",
+			signingConfig: nil,
+			wantWarning:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			privacy.StatementOnce = sync.Once{}
 			ko := options.KeyOpts{
+				KeyRef:           tt.keyRef,
+				Sk:               tt.sk,
 				SigningConfig:    tt.signingConfig,
 				SkipConfirmation: true,
 			}
-			var upload bool
 			var err error
 			stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
-				upload, err = ShouldUploadToTlog(ctx, ko, nil, true)
+				err = ConfirmPrivacyStatement(ctx, ko)
 			})
 			assert.NoError(t, err)
-			assert.True(t, upload)
 			if tt.wantWarning {
 				assert.Contains(t, stderr, "hosted by sigstore", "should warn about the public good instance's data retention policy")
 			} else {
 				assert.NotContains(t, stderr, "hosted by sigstore", "should not warn about the public good instance's data retention policy")
 			}
+		})
+	}
+}
+
+func TestShouldUploadToTlog(t *testing.T) {
+	tests := []struct {
+		name          string
+		signingConfig *root.SigningConfig
+		tlogUpload    bool
+		wantUpload    bool
+	}{
+		{
+			name:          "tlogUpload false returns false",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL),
+			tlogUpload:    false,
+			wantUpload:    false,
+		},
+		{
+			name:          "signing config with no Rekor URLs returns false",
+			signingConfig: mustSigningConfigWithRekor(t, options.DefaultRekorURL).WithRekorLogURLs(),
+			tlogUpload:    true,
+			wantUpload:    false,
+		},
+		{
+			name:          "tlogUpload true with Rekor URL returns true",
+			signingConfig: mustSigningConfigWithRekor(t, "http://localhost:3000"),
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+		{
+			name:          "nil signing config with tlogUpload true returns true",
+			signingConfig: nil,
+			tlogUpload:    true,
+			wantUpload:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ko := options.KeyOpts{
+				SigningConfig:    tt.signingConfig,
+				SkipConfirmation: true,
+			}
+			upload := ShouldUploadToTlog(context.Background(), ko, nil, tt.tlogUpload)
+			assert.Equal(t, tt.wantUpload, upload)
 		})
 	}
 }
@@ -260,10 +362,10 @@ func TestHasPublicGoodRekorURL(t *testing.T) {
 		want          bool
 	}{
 		{"nil signing config returns false", nil, false},
-		{"empty signing config returns false", mustSigningConfig(t, ""), false},
-		{"custom Rekor URL returns false", mustSigningConfig(t, "http://localhost:3000"), false},
-		{"public good Rekor URL returns true", mustSigningConfig(t, options.DefaultRekorURL), true},
-		{"signing config with cleared Rekor URLs returns false", mustSigningConfig(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
+		{"empty signing config returns false", mustSigningConfigWithRekor(t, ""), false},
+		{"custom Rekor URL returns false", mustSigningConfigWithRekor(t, "http://localhost:3000"), false},
+		{"public good Rekor URL returns true", mustSigningConfigWithRekor(t, options.DefaultRekorURL), true},
+		{"signing config with cleared Rekor URLs returns false", mustSigningConfigWithRekor(t, options.DefaultRekorURL).WithRekorLogURLs(), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -272,16 +374,38 @@ func TestHasPublicGoodRekorURL(t *testing.T) {
 	}
 }
 
-func TestIsPublicGoodRekorURL(t *testing.T) {
+func TestHasPublicGoodFulcioURL(t *testing.T) {
 	tests := []struct {
-		name     string
-		rekorURL string
-		want     bool
+		name          string
+		signingConfig *root.SigningConfig
+		want          bool
+	}{
+		{"nil signing config returns false", nil, false},
+		{"empty signing config returns false", mustSigningConfigWithFulcio(t, ""), false},
+		{"custom Fulcio URL returns false", mustSigningConfigWithFulcio(t, "http://localhost:5555"), false},
+		{"public good Fulcio URL returns true", mustSigningConfigWithFulcio(t, options.DefaultFulcioURL), true},
+		{"staging public good Fulcio URL returns true", mustSigningConfigWithFulcio(t, "https://fulcio.sigstage.dev"), true},
+		{"signing config with cleared Fulcio URLs returns false", mustSigningConfigWithFulcio(t, options.DefaultFulcioURL).WithFulcioCertificateAuthorityURLs(), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, hasPublicGoodFulcioURL(tt.signingConfig))
+		})
+	}
+}
+
+func TestIsPublicGoodURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
 	}{
 		{"empty is not public good", "", false},
-		{"default production URL", options.DefaultRekorURL, true},
+		{"default Rekor production URL", options.DefaultRekorURL, true},
+		{"default Fulcio production URL", options.DefaultFulcioURL, true},
 		{"region-specific production URL", "https://rekor.us-central1.sigstore.dev", true},
-		{"staging URL", "https://rekor.sigstage.dev", true},
+		{"staging Rekor URL", "https://rekor.sigstage.dev", true},
+		{"staging Fulcio URL", "https://fulcio.sigstage.dev", true},
 		{"region-specific staging URL", "https://rekor.us-central1.sigstage.dev", true},
 		{"custom self-hosted URL", "http://localhost:3000", false},
 		{"uppercase hostname is still public good", "https://REKOR.SIGSTORE.DEV", true},
@@ -291,7 +415,7 @@ func TestIsPublicGoodRekorURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isPublicGoodRekorURL(tt.rekorURL))
+			assert.Equal(t, tt.want, isPublicGoodURL(tt.url))
 		})
 	}
 }
@@ -562,6 +686,209 @@ func TestValidateSigningOptions(t *testing.T) {
 			if tt.wantWarningSubstr != "" {
 				assert.Contains(t, stderr, tt.wantWarningSubstr)
 			}
+		})
+	}
+}
+
+func TestLoadSigningConfigAndTrustedMaterial(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("empty signing config file bypasses TUF and leaves TrustedMaterial nil", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{})
+		assert.NoError(t, err)
+		scBytes, err := sc.MarshalJSON()
+		assert.NoError(t, err)
+
+		scPath := filepath.Join(t.TempDir(), "empty_signing_config.json")
+		assert.NoError(t, os.WriteFile(scPath, scBytes, 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err = LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, scPath, "")
+		assert.NoError(t, err)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing config has no services")
+	})
+
+	t.Run("useSigningConfig false with explicit trusted root loads TrustedMaterial without contacting TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		trPath := filepath.Join(t.TempDir(), "trusted_root.json")
+		trJSON := `{"mediaType":"application/vnd.dev.sigstore.trustedroot+json;version=0.1"}`
+		assert.NoError(t, os.WriteFile(trPath, []byte(trJSON), 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", trPath)
+		assert.NoError(t, err)
+		assert.Nil(t, ko.SigningConfig)
+		assert.NotNil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when explicit trusted root is provided")
+	})
+
+	t.Run("invalid signing config path fails fast without contacting TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "/nonexistent/signing_config.json", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "error reading signing config from file")
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty when signing config path is invalid")
+	})
+
+	t.Run("TUF trusted root error logs warning and continues without trusted root", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: ""}
+		var err error
+		stderr := ui.RunWithTestCtx(func(c context.Context, _ ui.WriteFunc) {
+			err = LoadSigningConfigAndTrustedMaterial(c, &ko, false, "", "")
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, ko.TrustedMaterial)
+		assert.Contains(t, stderr, "Could not fetch trusted_root.json from the TUF repository. Continuing without trusted root.")
+	})
+
+	t.Run("useSigningConfig false with no signing config and key ref leaves both nil and bypasses TUF", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", "")
+		assert.NoError(t, err)
+		assert.Nil(t, ko.SigningConfig)
+		assert.Nil(t, ko.TrustedMaterial)
+
+		entries, err := os.ReadDir(tufDir)
+		assert.NoError(t, err)
+		assert.Empty(t, entries, "expected TUF directory to remain empty")
+	})
+
+	t.Run("signing config with services triggers TUF fetch", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		sc, err := NewSigningConfigFromKeyOpts(options.KeyOpts{FulcioURL: "https://fulcio.example.com"})
+		assert.NoError(t, err)
+		scBytes, err := sc.MarshalJSON()
+		assert.NoError(t, err)
+
+		scPath := filepath.Join(t.TempDir(), "signing_config.json")
+		assert.NoError(t, os.WriteFile(scPath, scBytes, 0600))
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		var loadErr error
+		stderr := ui.RunWithTestCtx(func(c context.Context, _ ui.WriteFunc) {
+			loadErr = LoadSigningConfigAndTrustedMaterial(c, &ko, false, scPath, "")
+		})
+		assert.NoError(t, loadErr)
+		assert.NotNil(t, ko.SigningConfig)
+		assert.Contains(t, stderr, "Could not fetch trusted_root.json from the TUF repository. Continuing without trusted root.")
+	})
+
+	t.Run("invalid trusted root path returns error", func(t *testing.T) {
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, "", "/nonexistent/trusted_root.json")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "loading trusted root")
+	})
+
+	t.Run("useSigningConfig true fails when TUF signing config cannot be retrieved", func(t *testing.T) {
+		tufDir := t.TempDir()
+		t.Setenv("TUF_ROOT", tufDir)
+		t.Setenv("TUF_MIRROR", tufDir)
+
+		ko := options.KeyOpts{KeyRef: "cosign.key"}
+		err := LoadSigningConfigAndTrustedMaterial(ctx, &ko, true, "", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "getting signing config from TUF")
+	})
+}
+
+func TestRequireFulcioForCertificate(t *testing.T) {
+	withFulcio := mustSigningConfigWithFulcio(t, options.DefaultFulcioURL)
+	withoutFulcio := mustSigningConfigWithRekor(t, options.DefaultRekorURL)
+
+	tests := []struct {
+		name          string
+		ko            options.KeyOpts
+		wantErrSubstr string
+	}{
+		{
+			name: "keyless with Fulcio",
+			ko:   options.KeyOpts{SigningConfig: withFulcio},
+		},
+		{
+			name:          "keyless without Fulcio",
+			ko:            options.KeyOpts{SigningConfig: withoutFulcio},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with empty signing config",
+			ko:            options.KeyOpts{SigningConfig: NewEmptySigningConfig()},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "keyless with nil signing config",
+			ko:            options.KeyOpts{},
+			wantErrSubstr: "keyless signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name: "key without Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with nil signing config",
+			ko:   options.KeyOpts{KeyRef: "cosign.key"},
+		},
+		{
+			name: "security key without Fulcio",
+			ko:   options.KeyOpts{Sk: true, SigningConfig: withoutFulcio},
+		},
+		{
+			name: "key with certificate and Fulcio",
+			ko:   options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withFulcio},
+		},
+		{
+			name:          "key with certificate without Fulcio",
+			ko:            options.KeyOpts{KeyRef: "cosign.key", IssueCertificateForExistingKey: true, SigningConfig: withoutFulcio},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+		{
+			name:          "security key with certificate and nil signing config",
+			ko:            options.KeyOpts{Sk: true, IssueCertificateForExistingKey: true},
+			wantErrSubstr: "certificate-based signing requires a signing config with a Fulcio certificate authority",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireFulcioForCertificate(tt.ko)
+			if tt.wantErrSubstr == "" {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, tt.wantErrSubstr)
 		})
 	}
 }

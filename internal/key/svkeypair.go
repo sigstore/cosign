@@ -133,7 +133,7 @@ func (k *SignerVerifierKeypair) SignData(ctx context.Context, data []byte) ([]by
 		h := hashType.New()
 		h.Write(data)
 		digest = h.Sum(nil)
-		sOpts = append(sOpts, signatureoptions.WithDigest(digest))
+		sOpts = append(sOpts, signatureoptions.WithDigest(digest), signatureoptions.WithCryptoSignerOpts(hashType))
 	}
 
 	sig, err := k.sv.SignMessage(bytes.NewReader(data), sOpts...)

@@ -18,14 +18,21 @@ package test
 
 import (
 	"context"
+	"crypto"
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/initialize"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v3/pkg/cosign/env"
+	cliverify "github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	prototrustroot "github.com/sigstore/protobuf-specs/gen/pb-go/trustroot/v1"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
@@ -34,6 +41,20 @@ const (
 	testKMSVar  = "TEST_KMS"
 	defaultKMS  = "hashivault://transit"
 )
+
+func verifyKMS(keyRef, imageRef string, annotations map[string]any) error {
+	cmd := cliverify.VerifyCommand{
+		KeyRef:        keyRef,
+		CheckClaims:   true,
+		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
+		HashAlgorithm: crypto.SHA256,
+		MaxWorkers:    10,
+		CommonVerifyOptions: options.CommonVerifyOptions{
+			NewBundleFormat: true,
+		},
+	}
+	return cmd.Exec(context.Background(), []string{imageRef})
+}
 
 func TestSecretsKMS(t *testing.T) {
 	ctx := context.Background()
@@ -58,41 +79,73 @@ func TestSecretsKMS(t *testing.T) {
 	pubKey := prefix + ".pub"
 	privKey := kms
 
+	tufLocalCache := t.TempDir()
+	t.Setenv("TUF_ROOT", tufLocalCache)
+	rootPath := os.Getenv("TUF_ROOT_JSON")
+	mirror := os.Getenv("TUF_MIRROR")
+	must(initialize.DoInitialize(ctx, rootPath, mirror), t)
+
 	// Verify should fail at first
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
+	mustErr(verifyKMS(pubKey, imgName, nil), t)
 
 	rekorURL := os.Getenv(rekorURLVar)
+	rekorServices := []root.Service{
+		{
+			URL:                 rekorURL,
+			MajorAPIVersion:     2,
+			ValidityPeriodStart: time.Now().Add(-time.Hour),
+		},
+	}
+	rekorConfig := root.ServiceConfiguration{
+		Selector: prototrustroot.ServiceSelector_ANY,
+		Count:    1,
+	}
+	signingConfig, err := root.NewSigningConfig(
+		root.SigningConfigMediaType02,
+		nil,
+		nil,
+		rekorServices,
+		rekorConfig,
+		nil,
+		root.ServiceConfiguration{},
+	)
+	must(err, t)
 
-	must(downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td), t)
+	trustedMaterial, err := cosign.TrustedRoot()
+	must(err, t)
 
 	// Now sign and verify with the KMS key
 	ko := options.KeyOpts{
 		KeyRef:           privKey,
-		RekorURL:         rekorURL,
+		SigningConfig:    signingConfig,
+		TrustedMaterial:  trustedMaterial,
 		SkipConfirmation: true,
+		NewBundleFormat:  true,
 	}
 	so := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload:          true,
+		TlogUpload:      true,
+		NewBundleFormat: true,
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verifyKMS(pubKey, imgName, nil), t)
 
 	// Sign and verify with annotations
-	mustErr(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	mustErr(verifyKMS(pubKey, imgName, map[string]any{"foo": "bar"}), t)
 	soAnno := options.SignOptions{
-		Upload:     true,
-		TlogUpload: true,
+		Upload:          true,
+		TlogUpload:      true,
+		NewBundleFormat: true,
 		AnnotationOptions: options.AnnotationOptions{
 			Annotations: []string{"foo=bar"},
 		},
 	}
 	must(sign.SignCmd(t.Context(), ro, ko, soAnno, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	must(verifyKMS(pubKey, imgName, map[string]any{"foo": "bar"}), t)
 
 	// Store signatures in a different repo
 	t.Setenv("COSIGN_REPOSITORY", path.Join(repo, "subbedrepo"))
 	must(sign.SignCmd(t.Context(), ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verifyKMS(pubKey, imgName, nil), t)
 	os.Unsetenv("COSIGN_REPOSITORY")
 }

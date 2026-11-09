@@ -39,14 +39,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -59,14 +59,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -97,10 +97,9 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
     steps:
       - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -110,7 +109,7 @@ jobs:
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: '${{ env.GOVERSION }}'
           check-latest: true
@@ -118,8 +117,11 @@ jobs:
 
       - uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
 
+      - name: Extract version of scaffolding to use
+        run: echo "SCAFFOLDING_RELEASE_VERSION=$(awk '/sigstore\/scaffolding\/actions\/setup@/{print $NF; exit}' .github/workflows/e2e-tests.yml)" >> $GITHUB_ENV
+
       - name: Install cluster + sigstore
-        uses: sigstore/scaffolding/actions/setup@main
+        uses: sigstore/scaffolding/actions/setup@c9e7cb4a331fad6ff917e0f912a37035487f6d55 # v0.7.41
         with:
           version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
@@ -128,34 +130,36 @@ jobs:
 
       - name: Acceptance Tests
         run: go test -tags=e2e,kms -v ./test/...
+        env:
+          TUF_ROOT_JSON: ${{ github.workspace }}/root.json
 
   e2e-registry:
     runs-on: ubuntu-latest
 
-    env:
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.24"
-
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
     - name: Extract version of Go to use
       run: echo "GOVERSION=$(awk -F'[:@]' '/FROM golang/{print $2; exit}' Dockerfile)" >> $GITHUB_ENV
 
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version: '${{ env.GOVERSION }}'
         check-latest: true
         cache: false
 
     - name: Setup mirror
-      uses: chainguard-dev/actions/setup-mirror@f0be69916b439d0fcced2451b23d0f27cd46d545 # v1.6.26
+      uses: chainguard-dev/actions/setup-mirror@e94104128fff55b3c5e1831a8bbbf198603156f9 # v1.7.1
       with:
         mirror: mirror.gcr.io
 
+    - name: Extract version of scaffolding to use
+      run: echo "SCAFFOLDING_RELEASE_VERSION=$(awk '/sigstore\/scaffolding\/actions\/setup@/{print $NF; exit}' .github/workflows/e2e-tests.yml)" >> $GITHUB_ENV
+
     - name: Install cluster + sigstore
-      uses: sigstore/scaffolding/actions/setup@main
+      uses: sigstore/scaffolding/actions/setup@c9e7cb4a331fad6ff917e0f912a37035487f6d55 # v0.7.41
       with:
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
@@ -258,4 +262,4 @@ jobs:
 
     - name: Collect diagnostics
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@f0be69916b439d0fcced2451b23d0f27cd46d545 # v1.6.26
+      uses: chainguard-dev/actions/kind-diag@e94104128fff55b3c5e1831a8bbbf198603156f9 # v1.7.1

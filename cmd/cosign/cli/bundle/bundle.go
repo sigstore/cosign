@@ -44,14 +44,10 @@ type CreateCmd struct {
 	AttestationPath      string
 	BundlePath           string
 	CertificatePath      string
-	IgnoreTlog           bool
-	KeyRef               string
 	Out                  string
-	RekorURL             string
 	RFC3161TimestampPath string
 	SignaturePath        string
-	Sk                   bool
-	Slot                 string
+	options.CommonBundleCreateOptions
 }
 
 func (c *CreateCmd) Exec(ctx context.Context) (err error) {

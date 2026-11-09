@@ -202,13 +202,12 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
-		shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-		if err != nil {
-			return fmt.Errorf("should upload to tlog: %w", err)
-		}
-		if !shouldUpload {
-			ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
-		}
+	}
+	if !signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload) {
+		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
+	}
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko); err != nil {
+		return err
 	}
 
 	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
@@ -224,7 +223,12 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	}
 
 	if signOpts.Upload {
-		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
+		repo, _ := ociremote.GetEnvTargetRepository(regOpts.NameOptions()...)
+		if repo.RepositoryStr() == "" {
+			ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
+		} else {
+			ui.Infof(ctx, "Pushing signature to: %s", repo.RepositoryStr())
+		}
 		if err := ociremote.WriteAttestationNewBundleFormat(digest, bundleBytes, bundleOpts.PredicateType, bundleOpts.OCIRemoteOpts...); err != nil {
 			return err
 		}
@@ -263,13 +267,12 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 		if err != nil {
 			return fmt.Errorf("creating signing config: %w", err)
 		}
-		shouldUpload, err := signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload)
-		if err != nil {
-			return fmt.Errorf("should upload to tlog: %w", err)
-		}
-		if !shouldUpload {
-			ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
-		}
+	}
+	if !signcommon.ShouldUploadToTlog(ctx, ko, digest, signOpts.TlogUpload) {
+		ko.SigningConfig = ko.SigningConfig.WithRekorLogURLs()
+	}
+	if err := signcommon.ConfirmPrivacyStatement(ctx, ko); err != nil {
+		return err
 	}
 
 	keypair, certBytes, chainBytes, idToken, err := signcommon.GetKeypairAndToken(ctx, ko, signOpts.Cert, signOpts.CertChain)
@@ -442,7 +445,7 @@ func signDigest(ctx context.Context, digest name.Digest, payload []byte, ko opti
 	}
 
 	// Check if we are overriding the signatures repository location
-	repo, _ := ociremote.GetEnvTargetRepository()
+	repo, _ := ociremote.GetEnvTargetRepository(signOpts.Registry.NameOptions()...)
 	if repo.RepositoryStr() == "" {
 		ui.Infof(ctx, "Pushing signature to: %s", digest.Repository)
 	} else {

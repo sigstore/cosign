@@ -28,7 +28,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	bundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle/types"
 )
 
 func mustDecode(s string) []byte {
