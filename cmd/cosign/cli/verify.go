@@ -269,17 +269,17 @@ func VerifyBlob() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "verify-blob",
 		Short: "Verify a signature on the supplied blob",
-		Long: `Verify a signature on the supplied blob input using the specified key reference.
-You may specify either a key, a bundle (optionally with trusted root), or a kms reference to verify against.
-	If you use a key, bundle, or trusted root, you must specify the path to them on disk.
+		Long: `Verify a signature on the supplied blob input using a Sigstore bundle, provided via --bundle (required).
+Verify against a public key or KMS reference (--key), a security key (--sk), or, for keyless
+signatures, a certificate identity and OIDC issuer (--certificate-identity and --certificate-oidc-issuer).
 
-The preferred way to provide verification material is via a Sigstore bundle using --bundle,
-which contains the signature, certificate, and transparency log proof.
+A trusted root verifies service-provided material in the bundle (certificates, transparency log
+entries, and RFC 3161 timestamps). Cosign fetches it from TUF, unless you provide one via --trusted-root.
 The blob may be specified as a path to a file or - for stdin.`,
 		Example: ` cosign verify-blob --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
-  # Verify a signature with a bundle and trusted root
-  cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json <blob>
+  # Verify a keyless signature with a bundle and trusted root
+  cosign verify-blob --bundle artifact.sigstore.json --trusted-root trusted_root.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
 
   # Verify a blob (keyless)
   cosign verify-blob --bundle artifact.sigstore.json --certificate-identity foo@example.com --certificate-oidc-issuer https://accounts.google.com <blob>
@@ -313,41 +313,25 @@ The blob may be specified as a path to a file or - for stdin.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			ko := options.KeyOpts{
-				KeyRef:               o.Key,
-				Sk:                   o.SecurityKey.Use,
-				Slot:                 o.SecurityKey.Slot,
-				RekorURL:             o.Rekor.URL,
-				BundlePath:           o.BundlePath,
-				RFC3161TimestampPath: o.RFC3161TimestampPath,
-				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
-				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
+				KeyRef:     o.Key,
+				Sk:         o.SecurityKey.Use,
+				Slot:       o.SecurityKey.Slot,
+				BundlePath: o.BundlePath,
 			}
 			verifyBlobCmd := &verify.VerifyBlobCmd{
 				KeyOpts:                      ko,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CARoots:                      o.CertVerify.CARoots,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				SigRef:                       o.Signature,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
-				HashAlgorithm:                hashAlgorithm,
 				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 

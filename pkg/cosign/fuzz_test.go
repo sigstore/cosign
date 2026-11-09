@@ -100,7 +100,7 @@ func FuzzSigVerify(f *testing.F) {
 				t.Fatal(err)
 			}
 			for _, sig := range sl {
-				VerifyBlobSignature(context.Background(), sig, &CheckOpts{IgnoreTlog: true})
+				verifyInternal(context.Background(), sig, v1.Hash{}, verifyOCISignature, &CheckOpts{IgnoreTlog: true})
 			}
 		case 3:
 			sl, err := sigs.Get()
