@@ -41,33 +41,33 @@ cosign signing-config create \
 ### Options
 
 ```
-      --base-config string          path to base signing config file to use as starting point. Service flags will replace services from the base config.
-      --fulcio stringArray          fulcio service specification, as a comma-separated key-value list.
-                                    Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
-  -h, --help                        help for create
-      --no-default-fulcio           removes the default Fulcio URLs from the signing config.
-      --no-default-oidc             removes the default OIDC provider URLs from the signing config.
-      --no-default-rekor            removes the default Rekor URLs from the signing config.
-      --no-default-tsa              removes the default TSA URLs from the signing config.
-      --oidc-provider stringArray   oidc provider specification, as a comma-separated key-value list.
-                                    Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
-      --out string                  path to output signing config
-      --rekor stringArray           rekor service specification, as a comma-separated key-value list.
-                                    Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
-      --rekor-config string         rekor configuration. Required if --rekor is provided. One of: ANY, ALL, EXACT:<count>
-      --tsa stringArray             timestamping authority specification, as a comma-separated key-value list.
-                                    Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
-      --tsa-config string           timestamping authority configuration. Required if --tsa is provided. One of: ANY, ALL, EXACT:<count>
-      --with-default-rekor-v2       use the Sigstore TUF root, with the Rekor v2 service, as default values to populate the signing config. Specifying the other service flags will override the default values.
-      --with-default-services       use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.
+      --base-config string                   path to base signing config file to use as starting point. Service flags will replace services from the base config.
+      --fulcio stringArray                   fulcio service specification, as a comma-separated key-value list.
+                                             Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
+  -h, --help[=true|false]                    help for create
+      --no-default-fulcio[=true|false]       removes the default Fulcio URLs from the signing config.
+      --no-default-oidc[=true|false]         removes the default OIDC provider URLs from the signing config.
+      --no-default-rekor[=true|false]        removes the default Rekor URLs from the signing config.
+      --no-default-tsa[=true|false]          removes the default TSA URLs from the signing config.
+      --oidc-provider stringArray            oidc provider specification, as a comma-separated key-value list.
+                                             Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
+      --out string                           path to output signing config
+      --rekor stringArray                    rekor service specification, as a comma-separated key-value list.
+                                             Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
+      --rekor-config string                  rekor configuration. Required if --rekor is provided. One of: ANY, ALL, EXACT:<count>
+      --tsa stringArray                      timestamping authority specification, as a comma-separated key-value list.
+                                             Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
+      --tsa-config string                    timestamping authority configuration. Required if --tsa is provided. One of: ANY, ALL, EXACT:<count>
+      --with-default-rekor-v2[=true|false]   use the Sigstore TUF root, with the Rekor v2 service, as default values to populate the signing config. Specifying the other service flags will override the default values.
+      --with-default-services[=true|false]   use the Sigstore TUF root as default values to populate the signing config. Specifying the other service flags will override the default values.
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

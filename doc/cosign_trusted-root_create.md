@@ -26,29 +26,29 @@ cosign trusted-root create \
 ### Options
 
 ```
-      --ctfe stringArray        ctfe service specification, as a comma-separated key-value list.
-                                Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
-      --fulcio stringArray      fulcio service specification, as a comma-separated key-value list.
-                                Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
-  -h, --help                    help for create
-      --no-default-ctfe         removes the default CTFE URLs from the trusted root.
-      --no-default-fulcio       removes the default Fulcio URLs from the trusted root.
-      --no-default-rekor        removes the default Rekor URLs from the trusted root.
-      --no-default-tsa          removes the default TSA URLs from the trusted root.
-      --out string              path to output trusted root
-      --rekor stringArray       rekor service specification, as a comma-separated key-value list.
-                                Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
-      --tsa stringArray         timestamping authority specification, as a comma-separated key-value list.
-                                Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
-      --with-default-services   use the Sigstore TUF root as default values to populate the trusted root. Specifying the other service flags will override the default values.
+      --ctfe stringArray                     ctfe service specification, as a comma-separated key-value list.
+                                             Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
+      --fulcio stringArray                   fulcio service specification, as a comma-separated key-value list.
+                                             Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
+  -h, --help[=true|false]                    help for create
+      --no-default-ctfe[=true|false]         removes the default CTFE URLs from the trusted root.
+      --no-default-fulcio[=true|false]       removes the default Fulcio URLs from the trusted root.
+      --no-default-rekor[=true|false]        removes the default Rekor URLs from the trusted root.
+      --no-default-tsa[=true|false]          removes the default TSA URLs from the trusted root.
+      --out string                           path to output trusted root
+      --rekor stringArray                    rekor service specification, as a comma-separated key-value list.
+                                             Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
+      --tsa stringArray                      timestamping authority specification, as a comma-separated key-value list.
+                                             Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
+      --with-default-services[=true|false]   use the Sigstore TUF root as default values to populate the trusted root. Specifying the other service flags will override the default values.
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO
