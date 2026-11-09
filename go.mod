@@ -44,7 +44,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.2
 	github.com/sigstore/timestamp-authority/v2 v2.2.0
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
 	github.com/spiffe/go-spiffe/v2 v2.8.2
 	github.com/stretchr/testify v1.12.1
