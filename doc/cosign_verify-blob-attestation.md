@@ -43,7 +43,7 @@ cosign verify-blob-attestation [flags]
 ### Options
 
 ```
-      --allow-certificate-chain                         allow X.509 certificate chains in bundle verification material for v0.3+ bundles
+      --allow-certificate-chain[=true|false]            allow X.509 certificate chains in bundle verification material for v0.3+ bundles
       --bundle string                                   path to bundle FILE
       --certificate-github-workflow-name string         contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string          contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
@@ -54,27 +54,27 @@ cosign verify-blob-attestation [flags]
       --certificate-identity-regexp string              A regular expression alternative to --certificate-identity. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.
       --certificate-oidc-issuer string                  The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string           A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
-      --check-claims                                    if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified. (default true)
+      --check-claims[=true|false]                       if true, verifies the digest exists in the in-toto subject (using either the provided digest and digest algorithm or the provided blob's sha256 digest). If false, only the DSSE envelope is verified. (default true)
       --digest string                                   Digest to use for verifying in-toto subject (instead of providing a blob)
       --digestAlg string                                Digest algorithm to use for verifying in-toto subject (instead of providing a blob)
-  -h, --help                                            help for verify-blob-attestation
-      --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
+  -h, --help[=true|false]                               help for verify-blob-attestation
+      --insecure-ignore-sct[=true|false]                when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
+      --insecure-ignore-tlog[=true|false]               ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
-      --sk                                              whether to use a hardware security key
+      --sk[=true|false]                                 whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
       --type string                                     specify a predicate type (slsaprovenance|slsaprovenance02|slsaprovenance1|link|spdx|spdxjson|cyclonedx|vuln|openvex|custom) or an URI (default "custom")
-      --use-signed-timestamps                           verify rfc3161 timestamps
+      --use-signed-timestamps[=true|false]              verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

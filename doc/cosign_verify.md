@@ -59,9 +59,9 @@ cosign verify [flags]
 ### Options
 
 ```
-      --allow-certificate-chain                         allow X.509 certificate chains in bundle verification material for v0.3+ bundles
-      --allow-http-registry                             whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
-      --allow-insecure-registry                         whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
+      --allow-certificate-chain[=true|false]            allow X.509 certificate chains in bundle verification material for v0.3+ bundles
+      --allow-http-registry[=true|false]                whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry[=true|false]            whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                             extra key=value pairs to sign
       --certificate-github-workflow-name string         contains the workflow claim from the GitHub OIDC Identity token that contains the name of the executed workflow.
       --certificate-github-workflow-ref string          contains the ref claim from the GitHub OIDC Identity token that contains the git ref that the workflow run was based upon.
@@ -72,13 +72,13 @@ cosign verify [flags]
       --certificate-identity-regexp string              A regular expression alternative to --certificate-identity. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-identity or --certificate-identity-regexp must be set for keyless flows.
       --certificate-oidc-issuer string                  The OIDC issuer expected in a valid Fulcio certificate, e.g. https://token.actions.githubusercontent.com or https://oauth2.sigstore.dev/auth. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
       --certificate-oidc-issuer-regexp string           A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
-      --check-claims                                    whether to check the claims found (default true)
-  -h, --help                                            help for verify
-      --insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
-      --k8s-keychain                                    whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --check-claims[=true|false]                       whether to check the claims found (default true)
+  -h, --help[=true|false]                               help for verify
+      --insecure-ignore-sct[=true|false]                when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
+      --insecure-ignore-tlog[=true|false]               ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
+      --k8s-keychain[=true|false]                       whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
-      --local-image                                     whether the specified image is a path to an image saved locally via 'cosign save'
+      --local-image[=true|false]                        whether the specified image is a path to an image saved locally via 'cosign save'
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
   -o, --output string                                   output format for the signing image information (json|text) (default "json")
       --registry-cacert string                          path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
@@ -88,18 +88,18 @@ cosign verify [flags]
       --registry-server-name string                     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                           registry bearer auth token
       --registry-username string                        registry basic auth username
-      --sk                                              whether to use a hardware security key
+      --sk[=true|false]                                 whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
-      --use-signed-timestamps                           verify rfc3161 timestamps
+      --use-signed-timestamps[=true|false]              verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

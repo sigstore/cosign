@@ -29,18 +29,18 @@ CAVEATS:
 ### Options
 
 ```
-  -h, --help                       help for import-key-pair
+  -h, --help[=true|false]          help for import-key-pair
   -k, --key string                 import key pair to use for signing
   -o, --output-key-prefix string   name used for outputted key pairs (default "import-cosign")
-  -y, --yes                        skip confirmation prompts for overwriting existing key
+  -y, --yes[=true|false]           skip confirmation prompts for overwriting existing key
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

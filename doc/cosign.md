@@ -5,10 +5,10 @@ A tool for Container Signing, Verification and Storage in an OCI registry
 ### Options
 
 ```
-  -h, --help                 help for cosign
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+  -h, --help[=true|false]      help for cosign
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

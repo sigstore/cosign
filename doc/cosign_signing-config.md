@@ -9,15 +9,15 @@ Tool for interacting with a Sigstore protobuf signing config
 ### Options
 
 ```
-  -h, --help   help for signing-config
+  -h, --help[=true|false]   help for signing-config
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

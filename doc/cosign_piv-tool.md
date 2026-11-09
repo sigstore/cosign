@@ -5,16 +5,16 @@ Provides utilities for managing a hardware token
 ### Options
 
 ```
-  -h, --help       help for piv-tool
-  -f, --no-input   skip warnings and confirmations
+  -h, --help[=true|false]       help for piv-tool
+  -f, --no-input[=true|false]   skip warnings and confirmations
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO
