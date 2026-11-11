@@ -37,9 +37,11 @@ import (
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/cosign/attestation"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // TestAttestBlobCmdLocalKeyAndSk verifies the AttestBlobCmd returns an error
@@ -71,6 +73,31 @@ func writeFile(t *testing.T, td string, blob string, name string) string {
 		t.Fatal(err)
 	}
 	return blobPath
+}
+
+// assertOfflineBundle asserts that a key-signed bundle file carries no material
+// from online services (certificates, tlog entries, or signed timestamps).
+func assertOfflineBundle(t *testing.T, bundlePath string) {
+	t.Helper()
+	bundleBytes, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatalf("failed to read bundle: %v", err)
+	}
+	var bundle protobundle.Bundle
+	if err := protojson.Unmarshal(bundleBytes, &bundle); err != nil {
+		t.Fatalf("failed to unmarshal bundle: %v", err)
+	}
+	vm := bundle.GetVerificationMaterial()
+	// The content is a oneof, so a public key hint also rules out a certificate.
+	if vm.GetPublicKey() == nil {
+		t.Errorf("expected a public key hint, got %T", vm.GetContent())
+	}
+	if n := len(vm.GetTlogEntries()); n != 0 {
+		t.Errorf("expected no transparency log entries, got %d", n)
+	}
+	if n := len(vm.GetTimestampVerificationData().GetRfc3161Timestamps()); n != 0 {
+		t.Errorf("expected no RFC 3161 timestamps, got %d", n)
+	}
 }
 
 func makeSLSA02PredicateFile(t *testing.T, td string) string {
@@ -124,7 +151,6 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				keyref       string
 				certref      string
 				certchainref string
-				newBundle    bool
 				errString    string
 			}{
 				{
@@ -137,22 +163,10 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 					certref: certRef,
 				},
 				{
-					name:      "new bundle generation",
-					keyref:    keyRef,
-					certref:   certRef,
-					newBundle: true,
-				},
-				{
 					name:      "fail: cert no match key",
 					keyref:    keyRef,
 					certref:   subCertPem,
 					errString: "public key in certificate does not match the provided public key",
-				},
-				{
-					name:         "cert chain matches key",
-					keyref:       keyRef,
-					certref:      certRef,
-					certchainref: subCertPem,
 				},
 				{
 					name:         "cert chain partial",
@@ -175,18 +189,13 @@ func TestAttestBlobCmdLocalKeyAndCert(t *testing.T) {
 				},
 			} {
 				t.Run(tc.name, func(t *testing.T) {
-					keyOpts := options.KeyOpts{KeyRef: tc.keyref}
-					if tc.newBundle {
-						keyOpts.NewBundleFormat = true
-						keyOpts.BundlePath = filepath.Join(td, "output.bundle")
-					}
+					keyOpts := options.KeyOpts{KeyRef: tc.keyref, BundlePath: filepath.Join(td, "output.bundle")}
 					at := AttestBlobCommand{
-						KeyOpts:        keyOpts,
-						CertPath:       tc.certref,
-						CertChainPath:  tc.certchainref,
-						PredicatePath:  predicatePath,
-						PredicateType:  predicateType,
-						RekorEntryType: "dsse",
+						KeyOpts:       keyOpts,
+						CertPath:      tc.certref,
+						CertChainPath: tc.certchainref,
+						PredicatePath: predicatePath,
+						PredicateType: predicateType,
 					}
 					err := at.Exec(ctx, blob)
 					if err != nil {
@@ -228,24 +237,33 @@ func TestAttestBlob(t *testing.T) {
 
 	for predicateType, predicatePath := range predicates {
 		t.Run(predicateType, func(t *testing.T) {
-			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
+			bundlePath := filepath.Join(td, "bundle.json")
+			keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath}
 			at := AttestBlobCommand{
-				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
-				PredicatePath:   predicatePath,
-				PredicateType:   predicateType,
-				OutputSignature: dssePath,
-				RekorEntryType:  "dsse",
+				KeyOpts:       keyOpts,
+				PredicatePath: predicatePath,
+				PredicateType: predicateType,
 			}
 			err := at.Exec(ctx, blobPath)
 			if err != nil {
 				t.Fatal(err)
 			}
+			assertOfflineBundle(t, bundlePath)
 
-			// Load the attestation.
-			dsseBytes, _ := os.ReadFile(dssePath)
-			env := &ssldsse.Envelope{}
-			if err := json.Unmarshal(dsseBytes, env); err != nil {
+			// Load the attestation bundle.
+			bundleBytes, err := os.ReadFile(bundlePath)
+			if err != nil {
 				t.Fatal(err)
+			}
+			var bundleJSON struct {
+				DsseEnvelope *ssldsse.Envelope `json:"dsseEnvelope"`
+			}
+			if err := json.Unmarshal(bundleBytes, &bundleJSON); err != nil {
+				t.Fatal(err)
+			}
+			env := bundleJSON.DsseEnvelope
+			if env == nil {
+				t.Fatal("expected dsse envelope in bundle")
 			}
 
 			if len(env.Signatures) != 1 {
@@ -284,38 +302,6 @@ func TestAttestBlob(t *testing.T) {
 	}
 }
 
-func TestBadRekorEntryType(t *testing.T) {
-	ctx := context.Background()
-	td := t.TempDir()
-
-	keys, _ := cosign.GenerateKeyPair(nil)
-	keyRef := writeFile(t, td, string(keys.PrivateBytes), "key.pem")
-
-	blob := []byte("foo")
-	blobPath := writeFile(t, td, string(blob), "foo.txt")
-
-	predicates := map[string]string{}
-	predicates["slsaprovenance"] = makeSLSA02PredicateFile(t, td)
-	predicates["slsaprovenance1"] = makeSLSA1PredicateFile(t, td)
-
-	for predicateType, predicatePath := range predicates {
-		t.Run(predicateType, func(t *testing.T) {
-			dssePath := filepath.Join(td, "dsse.intoto.jsonl")
-			at := AttestBlobCommand{
-				KeyOpts:         options.KeyOpts{KeyRef: keyRef},
-				PredicatePath:   predicatePath,
-				PredicateType:   predicateType,
-				OutputSignature: dssePath,
-				RekorEntryType:  "badvalue",
-			}
-			err := at.Exec(ctx, blobPath)
-			if err == nil || err.Error() != "unknown value for rekor-entry-type" {
-				t.Fatal("expected an error due to unknown rekor entry type")
-			}
-		})
-	}
-}
-
 func TestStatementPath(t *testing.T) {
 	ctx := context.Background()
 	td := t.TempDir()
@@ -340,10 +326,10 @@ func TestStatementPath(t *testing.T) {
 	}`
 	statementPath := writeFile(t, td, statement, "statement.json")
 
+	keyOpts := options.KeyOpts{KeyRef: keyRef, BundlePath: filepath.Join(td, "bundle.json")}
 	at := AttestBlobCommand{
-		KeyOpts:        options.KeyOpts{KeyRef: keyRef},
-		StatementPath:  statementPath,
-		RekorEntryType: "dsse",
+		KeyOpts:       keyOpts,
+		StatementPath: statementPath,
 	}
 	err := at.Exec(ctx, "")
 	assert.NoError(t, err)

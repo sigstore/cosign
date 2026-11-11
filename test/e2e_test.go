@@ -993,14 +993,11 @@ func TestSignAttestVerifyBlobWithSigningConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
-	ko.NewBundleFormat = true
 	ko.BundlePath = attBundlePath
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		RekorEntryType: "dsse",
-		StatementPath:  statementPath,
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1439,12 +1436,10 @@ func TestSignVerifyBlobWithCertificateChain(t *testing.T) {
 			var verifyErr error
 			if tc.attestation {
 				attestBlobCmd := attest.AttestBlobCommand{
-					KeyOpts:        ko,
-					CertPath:       leafCertPath,
-					CertChainPath:  signChainPath,
-					RekorEntryType: "dsse",
-					StatementPath:  statementPath,
-					TlogUpload:     false,
+					KeyOpts:       ko,
+					CertPath:      leafCertPath,
+					CertChainPath: signChainPath,
+					StatementPath: statementPath,
 				}
 				must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -1803,15 +1798,12 @@ func TestSignVerifyWithSigningConfigWithKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	attBundlePath := filepath.Join(attestDir, "attest.bundle.json")
-	ko.NewBundleFormat = true
 	ko.BundlePath = attBundlePath
 	ko.KeyRef = privKeyPath
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		RekorEntryType: "dsse",
-		StatementPath:  statementPath,
-		TlogUpload:     true,
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -2854,21 +2846,22 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 	_, privKeyPath, pubKeyPath := keypair(t, td)
 
 	ctx := context.Background()
+	signingConfigPath := prepareSigningConfig(t, fulcioURL, rekorURL, "unused", tsaURL+"/api/v1/timestamp")
+	trustedRootPath := prepareTrustedRoot(t, tsaURL)
 	ko := options.KeyOpts{
-		KeyRef:          privKeyPath,
-		BundlePath:      bundlePath,
-		NewBundleFormat: true,
-		TSAServerURL:    tsaURL + "/api/v1/timestamp",
-		PassFunc:        passFunc,
+		KeyRef:           privKeyPath,
+		BundlePath:       bundlePath,
+		PassFunc:         passFunc,
+		SkipConfirmation: true,
 	}
+	err := signcommon.LoadSigningConfigAndTrustedMaterial(ctx, &ko, false, signingConfigPath, trustedRootPath)
+	must(err, t)
 
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:        ko,
-		PredicatePath:  predicatePath,
-		PredicateType:  predicateType,
-		Timeout:        30 * time.Second,
-		TlogUpload:     false,
-		RekorEntryType: "dsse",
+		KeyOpts:       ko,
+		PredicatePath: predicatePath,
+		PredicateType: predicateType,
+		Timeout:       30 * time.Second,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
@@ -2905,7 +2898,7 @@ func TestAttestationBlobRFC3161Timestamp(t *testing.T) {
 		t.Error(err)
 	}
 
-	trustedRootPath := filepath.Join(td, "trustedroot.json")
+	trustedRootPath = filepath.Join(td, "trustedroot.json")
 	trustedRootBytes, err := trustedRoot.MarshalJSON()
 	if err != nil {
 		t.Error(err)
@@ -4579,17 +4572,19 @@ func TestAttestBlobSignVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	outputSignature := filepath.Join(td1, "signature")
+	bundlePath1 := filepath.Join(td1, "attest1.bundle.json")
+	bundlePath2 := filepath.Join(td1, "attest2.bundle.json")
 
 	_, privKeyPath1, pubKeyPath1 := keypair(t, td1)
 
 	ctx := context.Background()
 	ko := options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:          pubKeyPath1,
+		BundlePath:      bundlePath1,
+		NewBundleFormat: true,
 	}
 	blobVerifyAttestationCmd := cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
-		SignaturePath: outputSignature,
 		PredicateType: predicateType,
 		IgnoreTlog:    true,
 		CheckClaims:   true,
@@ -4599,17 +4594,18 @@ func TestAttestBlobSignVerify(t *testing.T) {
 
 	// Now attest the blob with the private key
 	ko = options.KeyOpts{
-		KeyRef:   privKeyPath1,
-		PassFunc: passFunc,
+		KeyRef:           privKeyPath1,
+		PassFunc:         passFunc,
+		BundlePath:       bundlePath1,
+		SkipConfirmation: true,
 	}
 	attestBlobCmd := attest.AttestBlobCommand{
-		KeyOpts:         ko,
-		PredicatePath:   predicatePath,
-		PredicateType:   predicateType,
-		OutputSignature: outputSignature,
-		RekorEntryType:  "dsse",
+		KeyOpts:       ko,
+		PredicatePath: predicatePath,
+		PredicateType: predicateType,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
+	assertOfflineBundle(t, bundlePath1)
 
 	// Now verify should work
 	must(blobVerifyAttestationCmd.Exec(ctx, bp), t)
@@ -4623,23 +4619,28 @@ func TestAttestBlobSignVerify(t *testing.T) {
 	mustErr(blobVerifyAttestationCmd.Exec(ctx, anotherBlob), t)
 
 	// Test statement signing
+	ko = options.KeyOpts{
+		KeyRef:           privKeyPath1,
+		PassFunc:         passFunc,
+		BundlePath:       bundlePath2,
+		SkipConfirmation: true,
+	}
 	attestBlobCmd = attest.AttestBlobCommand{
-		KeyOpts:         ko,
-		StatementPath:   statementPath,
-		OutputSignature: outputSignature,
-		RekorEntryType:  "dsse",
+		KeyOpts:       ko,
+		StatementPath: statementPath,
 	}
 	must(attestBlobCmd.Exec(ctx, bp), t)
 
 	// Test statement verification
 	ko = options.KeyOpts{
-		KeyRef: pubKeyPath1,
+		KeyRef:          pubKeyPath1,
+		BundlePath:      bundlePath2,
+		NewBundleFormat: true,
 	}
 	blobVerifyAttestationCmd = cliverify.VerifyBlobAttestationCommand{
 		KeyOpts:       ko,
 		Digest:        "7e9b6e7ba2842c91cf49f3e214d04a7a496f8214356f41d81a6e6dcad11f11e3",
-		DigestAlg:     "alg",
-		SignaturePath: outputSignature,
+		DigestAlg:     "sha256",
 		IgnoreTlog:    true,
 		PredicateType: "something",
 	}
