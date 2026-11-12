@@ -17,18 +17,13 @@ package verify
 
 import (
 	"context"
-	"crypto"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	internal "github.com/sigstore/cosign/v3/internal/pkg/cosign"
-	payloadsize "github.com/sigstore/cosign/v3/internal/pkg/cosign/payload/size"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
@@ -111,60 +106,22 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 	}
 	defer closeSV()
 
-	var h v1.Hash
+	var digestAlg string
 	var digest []byte
 	if c.CheckClaims {
 		if artifactPath != "" {
 			if c.Digest != "" {
 				ui.Warnf(ctx, "Ignoring provided --digest in favor of provided blob")
 			}
-			// For the legacy (non-bundle) verification path we still need to
-			// compute the digest manually.  Pick the hash algorithm to use:
-			// default to SHA-256 for backward compatibility; honor --digestAlg
-			// so attestations produced against e.g. SHA-512 can be verified.
-			hashName := "sha256"
-			hashAlg := crypto.SHA256
 			if c.DigestAlg != "" {
-				parsed, err := parseBlobHashAlgorithm(c.DigestAlg)
-				if err != nil {
-					return err
-				}
-				hashName = c.DigestAlg
-				hashAlg = parsed
-			}
-
-			f, err := os.Open(filepath.Clean(artifactPath))
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			fileInfo, err := f.Stat()
-			if err != nil {
-				return err
-			}
-			err = payloadsize.CheckSize(uint64(fileInfo.Size()))
-			if err != nil {
-				return err
-			}
-
-			payload := internal.NewHashReader(f, hashAlg)
-			if _, err := io.ReadAll(&payload); err != nil {
-				return err
-			}
-			digest = payload.Sum(nil)
-			h = v1.Hash{
-				Hex:       hex.EncodeToString(digest),
-				Algorithm: hashName,
+				ui.Warnf(ctx, "Ignoring provided --digestAlg because a blob was provided")
 			}
 		} else if c.Digest != "" && c.DigestAlg != "" {
 			digest, err = hex.DecodeString(c.Digest)
 			if err != nil {
 				return fmt.Errorf("unable to decode provided digest: %w", err)
 			}
-			h = v1.Hash{
-				Hex:       c.Digest,
-				Algorithm: c.DigestAlg,
-			}
+			digestAlg = c.DigestAlg
 		}
 	}
 
@@ -196,7 +153,7 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		defer artifactFile.Close()
 		policyOpt = sgverify.WithArtifact(artifactFile)
 	default:
-		policyOpt = sgverify.WithArtifactDigest(h.Algorithm, digest)
+		policyOpt = sgverify.WithArtifactDigest(digestAlg, digest)
 	}
 
 	_, err = cosign.VerifyNewBundle(ctx, co, policyOpt, bundle)
@@ -241,19 +198,4 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 
 	ui.Infof(ctx, "Verified OK")
 	return nil
-}
-
-// parseBlobHashAlgorithm maps the --digestAlg name used by
-// verify-blob-attestation to a crypto.Hash. Only algorithms actually
-// supported as in-toto subject digest algorithms are accepted.
-func parseBlobHashAlgorithm(name string) (crypto.Hash, error) {
-	switch name {
-	case "sha256":
-		return crypto.SHA256, nil
-	case "sha384":
-		return crypto.SHA384, nil
-	case "sha512":
-		return crypto.SHA512, nil
-	}
-	return 0, fmt.Errorf("unsupported --digestAlg %q; supported values are sha256, sha384, sha512", name)
 }

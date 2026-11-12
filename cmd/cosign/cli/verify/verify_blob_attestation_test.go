@@ -51,7 +51,6 @@ const (
 	blobContents                         = "some-payload"
 	blobSha256                           = "658781cd4ed9bca60dacd09f7bb914bb51502e8b5d619f57f39a1d652596cc24"
 	anotherBlobContents                  = "another-blob"
-	hugeBlobContents                     = "hugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayloadhugepayload"
 	blobSLSAProvenanceSignature          = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHQ3SW01aGJXVWlPaUppYkc5aUlpd2laR2xuWlhOMElqcDdJbk5vWVRJMU5pSTZJalkxT0RjNE1XTmtOR1ZrT1dKallUWXdaR0ZqWkRBNVpqZGlZamt4TkdKaU5URTFNREpsT0dJMVpEWXhPV1kxTjJZek9XRXhaRFkxTWpVNU5tTmpNalFpZlgxZExDSndjbVZrYVdOaGRHVWlPbnNpWW5WcGJHUmxjaUk2ZXlKcFpDSTZJaklpZlN3aVluVnBiR1JVZVhCbElqb2llQ0lzSW1sdWRtOWpZWFJwYjI0aU9uc2lZMjl1Wm1sblUyOTFjbU5sSWpwN2ZYMTlmUT09Iiwic2lnbmF0dXJlcyI6W3sia2V5aWQiOiIiLCJzaWciOiJNRVVDSUE4S2pacWtydDkwZnpCb2pTd3d0ajNCcWI0MUU2cnV4UWs5N1RMbnB6ZFlBaUVBek9Bak9Uenl2VEhxYnBGREFuNnpocmc2RVp2N2t4SzVmYVJvVkdZTWgyYz0ifV19"
 	dssePredicateEmptySubject            = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHRkTENKd2NtVmthV05oZEdVaU9uc2lZblZwYkdSbGNpSTZleUpwWkNJNklqSWlmU3dpWW5WcGJHUlVlWEJsSWpvaWVDSXNJbWx1ZG05allYUnBiMjRpT25zaVkyOXVabWxuVTI5MWNtTmxJanA3ZlgxOWZRPT0iLCJzaWduYXR1cmVzIjpbeyJrZXlpZCI6IiIsInNpZyI6Ik1FWUNJUUNrTEV2NkhZZ0svZDdUK0N3NTdXbkZGaHFUTC9WalAyVDA5Q2t1dk1nbDRnSWhBT1hBM0lhWWg1M1FscVk1eVU4cWZxRXJma2tGajlEakZnaWovUTQ2NnJSViJ9XX0="
 	dssePredicateMissingSha256           = "eyJwYXlsb2FkVHlwZSI6ImFwcGxpY2F0aW9uL3ZuZC5pbi10b3RvK2pzb24iLCJwYXlsb2FkIjoiZXlKZmRIbHdaU0k2SW1oMGRIQnpPaTh2YVc0dGRHOTBieTVwYnk5VGRHRjBaVzFsYm5RdmRqQXVNU0lzSW5CeVpXUnBZMkYwWlZSNWNHVWlPaUpvZEhSd2N6b3ZMM05zYzJFdVpHVjJMM0J5YjNabGJtRnVZMlV2ZGpBdU1pSXNJbk4xWW1wbFkzUWlPbHQ3SW01aGJXVWlPaUppYkc5aUlpd2laR2xuWlhOMElqcDdmWDFkTENKd2NtVmthV05oZEdVaU9uc2lZblZwYkdSbGNpSTZleUpwWkNJNklqSWlmU3dpWW5WcGJHUlVlWEJsSWpvaWVDSXNJbWx1ZG05allYUnBiMjRpT25zaVkyOXVabWxuVTI5MWNtTmxJanA3ZlgxOWZRPT0iLCJzaWduYXR1cmVzIjpbeyJrZXlpZCI6IiIsInNpZyI6Ik1FVUNJQysvM2M4RFo1TGFZTEx6SFZGejE3ZmxHUENlZXVNZ2tIKy8wa2s1cFFLUEFpRUFqTStyYnBBRlJybDdpV0I2Vm9BYVZPZ3U3NjRRM0JKdHI1bHk4VEFHczNrPSJ9XX0="
@@ -66,7 +65,6 @@ func TestVerifyBlobAttestation(t *testing.T) {
 
 	blobPath := writeBlobFile(t, td, blobContents, "blob")
 	anotherBlobPath := writeBlobFile(t, td, anotherBlobContents, "other-blob")
-	hugeBlobPath := writeBlobFile(t, td, hugeBlobContents, "huge-blob")
 	keyRef := writeBlobFile(t, td, pubkey, "cosign.pub")
 
 	bundleSLSAProvenance := makeBundleFromDSSE(t, blobSLSAProvenanceSignature)
@@ -81,7 +79,6 @@ func TestVerifyBlobAttestation(t *testing.T) {
 		digest        string
 		bundlePath    string
 		predicateType string
-		env           map[string]string
 		shouldErr     bool
 	}{
 		{
@@ -128,12 +125,6 @@ func TestVerifyBlobAttestation(t *testing.T) {
 			blobPath:      blobPath,
 			shouldErr:     true,
 		}, {
-			description: "override file size limit",
-			bundlePath:  bundleSLSAProvenance,
-			blobPath:    hugeBlobPath,
-			env:         map[string]string{"COSIGN_MAX_ATTACHMENT_SIZE": "128"},
-			shouldErr:   true,
-		}, {
 			description: "verify new bundle with public key",
 			// From blobSLSAProvenanceSignature
 			bundlePath:    makeLocalAttestNewBundle(t, "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJibG9iIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjY1ODc4MWNkNGVkOWJjYTYwZGFjZDA5ZjdiYjkxNGJiNTE1MDJlOGI1ZDYxOWY1N2YzOWExZDY1MjU5NmNjMjQifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6IjIifSwiYnVpbGRUeXBlIjoieCIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX19fQ==", "application/vnd.in-toto+json", "MEUCIA8KjZqkrt90fzBojSwwtj3Bqb41E6ruxQk97TLnpzdYAiEAzOAjOTzyvTHqbpFDAn6zhrg6EZv7kxK5faRoVGYMh2c="),
@@ -156,10 +147,6 @@ func TestVerifyBlobAttestation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			for k, v := range test.env {
-				t.Setenv(k, v)
-			}
-
 			cmd := VerifyBlobAttestationCommand{
 				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
 				IgnoreTlog:    true,
@@ -523,39 +510,6 @@ func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) st
 		t.Fatal(err)
 	}
 	return bundlePath
-}
-
-func TestParseBlobHashAlgorithm(t *testing.T) {
-	cases := []struct {
-		name    string
-		want    crypto.Hash
-		wantErr bool
-	}{
-		{name: "sha256", want: crypto.SHA256},
-		{name: "sha384", want: crypto.SHA384},
-		{name: "sha512", want: crypto.SHA512},
-		{name: "sha1", wantErr: true},
-		{name: "md5", wantErr: true},
-		{name: "", wantErr: true},
-		{name: "SHA256", wantErr: true}, // case-sensitive; matches in-toto subject convention
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := parseBlobHashAlgorithm(tc.name)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error for %q, got nil", tc.name)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got != tc.want {
-				t.Errorf("got %v, want %v", got, tc.want)
-			}
-		})
-	}
 }
 
 func TestVerifyBlobAttestationSkWithoutIdentities(t *testing.T) {
