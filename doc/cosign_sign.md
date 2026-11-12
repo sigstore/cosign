@@ -96,6 +96,7 @@ cosign sign [flags]
       --registry-username string                        registry basic auth username
       --signing-config string                           path to a signing config file
       --sk[=true|false]                                 whether to use a hardware security key
+      --skip-if-signed[=true|false]                     do not sign a digest that already has a verified signature from the identity cosign would sign as; requires --new-bundle-format
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-client-cacert string                  path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
       --timestamp-client-cert string                    path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server

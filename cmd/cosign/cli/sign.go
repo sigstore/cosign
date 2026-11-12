@@ -94,6 +94,9 @@ race conditions or (worse) malicious tampering.
 			if o.BundlePath != "" && (len(args) > 1 || o.Recursive) {
 				return fmt.Errorf("cannot use --bundle when signing multiple images or with --recursive")
 			}
+			if o.SkipIfSigned && (!o.NewBundleFormat || o.BundlePath != "" || o.Cert != "") {
+				return fmt.Errorf("--skip-if-signed requires --new-bundle-format and cannot be used with --bundle or --certificate")
+			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

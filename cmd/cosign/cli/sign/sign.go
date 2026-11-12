@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -195,6 +196,7 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 		BundlePath:    signOpts.BundlePath,
 		Upload:        signOpts.Upload,
 		OCIRemoteOpts: ociremoteOpts,
+		SkipIfSigned:  signOpts.SkipIfSigned,
 	}
 
 	if ko.SigningConfig == nil {
@@ -211,6 +213,10 @@ func signDigestBundle(ctx context.Context, digest name.Digest, ko options.KeyOpt
 	}
 
 	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, ko, signOpts.Cert, signOpts.CertChain, bundleOpts, ko.SigningConfig, ko.TrustedMaterial)
+	if errors.Is(err, signcommon.ErrAlreadySigned) {
+		ui.Infof(ctx, "Skipping %s: it is already signed by this identity", digest)
+		return nil
+	}
 	if err != nil {
 		return err
 	}

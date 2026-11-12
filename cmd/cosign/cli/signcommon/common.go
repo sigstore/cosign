@@ -424,6 +424,7 @@ type CommonBundleOpts struct {
 	BundlePath    string
 	Upload        bool
 	OCIRemoteOpts []ociremote.Option
+	SkipIfSigned  bool
 }
 
 // NewAttestationBundle uses signing config and trusted root to sign an attestation and create a bundle.
@@ -449,6 +450,16 @@ func NewAttestationBundle(ctx context.Context, ko options.KeyOpts, cert, certCha
 		}
 	}
 	signOpts := cbundle.SignOptions{TSAClientTransport: tsaClientTransport}
+
+	if bundleOpts.SkipIfSigned {
+		signed, err := signedBySigner(ctx, keypair, idToken, bundleOpts, signingConfig, trustedMaterial, &signOpts)
+		if err != nil {
+			return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, err
+		}
+		if signed {
+			return nil, nil, pb_go_v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED, ErrAlreadySigned
+		}
+	}
 
 	bundle, err := cbundle.SignData(ctx, content, keypair, idToken, certBytes, chainBytes, signingConfig, trustedMaterial, signOpts)
 	if err != nil {
