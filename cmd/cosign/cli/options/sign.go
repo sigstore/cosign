@@ -44,6 +44,7 @@ type SignOptions struct {
 	SignContainerIdentities []string
 	RecordCreationTimestamp bool
 	NewBundleFormat         bool
+	SkipIfSigned            bool
 	UseSigningConfig        bool
 	SigningConfigPath       string
 	TrustedRootPath         string
@@ -160,6 +161,9 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "expect the signature/attestation to be packaged in a Sigstore bundle")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
+
+	cmd.Flags().BoolVar(&o.SkipIfSigned, "skip-if-signed", false,
+		"do not sign a digest that already has a verified signature from the identity cosign would sign as; requires --new-bundle-format")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")

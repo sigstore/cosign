@@ -40,6 +40,7 @@ type AttestOptions struct {
 	RecordCreationTimestamp bool
 	BundlePath              string
 	NewBundleFormat         bool
+	SkipIfSigned            bool
 	UseSigningConfig        bool
 	SigningConfigPath       string
 	TrustedRootPath         string
@@ -127,6 +128,9 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "attach a Sigstore bundle using OCI referrers API")
+
+	cmd.Flags().BoolVar(&o.SkipIfSigned, "skip-if-signed", false,
+		"do not attest a digest that already has a verified attestation of the same predicate type from the identity cosign would sign as; requires --new-bundle-format")
 	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,

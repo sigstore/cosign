@@ -75,6 +75,9 @@ func Attest() *cobra.Command {
 			if o.BundlePath != "" && len(args) > 1 {
 				return fmt.Errorf("cannot use --bundle when attesting multiple images")
 			}
+			if o.SkipIfSigned && (!o.NewBundleFormat || o.BundlePath != "" || o.Cert != "") {
+				return fmt.Errorf("--skip-if-signed requires --new-bundle-format and cannot be used with --bundle or --certificate")
+			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -132,6 +135,7 @@ func Attest() *cobra.Command {
 				TlogUpload:              o.TlogUpload,
 				RekorEntryType:          o.RekorEntryType,
 				RecordCreationTimestamp: o.RecordCreationTimestamp,
+				SkipIfSigned:            o.SkipIfSigned,
 			}
 
 			for _, img := range args {

@@ -1090,6 +1090,18 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 	args := []string{imgName}
 	must(cmd.Exec(ctx, args), t)
 
+	imgRef, err := name.ParseReference(imgName)
+	must(err, t)
+	bundleCount := func() int {
+		bundles, _, err := cosign.GetBundles(ctx, imgRef, nil)
+		must(err, t)
+		return len(bundles)
+	}
+	skipSo := so
+	skipSo.SkipIfSigned = true
+	must(sign.SignCmd(ctx, ro, ko, skipSo, []string{imgName}), t)
+	assert.Equal(t, 1, bundleCount(), "--skip-if-signed signed an image this identity already signed")
+
 	// Attest image
 	predicate := `{ "buildType": "x", "builder": { "id": "2" }, "recipe": {} }`
 	predicatePath := filepath.Join(t.TempDir(), "predicate.json")
@@ -1105,6 +1117,11 @@ func TestSignAttestVerifyContainerWithSigningConfig(t *testing.T) {
 		TlogUpload:     true,
 	}
 	must(attestCmd.Exec(ctx, imgName), t)
+
+	skipAttestCmd := attestCmd
+	skipAttestCmd.SkipIfSigned = true
+	must(skipAttestCmd.Exec(ctx, imgName), t)
+	assert.Equal(t, 2, bundleCount(), "--skip-if-signed attested an image this identity already attested")
 
 	// Verify attestation
 	verifyAttestation := cliverify.VerifyAttestationCommand{
