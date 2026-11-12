@@ -34,6 +34,7 @@ type AttestOptions struct {
 	BundlePath        string
 	UseSigningConfig  bool
 	SigningConfigPath string
+	SkipIfSigned      bool
 	TrustedRootPath   string
 
 	Fulcio      FulcioOptions
@@ -94,6 +95,9 @@ func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"write everything required to verify the blob to a FILE")
 	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
+
+	cmd.Flags().BoolVar(&o.SkipIfSigned, "skip-if-signed", false,
+		"do not attest a digest that already has a verified attestation of the same predicate type from the identity cosign would sign as")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")
