@@ -18,7 +18,7 @@ cosign sign [flags]
 ### Examples
 
 ```
-  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+  cosign sign [--key <key path>|<kms uri>] [-a key=value] [--upload=true|false] [-y] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -58,12 +58,6 @@ cosign sign [flags]
 
   # sign a container image and upload to the transparency log
   cosign sign --key cosign.key <IMAGE DIGEST>
-
-  # sign a container image and skip uploading to the transparency log
-  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
-
-  # sign a container image and honor the creation timestamp of the signature
-  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>
 ```
 
 ### Options

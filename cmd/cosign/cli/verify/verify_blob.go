@@ -43,7 +43,6 @@ type VerifyBlobCmd struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 	IgnoreSCT                    bool
-	Offline                      bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	AllowCertificateChain        bool
@@ -78,12 +77,11 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
-		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}
-	vOfflineKey := verifyOfflineWithKey(c.KeyRef, "", c.Sk, co)
+	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.Sk, co)
 
 	// User provides a key. Otherwise, verification requires a Fulcio certificate
 	// provided in an attached bundle.
@@ -94,7 +92,7 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 	}
 	defer closeSV()
 
-	err = SetTrustedMaterial(ctx, c.TrustedRootPath, "", "", "", "", vOfflineKey, co)
+	err = SetTrustedMaterial(c.TrustedRootPath, vOfflineKey, co)
 	if err != nil {
 		return fmt.Errorf("setting trusted material: %w", err)
 	}

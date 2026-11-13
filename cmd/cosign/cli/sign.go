@@ -17,7 +17,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
@@ -38,7 +37,7 @@ Make sure to sign the image by its digest (@sha256:...) rather than by tag
 (:latest) so that you actually sign what you think you're signing! This prevents
 race conditions or (worse) malicious tampering.
 `,
-		Example: `  cosign sign --key <key path>|<kms uri> [-a key=value] [--upload=true|false] [-f] [-r] <image digest uri>
+		Example: `  cosign sign [--key <key path>|<kms uri>] [-a key=value] [--upload=true|false] [-y] [-r] <image digest uri>
 
   # sign a container image with the Sigstore OIDC flow
   cosign sign <IMAGE DIGEST>
@@ -77,19 +76,13 @@ race conditions or (worse) malicious tampering.
   COSIGN_DOCKER_MEDIA_TYPES=1 cosign sign --key cosign.key legacy-registry.example.com/my/image@<DIGEST>
 
   # sign a container image and upload to the transparency log
-  cosign sign --key cosign.key <IMAGE DIGEST>
-
-  # sign a container image and skip uploading to the transparency log
-  cosign sign --key cosign.key --tlog-upload=false <IMAGE DIGEST>
-
-  # sign a container image and honor the creation timestamp of the signature
-  cosign sign --key cosign.key --record-creation-timestamp <IMAGE DIGEST>`,
+  cosign sign --key cosign.key <IMAGE DIGEST>`,
 
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		PreRunE: func(_ *cobra.Command, args []string) error {
-			if o.NewBundleFormat && !o.Upload && o.BundlePath == "" {
-				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path with --new-bundle-format")
+			if !o.Upload && o.BundlePath == "" {
+				return fmt.Errorf("must enable upload to the OCI registry or specify a local --bundle path")
 			}
 			if o.BundlePath != "" && (len(args) > 1 || o.Recursive) {
 				return fmt.Errorf("cannot use --bundle when signing multiple images or with --recursive")
@@ -97,21 +90,6 @@ race conditions or (worse) malicious tampering.
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := signcommon.ValidateSigningOptions(cmd.Context(), o.UseSigningConfig, o.SigningConfigPath,
-				o.Rekor.URL, o.Fulcio.URL, o.OIDC.Issuer, o.TSAServerURL,
-				o.TlogUpload, o.NewBundleFormat, o.BundlePath,
-				o.Output, "", o.OutputCertificate, o.OutputPayload, o.OutputSignature, ""); err != nil {
-				return err
-			}
-
-			switch o.Attachment {
-			case "sbom":
-				fmt.Fprintln(os.Stderr, options.SBOMAttachmentDeprecation)
-			case "":
-				break
-			default:
-				return fmt.Errorf("specified image attachment %s not specified. Can be 'sbom'", o.Attachment)
-			}
 			oidcClientSecret, err := o.OIDC.ClientSecret()
 			if err != nil {
 				return err
@@ -122,11 +100,8 @@ race conditions or (worse) malicious tampering.
 				PassFunc:                       generate.GetPass,
 				Sk:                             o.SecurityKey.Use,
 				Slot:                           o.SecurityKey.Slot,
-				FulcioURL:                      o.Fulcio.URL,
 				IDToken:                        o.Fulcio.IdentityToken,
 				FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-				RekorURL:                       o.Rekor.URL,
-				OIDCIssuer:                     o.OIDC.Issuer,
 				OIDCClientID:                   o.OIDC.ClientID,
 				OIDCClientSecret:               oidcClientSecret,
 				OIDCRedirectURL:                o.OIDC.RedirectURL,
@@ -138,19 +113,14 @@ race conditions or (worse) malicious tampering.
 				TSAClientCert:                  o.TSAClientCert,
 				TSAClientKey:                   o.TSAClientKey,
 				TSAServerName:                  o.TSAServerName,
-				TSAServerURL:                   o.TSAServerURL,
 				IssueCertificateForExistingKey: o.IssueCertificate,
-				NewBundleFormat:                o.NewBundleFormat,
 			}
 			if err := signcommon.LoadSigningConfigAndTrustedMaterial(cmd.Context(), &ko, o.UseSigningConfig, o.SigningConfigPath, o.TrustedRootPath); err != nil {
 				return err
 			}
 
 			if err := sign.SignCmd(cmd.Context(), ro, ko, *o, args); err != nil {
-				if o.Attachment == "" {
-					return fmt.Errorf("signing %v: %w", args, err)
-				}
-				return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, args, err)
+				return fmt.Errorf("signing %v: %w", args, err)
 			}
 			return nil
 		},
