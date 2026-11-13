@@ -89,45 +89,27 @@ against the transparency log.`,
 				return err
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			v := &verify.VerifyCommand{
 				RegistryOptions:              o.Registry,
 				CertVerifyOptions:            o.CertVerify,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				KeyRef:                       o.Key,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
-				Attachment:                   o.Attachment,
 				Annotations:                  annotations,
-				HashAlgorithm:                hashAlgorithm,
-				SignatureRef:                 o.SignatureRef,
-				PayloadRef:                   o.PayloadRef,
 				LocalImage:                   o.LocalImage,
-				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-				ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				NewBundleFormat:              o.CommonVerifyOptions.NewBundleFormat,
+				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
@@ -206,41 +188,27 @@ against the transparency log.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			v := &verify.VerifyAttestationCommand{
 				RegistryOptions:              o.Registry,
 				CommonVerifyOptions:          o.CommonVerifyOptions,
 				CheckClaims:                  o.CheckClaims,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
-				CARoots:                      o.CertVerify.CARoots,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
 				KeyRef:                       o.Key,
 				Sk:                           o.SecurityKey.Use,
 				Slot:                         o.SecurityKey.Slot,
 				Output:                       o.Output,
-				RekorURL:                     o.Rekor.URL,
 				PredicateType:                o.Predicate.Type,
 				Policies:                     o.Policies,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
-				Offline:                      o.CommonVerifyOptions.Offline,
-				TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-				HashAlgorithm:                hashAlgorithm,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
@@ -328,7 +296,6 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
@@ -356,10 +323,12 @@ func VerifyBlobAttestation() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "verify-blob-attestation",
 		Short: "Verify an attestation on the supplied blob",
-		Long: `Verify an attestation on the supplied blob input using the specified key reference.
-You may specify either a key or a kms reference to verify against.
+		Long: `Verify an attestation on the supplied blob input using a Sigstore bundle, provided via --bundle (required).
+Verify against a public key or KMS reference (--key), a security key (--sk), or, for keyless
+signatures, a certificate identity and OIDC issuer (--certificate-identity and --certificate-oidc-issuer).
 
-Signed material is provided with the --bundle flag.
+A trusted root verifies service-provided material in the bundle (certificates, transparency log
+entries, and RFC 3161 timestamps). Cosign fetches it from TUF, unless you provide one via --trusted-root.
 The blob may be specified as a path to a file.`,
 		Example: ` cosign verify-blob-attestation --bundle <path> --certificate-identity <identity> --certificate-oidc-issuer <issuer> <blob>
 
@@ -390,45 +359,28 @@ The blob may be specified as a path to a file.`,
 				o.CommonVerifyOptions.IgnoreTlog = true
 			}
 
-			hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
-			if err != nil {
-				return err
-			}
-
 			ko := options.KeyOpts{
-				KeyRef:               o.Key,
-				Sk:                   o.SecurityKey.Use,
-				Slot:                 o.SecurityKey.Slot,
-				RekorURL:             o.Rekor.URL,
-				BundlePath:           o.BundlePath,
-				RFC3161TimestampPath: o.RFC3161TimestampPath,
-				TSACertChainPath:     o.CommonVerifyOptions.TSACertChainPath,
-				NewBundleFormat:      o.CommonVerifyOptions.NewBundleFormat,
+				KeyRef:     o.Key,
+				Sk:         o.SecurityKey.Use,
+				Slot:       o.SecurityKey.Slot,
+				BundlePath: o.BundlePath,
 			}
 			v := verify.VerifyBlobAttestationCommand{
 				KeyOpts:                      ko,
 				PredicateType:                o.Type,
 				CheckClaims:                  o.CheckClaims,
-				SignaturePath:                o.SignaturePath,
 				CertVerifyOptions:            o.CertVerify,
-				CertRef:                      o.CertVerify.Cert,
-				CertChain:                    o.CertVerify.CertChain,
-				CARoots:                      o.CertVerify.CARoots,
-				CAIntermediates:              o.CertVerify.CAIntermediates,
 				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
 				CertGithubWorkflowSHA:        o.CertVerify.CertGithubWorkflowSha,
 				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
 				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-				SCTRef:                       o.CertVerify.SCT,
-				Offline:                      o.CommonVerifyOptions.Offline,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 				Digest:                       o.Digest,
 				DigestAlg:                    o.DigestAlg,
-				HashAlgorithm:                hashAlgorithm,
 				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 			}
 			// We only use the blob if we are checking claims.
