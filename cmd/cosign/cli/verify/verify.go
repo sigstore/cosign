@@ -35,6 +35,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -146,6 +147,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		ExperimentalOCI11:            c.ExperimentalOCI11,
 		UseSignedTimestamps:          c.TSACertChainPath != "" || c.UseSignedTimestamps,
 		NewBundleFormat:              c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat,
+		BundlePredicateType:          types.CosignSignPredicateType,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, c.CertRef, c.Sk, co)
@@ -160,7 +162,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	} else {
 		ref, err := name.ParseReference(images[0], c.NameOptions...)
 		if err == nil && (c.NewBundleFormat || c.CommonVerifyOptions.NewBundleFormat) {
-			newBundles, _, err := cosign.GetBundles(ctx, ref, co.RegistryClientOpts, c.NameOptions...)
+			newBundles, _, err := cosign.GetBundlesWithPredicateType(ctx, ref, co.RegistryClientOpts, co.BundlePredicateType, c.NameOptions...)
 			if len(newBundles) == 0 || err != nil {
 				co.NewBundleFormat = false
 			}
