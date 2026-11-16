@@ -100,7 +100,6 @@ against the transparency log.`,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
 					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-					AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
 				},
 			}
 

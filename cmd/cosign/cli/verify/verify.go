@@ -60,7 +60,6 @@ type VerifyCommand struct {
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
 	MaxWorkers                   int
-	AllowCertificateChain        bool
 }
 
 // Exec runs the verification command
@@ -94,7 +93,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	if c.AllowHTTPRegistry || c.AllowInsecure {
 		c.NameOptions = append(c.NameOptions, name.Insecure)
 	}
-	if c.AllowCertificateChain || c.CommonVerifyOptions.AllowCertificateChain {
+	if c.AllowCertificateChain {
 		ociremoteOpts = append(ociremoteOpts, ociremote.WithBundleOptions(sgbundle.AllowCertificateChain()))
 	}
 
@@ -112,7 +111,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		IgnoreTlog:                   c.IgnoreTlog,
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
-		AllowCertificateChain:        c.AllowCertificateChain || c.CommonVerifyOptions.AllowCertificateChain,
+		AllowCertificateChain:        c.AllowCertificateChain,
 		NewBundleFormat:              true,
 	}
 	vOfflineKey := verifyOfflineWithKey(c.KeyRef, "", c.Sk, co)

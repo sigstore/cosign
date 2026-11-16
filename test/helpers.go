@@ -184,15 +184,15 @@ var verifyKeylessTSA = func(imageRef, _ string, skipSCT, skipTlogVerify bool) er
 var verifyWithTrustedRoot = func(imageRef, trustedRootPath string) error {
 	cmd := cliverify.VerifyCommand{
 		CommonVerifyOptions: options.CommonVerifyOptions{
-			TrustedRootPath: trustedRootPath,
+			TrustedRootPath:       trustedRootPath,
+			AllowCertificateChain: true,
 		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertOidcIssuerRegexp: ".*",
 			CertIdentityRegexp:   ".*",
 		},
-		IgnoreSCT:             true,
-		MaxWorkers:            10,
-		AllowCertificateChain: true,
+		IgnoreSCT:  true,
+		MaxWorkers: 10,
 	}
 	initVerifyCmd(&cmd)
 	return cmd.Exec(context.Background(), []string{imageRef})

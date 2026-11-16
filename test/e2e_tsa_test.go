@@ -257,9 +257,9 @@ func TestTSAMTLSWithSigningConfig(t *testing.T) {
 		CheckClaims:         true,
 		UseSignedTimestamps: true,
 		CommonVerifyOptions: options.CommonVerifyOptions{
-			TrustedRootPath: trustedRootFile,
+			TrustedRootPath:       trustedRootFile,
+			AllowCertificateChain: true,
 		},
-		AllowCertificateChain: true,
 		CertVerifyOptions: options.CertVerifyOptions{
 			CertIdentityRegexp:   ".*",
 			CertOidcIssuerRegexp: ".*",
