@@ -4,10 +4,12 @@ Verify an attestation on the supplied blob
 
 ### Synopsis
 
-Verify an attestation on the supplied blob input using the specified key reference.
-You may specify either a key or a kms reference to verify against.
+Verify an attestation on the supplied blob input using a Sigstore bundle, provided via --bundle (required).
+Verify against a public key or KMS reference (--key), a security key (--sk), or, for keyless
+signatures, a certificate identity and OIDC issuer (--certificate-identity and --certificate-oidc-issuer).
 
-Signed material is provided with the --bundle flag.
+A trusted root verifies service-provided material in the bundle (certificates, transparency log
+entries, and RFC 3161 timestamps). Cosign fetches it from TUF, unless you provide one via --trusted-root.
 The blob may be specified as a path to a file.
 
 ```
