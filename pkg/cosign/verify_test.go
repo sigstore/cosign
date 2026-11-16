@@ -61,6 +61,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/sigstore/cosign/v3/pkg/oci/layout"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/cosign/v3/pkg/types"
@@ -115,18 +116,6 @@ func (m *mockAttestation) Base64Signature() (string, error) {
 	return string(b), err
 }
 
-func appendSlices(slices [][]byte) []byte {
-	totalLen := 0
-	for _, s := range slices {
-		totalLen += len(s)
-	}
-	tmp := make([]byte, 0, totalLen)
-	for _, s := range slices {
-		tmp = append(tmp, s...)
-	}
-	return tmp
-}
-
 func Test_verifyOCIAttestation(t *testing.T) {
 	stmt, err := json.Marshal(in_toto.ProvenanceStatementSLSA02{})
 	if err != nil {
@@ -175,7 +164,7 @@ func TestVerifyImageSignature(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub, pemRoot}, nil)))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
 			RootCerts:  rootPool,
@@ -211,7 +200,7 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	signature, _ := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 
 	ociSig, _ := static.NewSignature(payload,
-		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})))
+		base64.StdEncoding.EncodeToString(signature), static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub3, pemSub2, pemSub1, pemRoot}, nil)))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
 		RootCerts: rootPool,
 		IgnoreSCT: true, IgnoreTlog: true,
@@ -285,7 +274,7 @@ func Test_verifySignaturesErrNoMatchingSignatures(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub, pemRoot}, nil)))
 	_, _, err := verifySignatures(context.Background(), &fakeOCISignatures{signatures: []oci.Signature{ociSig}}, v1.Hash{}, &CheckOpts{
 		RootCerts:  rootPool,
 		IgnoreSCT:  true,
@@ -590,7 +579,7 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub, pemRoot}, nil)))
 	verified, err := VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
 		&CheckOpts{
 			RootCerts:         rootPool,
@@ -1774,7 +1763,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 
 	// success, signing over signature
@@ -1798,7 +1787,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	rfc3161TS = bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
 	ociSig, _ = static.NewSignature(payload,
 		"", /*signature*/
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
 		TSACertificate:              leaves[0],
@@ -1812,7 +1801,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	// failure with non-base64 encoded signature
 	ociSig, _ = static.NewSignature(payload,
 		string(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
 		TSACertificate:              leaves[0],
@@ -1833,7 +1822,7 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	signature, _ = privKey.Sign(rand.Reader, h[:], crypto.SHA256)
 	ociSig, _ = static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(signature),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemRoot})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemRoot}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
 		TSACertificate:              leaves[0],
@@ -1940,7 +1929,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 
 	ociSig, _ := static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(sigBytes),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})))
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub, pemRoot}, nil)))
 
 	co := &CheckOpts{
 		RootCerts:  rootPool,
@@ -1985,7 +1974,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 
 	ociSig, _ = static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(sigBytes),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{pemSub, pemRoot}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, co)
 	if err == nil {
@@ -2010,7 +1999,7 @@ func TestVerifyImageSignatureExpiredCACertificate(t *testing.T) {
 
 	ociSig, _ = static.NewSignature(payload,
 		base64.StdEncoding.EncodeToString(sigBytes),
-		static.WithCertChain(pemLeaf, appendSlices([][]byte{})),
+		static.WithCertChain(pemLeaf, bytes.Join([][]byte{}, nil)),
 		static.WithRFC3161Timestamp(&rfc3161TS))
 	_, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, co)
 	if err == nil {
@@ -2229,6 +2218,10 @@ func createTestSignedImage(t *testing.T, withBundle, attestation bool) oci.Signe
 // createV3BundleLayout creates a layout directory with a v3 sigstore bundle.
 // V3 bundles are stored as separate images with layers having the sigstore bundle media type.
 func createV3BundleLayout(t *testing.T) string {
+	return createV3BundleLayoutWithAnnotations(t, nil)
+}
+
+func createV3BundleLayoutWithAnnotations(t *testing.T, annotations map[string]string) string {
 	t.Helper()
 	tmp := t.TempDir()
 
@@ -2287,6 +2280,7 @@ func createV3BundleLayout(t *testing.T) string {
 		Digest:    targetDigest,
 		Size:      0,
 	}
+	referrerManifest.Annotations = annotations
 
 	// Write the referrer manifest to blobs/sha256
 	blobsDir := tmp + "/blobs/sha256"
@@ -2323,6 +2317,16 @@ func TestHasLocalAttestationBundles_V3Bundles(t *testing.T) {
 	hasBundles, err := HasLocalAttestationBundles(tmp)
 	require.NoError(t, err)
 	assert.True(t, hasBundles, "expected true for v3 attestations with bundles")
+}
+
+func TestHasLocalAttestationBundles_SignatureBundleOnly(t *testing.T) {
+	tmp := createV3BundleLayoutWithAnnotations(t, map[string]string{
+		ociremote.BundlePredicateType: types.CosignSignPredicateType,
+	})
+
+	hasBundles, err := HasLocalAttestationBundles(tmp)
+	require.NoError(t, err)
+	assert.False(t, hasBundles, "expected false when layout only contains signature bundles")
 }
 
 func TestHasLocalSigstoreBundles_OCIReferrers(t *testing.T) {
