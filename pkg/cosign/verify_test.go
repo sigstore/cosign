@@ -174,9 +174,25 @@ func TestVerifyImageSignature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
-	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+
+	b64Sig := base64.StdEncoding.EncodeToString(signature)
+	rekorBundle, rekorPubKeys := testRekorBundle(t, b64Sig, payload, pemLeaf)
+	ociSig, _ = static.NewSignature(payload, b64Sig,
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})), static.WithBundle(rekorBundle))
+	verified, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			RekorPubKeys: rekorPubKeys,
+			Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+	if err != nil {
+		t.Fatalf("unexpected error while verifying signature with bundle, got %v", err)
+	}
+	if !verified {
+		t.Fatalf("expected verified=true with bundle, got verified=false")
 	}
 }
 
@@ -208,9 +224,24 @@ func TestVerifyImageSignatureMultipleSubs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
-	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+
+	b64Sig := base64.StdEncoding.EncodeToString(signature)
+	rekorBundle, rekorPubKeys := testRekorBundle(t, b64Sig, payload, pemLeaf)
+	ociSig, _ = static.NewSignature(payload, b64Sig,
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub3, pemSub2, pemSub1, pemRoot})), static.WithBundle(rekorBundle))
+	verified, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{}, &CheckOpts{
+		RootCerts:    rootPool,
+		IgnoreSCT:    true,
+		RekorPubKeys: rekorPubKeys,
+		Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+	if err != nil {
+		t.Fatalf("unexpected error while verifying signature with bundle, got %v", err)
+	}
+	if !verified {
+		t.Fatalf("expected verified=true with bundle, got verified=false")
 	}
 }
 
@@ -247,6 +278,37 @@ func CreateTestBundle(ctx context.Context, t *testing.T, rekor signature.Signer,
 		Payload:              pyld,
 	}
 	return b
+}
+
+// testRekorBundle returns a Rekor bundle for the signature and log keys that trust it.
+func testRekorBundle(t *testing.T, b64Sig string, payload, pemLeaf []byte) (*bundle.RekorBundle, *TrustedTransparencyLogPubKeys) {
+	t.Helper()
+	ctx := context.Background()
+	sv, _, err := signature.NewECDSASignerVerifier(elliptic.P256(), rand.Reader, crypto.SHA256)
+	if err != nil {
+		t.Fatalf("creating rekor signer: %v", err)
+	}
+	pe, err := proposedEntries(b64Sig, payload, pemLeaf)
+	if err != nil {
+		t.Fatalf("creating proposed entry: %v", err)
+	}
+	entry, err := rtypes.UnmarshalEntry(pe[0])
+	if err != nil {
+		t.Fatalf("unmarshalling entry: %v", err)
+	}
+	leaf, err := entry.Canonicalize(ctx)
+	if err != nil {
+		t.Fatalf("canonicalizing entry: %v", err)
+	}
+	pemBytes, err := cryptoutils.MarshalPublicKeyToPEM(sv.Public())
+	if err != nil {
+		t.Fatalf("marshalling rekor public key: %v", err)
+	}
+	rekorPubKeys := NewTrustedTransparencyLogPubKeys()
+	if err := rekorPubKeys.AddTransparencyLogPubKey(pemBytes, tuf.Active); err != nil {
+		t.Fatalf("adding rekor public key: %v", err)
+	}
+	return CreateTestBundle(ctx, t, sv, leaf), &rekorPubKeys
 }
 
 func Test_verifySignaturesErrNoSignaturesFound(t *testing.T) {
@@ -518,9 +580,24 @@ func TestVerifyImageSignatureWithOnlyRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while verifying signature, expected no error, got %v", err)
 	}
-	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+
+	b64Sig := base64.StdEncoding.EncodeToString(signature)
+	rekorBundle, rekorPubKeys := testRekorBundle(t, b64Sig, payload, pemLeaf)
+	ociSig, _ = static.NewSignature(payload, b64Sig, static.WithCertChain(pemLeaf, pemRoot), static.WithBundle(rekorBundle))
+	verified, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			RekorPubKeys: rekorPubKeys,
+			Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+	if err != nil {
+		t.Fatalf("unexpected error while verifying signature with bundle, got %v", err)
+	}
+	if !verified {
+		t.Fatalf("expected verified=true with bundle, got verified=false")
 	}
 }
 
@@ -551,9 +628,25 @@ func TestVerifyImageSignatureWithMissingSub(t *testing.T) {
 	if !strings.Contains(err.Error(), "certificate signed by unknown authority") {
 		t.Fatal("expected error while verifying signature")
 	}
-	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+
+	// A valid tlog bundle must not make up for an unverifiable certificate chain.
+	b64Sig := base64.StdEncoding.EncodeToString(signature)
+	rekorBundle, rekorPubKeys := testRekorBundle(t, b64Sig, payload, pemLeaf)
+	ociSig, _ = static.NewSignature(payload, b64Sig, static.WithCertChain(pemLeaf, pemRoot), static.WithBundle(rekorBundle))
+	verified, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:    rootPool,
+			IgnoreSCT:    true,
+			RekorPubKeys: rekorPubKeys,
+			Identities:   []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+	if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		t.Fatalf("expected unknown authority error with bundle, got %v", err)
+	}
+	if verified {
+		t.Fatalf("expected verified=false with bundle, got verified=true")
 	}
 }
 
@@ -593,9 +686,27 @@ func TestVerifyImageSignatureWithExistingSub(t *testing.T) {
 	if !strings.Contains(err.Error(), "certificate signed by unknown authority") {
 		t.Fatal("expected error while verifying signature")
 	}
-	// TODO: Create fake bundle and test verification
 	if verified == true {
 		t.Fatalf("expected verified=false, got verified=true")
+	}
+
+	// A valid tlog bundle must not make up for an unverifiable certificate chain.
+	b64Sig := base64.StdEncoding.EncodeToString(signature)
+	rekorBundle, rekorPubKeys := testRekorBundle(t, b64Sig, payload, pemLeaf)
+	ociSig, _ = static.NewSignature(payload, b64Sig,
+		static.WithCertChain(pemLeaf, appendSlices([][]byte{pemSub, pemRoot})), static.WithBundle(rekorBundle))
+	verified, err = VerifyImageSignature(context.TODO(), ociSig, v1.Hash{},
+		&CheckOpts{
+			RootCerts:         rootPool,
+			IntermediateCerts: subPool,
+			IgnoreSCT:         true,
+			RekorPubKeys:      rekorPubKeys,
+			Identities:        []Identity{{Subject: "subject@mail.com", Issuer: "oidc-issuer"}}})
+	if err == nil || !strings.Contains(err.Error(), "certificate signed by unknown authority") {
+		t.Fatalf("expected unknown authority error with bundle, got %v", err)
+	}
+	if verified {
+		t.Fatalf("expected verified=false with bundle, got verified=true")
 	}
 }
 
