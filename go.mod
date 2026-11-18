@@ -53,7 +53,7 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go/v3 v3.46.0
 	golang.org/x/crypto v0.59.0
-	golang.org/x/oauth2 v0.37.0
+	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sync v0.25.0
 	golang.org/x/term v0.48.0
 	google.golang.org/api v0.308.0
