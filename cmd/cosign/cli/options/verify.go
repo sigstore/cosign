@@ -16,9 +16,11 @@
 package options
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/sigstore/cosign/v3/internal/pkg/cosign"
 )
@@ -36,6 +38,13 @@ type CommonVerifyOptions struct {
 	NewBundleFormat       bool
 	TrustedRootPath       string
 	AllowCertificateChain bool
+	// RekorThreshold is the minimum number of verified transparency log
+	// entries. 0 skips transparency log verification.
+	RekorThreshold int
+	// TimestampThreshold is the minimum number of verified RFC3161 signed
+	// timestamps. After ResolveThresholds, it is 0 unless
+	// --timestamp-threshold was set explicitly.
+	TimestampThreshold int
 }
 
 func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -49,16 +58,30 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	_ = cmd.MarkFlagFilename("timestamp-certificate-chain", certificateExts...)
 	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chain")
 
+	cmd.Flags().IntVar(&o.RekorThreshold, "rekor-threshold", 1,
+		"minimum number of verified transparency log entries. Set to 0 to skip transparency log verification, to be used when an artifact signature "+
+			"has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log")
+
+	cmd.Flags().IntVar(&o.TimestampThreshold, "timestamp-threshold", 1,
+		"minimum number of verified RFC3161 signed timestamps. When not set explicitly, signed timestamps are required only for bundles with "+
+			"Rekor v2 entries and no Rekor v1 entries. Set to 0 to not require signed timestamps, except for certificate-signed bundles with only "+
+			"Rekor v2 entries, which always require one because they have no other trusted time")
+
 	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
 		"verify rfc3161 timestamps")
+	_ = cmd.Flags().MarkDeprecated("use-signed-timestamps", "please use --timestamp-threshold=1 instead")
 
 	cmd.Flags().BoolVar(&o.IgnoreTlog, "insecure-ignore-tlog", false,
 		"ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts "+
 			"cannot be publicly verified when not included in a log")
+	_ = cmd.Flags().MarkDeprecated("insecure-ignore-tlog", "please use --rekor-threshold=0 instead")
+
+	cmd.MarkFlagsMutuallyExclusive("rekor-threshold", "insecure-ignore-tlog")
+	cmd.MarkFlagsMutuallyExclusive("timestamp-threshold", "use-signed-timestamps")
 
 	cmd.Flags().BoolVar(&o.PrivateInfrastructure, "private-infrastructure", false,
 		"skip transparency log verification when verifying artifacts in a privately deployed infrastructure")
-	_ = cmd.Flags().MarkDeprecated("private-infrastructure", "please use --insecure-ignore-tlog instead")
+	_ = cmd.Flags().MarkDeprecated("private-infrastructure", "please use --rekor-threshold=0 instead")
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
@@ -81,6 +104,43 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 }
 
 var verifyOutputTypes = []string{"json", "text"} // First one is the default
+// ResolveThresholds reconciles --rekor-threshold and --timestamp-threshold
+// with the deprecated --insecure-ignore-tlog, --private-infrastructure and
+// --use-signed-timestamps flags, so that IgnoreTlog, UseSignedTimestamps,
+// RekorThreshold and TimestampThreshold are consistent. It must be called
+// after flags are parsed.
+func (o *CommonVerifyOptions) ResolveThresholds(flags *pflag.FlagSet) error {
+	if o.RekorThreshold < 0 {
+		return fmt.Errorf("--rekor-threshold must be at least 0")
+	}
+	if o.TimestampThreshold < 0 {
+		return fmt.Errorf("--timestamp-threshold must be at least 0")
+	}
+	if o.PrivateInfrastructure && flags.Changed("rekor-threshold") && o.RekorThreshold > 0 {
+		return fmt.Errorf("--private-infrastructure cannot be used with a non-zero --rekor-threshold")
+	}
+
+	if flags.Changed("rekor-threshold") {
+		o.IgnoreTlog = o.RekorThreshold == 0
+	} else if o.IgnoreTlog || o.PrivateInfrastructure {
+		o.RekorThreshold = 0
+	}
+	if o.PrivateInfrastructure {
+		o.IgnoreTlog = true
+	}
+
+	// When --timestamp-threshold is unset, keep the legacy behavior: signed
+	// timestamps are verified if --use-signed-timestamps is set or the bundle
+	// only has Rekor v2 entries, and non-bundle signatures without a
+	// timestamp are accepted.
+	// A threshold of 0 in CheckOpts selects that behavior.
+	if flags.Changed("timestamp-threshold") {
+		o.UseSignedTimestamps = o.TimestampThreshold > 0
+	} else {
+		o.TimestampThreshold = 0
+	}
+	return nil
+}
 
 // VerifyOptions is the top level wrapper for the `verify` command.
 type VerifyOptions struct {

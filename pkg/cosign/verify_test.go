@@ -2900,3 +2900,84 @@ func TestVerifyImageSignatureWithBundleBodyMissingHash(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyImageSignatureTimestampThreshold(t *testing.T) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier, err := signature.LoadECDSAVerifier(&privKey.PublicKey, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := []byte{1, 2, 3, 4}
+	h := sha256.Sum256(payload)
+	sigBytes, err := privKey.Sign(rand.Reader, h[:], crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b64Sig := base64.StdEncoding.EncodeToString(sigBytes)
+
+	client, err := tsaMock.NewTSAClient(tsaMock.TSAClientOptions{Time: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.Message = sigBytes
+	timestampResponse, err := client.GetTimestampResponse(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(client.CertChain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaves, intermediates, roots, err := splitPEMCertificateChain(certChainPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sigWithoutTS, err := static.NewSignature(payload, b64Sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sigWithTS, err := static.NewSignature(payload, b64Sig,
+		static.WithRFC3161Timestamp(bundle.TimestampToRFC3161Timestamp(timestampResponse)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name                string
+		sig                 oci.Signature
+		useSignedTimestamps bool
+		threshold           int
+		wantErr             bool
+	}{
+		{name: "no timestamp, optional", sig: sigWithoutTS, useSignedTimestamps: true, threshold: 0},
+		{name: "no timestamp, required", sig: sigWithoutTS, useSignedTimestamps: true, threshold: 1, wantErr: true},
+		{name: "timestamp, optional", sig: sigWithTS, useSignedTimestamps: true, threshold: 0},
+		{name: "timestamp, required", sig: sigWithTS, useSignedTimestamps: true, threshold: 1},
+		{name: "no timestamp, threshold without UseSignedTimestamps", sig: sigWithoutTS, threshold: 1, wantErr: true},
+		{name: "timestamp, threshold without UseSignedTimestamps", sig: sigWithTS, threshold: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := VerifyImageSignature(context.TODO(), tc.sig, v1.Hash{}, &CheckOpts{
+				SigVerifier:                 verifier,
+				IgnoreTlog:                  true,
+				UseSignedTimestamps:         tc.useSignedTimestamps,
+				TimestampThreshold:          tc.threshold,
+				TSACertificate:              leaves[0],
+				TSAIntermediateCertificates: intermediates,
+				TSARootCertificates:         roots,
+			})
+			if tc.wantErr {
+				var vf *VerificationFailure
+				if !errors.As(err, &vf) {
+					t.Fatalf("expected %T, got %T (%v)", vf, err, err)
+				}
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
