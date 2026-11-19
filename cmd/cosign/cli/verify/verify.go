@@ -30,6 +30,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -138,14 +139,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	for _, img := range images {
 		var verified []oci.Signature
 		var bundleVerified bool
+		var displayName string
 
 		if c.LocalImage {
 			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
 			if err != nil {
 				return err
 			}
-			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, verified, c.Output)
+			displayName = img
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -157,13 +158,15 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
+			displayName = ref.Name()
+		}
 
-			verifiedOutput, err := transformOutput(verified, ref.Name())
-			if err == nil {
-				verified = verifiedOutput
-			}
-
-			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)
+		verifiedOutput, err := transformOutput(verified, displayName)
+		if err == nil {
+			verified = verifiedOutput
+		}
+		if verified != nil {
+			PrintVerificationHeader(ctx, displayName, co, bundleVerified, fulcioVerified)
 			PrintVerification(ctx, verified, c.Output)
 		}
 	}
@@ -192,6 +195,11 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
 			return nil, fmt.Errorf("no intoto subject or digest found")
+		}
+		if intotoStatement.PredicateType != types.CosignSignPredicateType {
+			// Attestations with other predicate types are allowed, but do not
+			// count towards verified for `cosign verify`
+			return nil, nil
 		}
 
 		var digest string
