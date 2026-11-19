@@ -163,9 +163,17 @@ type CheckOpts struct {
 	TSAIntermediateCertificates []*x509.Certificate
 	// UseSignedTimestamps enables timestamp verification using a TSA
 	UseSignedTimestamps bool
+	// TimestampThreshold is the minimum number of verified signed timestamps
+	// required when UseSignedTimestamps is set. For Sigstore bundles, 0 is
+	// treated as 1. For signatures not in the bundle format, 0 verifies a
+	// timestamp if one is present but doesn't require it, and 1 requires one.
+	TimestampThreshold int
 
 	// IgnoreTlog skip tlog verification
 	IgnoreTlog bool
+	// RekorThreshold is the minimum number of verified transparency log
+	// entries required when IgnoreTlog is not set. Defaults to 1 if unset.
+	RekorThreshold int
 
 	// The amount of maximum workers for parallel executions.
 	// Defaults to 10.
@@ -202,6 +210,33 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 		return nil, fmt.Errorf("no public key material available")
 	}
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
+}
+
+func (co *CheckOpts) rekorThreshold() int {
+	if co.RekorThreshold > 0 {
+		return co.RekorThreshold
+	}
+	return 1
+}
+
+func (co *CheckOpts) timestampThreshold() int {
+	if co.TimestampThreshold > 0 {
+		return co.TimestampThreshold
+	}
+	return 1
+}
+
+// checkLegacyThresholds returns an error if thresholds above 1 are requested
+// for a non-bundle signature, which holds at most one Rekor bundle and one
+// RFC3161 timestamp.
+func (co *CheckOpts) checkLegacyThresholds() error {
+	if !co.IgnoreTlog && co.rekorThreshold() > 1 {
+		return fmt.Errorf("a transparency log threshold of %d is unsupported for signatures not in the Sigstore bundle format", co.rekorThreshold())
+	}
+	if co.UseSignedTimestamps && co.timestampThreshold() > 1 {
+		return fmt.Errorf("a signed timestamp threshold of %d is unsupported for signatures not in the Sigstore bundle format", co.timestampThreshold())
+	}
+	return nil
 }
 
 // verificationOptions returns the verification options for verifying with sigstore-go.
@@ -263,7 +298,7 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 	}
 
 	if !co.IgnoreTlog {
-		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1))
+		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(co.rekorThreshold()))
 		// If you aren't using a signed timestamp, use the time from the transparency log
 		// to verify Fulcio certificates, or require no timestamp to verify a key.
 		// For Rekor v2, a signed timestamp must be provided.
@@ -276,7 +311,7 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 		}
 	}
 	if co.UseSignedTimestamps {
-		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
+		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(co.timestampThreshold()))
 	}
 	// A time verification policy must be provided. Without a signed timestamp or integrated timestamp,
 	// verify a certificate with the current time, or require no timestamp to verify a key.
@@ -829,6 +864,10 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 	verifyFn signatureVerificationFn, co *CheckOpts) (
 	bundleVerified bool, err error) {
+	if err := co.checkLegacyThresholds(); err != nil {
+		return false, err
+	}
+
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
 	var acceptableRFC3161Timestamp *timestamp.Timestamp
@@ -839,6 +878,10 @@ func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
 		}
 		if acceptableRFC3161Timestamp != nil {
 			acceptableRFC3161Time = &acceptableRFC3161Timestamp.Time
+		} else if co.TimestampThreshold > 0 {
+			return false, &VerificationFailure{
+				fmt.Errorf("signed timestamp threshold not met: 0 < %d", co.TimestampThreshold),
+			}
 		}
 	}
 

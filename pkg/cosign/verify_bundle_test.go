@@ -477,6 +477,46 @@ func TestVerifyBundle(t *testing.T) {
 			entity:               &bundleMutator{SignedEntity: blobSig, tlogOverride: otherTlogEntries},
 			wantErr:              true,
 		},
+		{
+			name: "rekor and timestamp thresholds met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				RekorThreshold:      1,
+				TimestampThreshold:  1,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              false,
+		},
+		{
+			name: "rekor threshold not met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				RekorThreshold:      2,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              true,
+		},
+		{
+			name: "timestamp threshold not met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				TimestampThreshold:  2,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err = VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)
@@ -905,6 +945,30 @@ func TestRekorV2Bundle(t *testing.T) {
 			err := rekorV2Bundle(bundle, tc.co)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedUseSignedTimestamps, tc.co.UseSignedTimestamps)
+		})
+	}
+}
+
+func TestCheckLegacyThresholds(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		co      CheckOpts
+		wantErr bool
+	}{
+		{name: "defaults", co: CheckOpts{}},
+		{name: "thresholds of one", co: CheckOpts{RekorThreshold: 1, UseSignedTimestamps: true, TimestampThreshold: 1}},
+		{name: "rekor threshold above one", co: CheckOpts{RekorThreshold: 2}, wantErr: true},
+		{name: "rekor threshold above one, tlog ignored", co: CheckOpts{RekorThreshold: 2, IgnoreTlog: true}},
+		{name: "timestamp threshold above one", co: CheckOpts{UseSignedTimestamps: true, TimestampThreshold: 2}, wantErr: true},
+		{name: "timestamp threshold above one, timestamps unused", co: CheckOpts{TimestampThreshold: 2}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.co.checkLegacyThresholds()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

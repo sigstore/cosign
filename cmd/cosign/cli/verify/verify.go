@@ -59,6 +59,8 @@ type VerifyCommand struct {
 	Offline                      bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
+	RekorThreshold               int
+	TimestampThreshold           int
 	MaxWorkers                   int
 }
 
@@ -109,6 +111,8 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		RekorThreshold:               c.RekorThreshold,
+		TimestampThreshold:           c.TimestampThreshold,
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,

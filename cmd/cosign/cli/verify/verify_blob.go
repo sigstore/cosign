@@ -46,6 +46,8 @@ type VerifyBlobCmd struct {
 	Offline                      bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
+	RekorThreshold               int
+	TimestampThreshold           int
 	AllowCertificateChain        bool
 }
 
@@ -80,6 +82,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		Identities:                   identities,
 		Offline:                      c.Offline,
 		IgnoreTlog:                   c.IgnoreTlog,
+		RekorThreshold:               c.RekorThreshold,
+		TimestampThreshold:           c.TimestampThreshold,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}

@@ -74,6 +74,9 @@ against the transparency log.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
+			}
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
 				return err
@@ -98,6 +101,8 @@ against the transparency log.`,
 					LocalImage:                   o.LocalImage,
 					Offline:                      o.CommonVerifyOptions.Offline,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+					RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+					TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				},

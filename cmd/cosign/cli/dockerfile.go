@@ -79,6 +79,9 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
   cosign dockerfile verify --key hashivault://[KEY] <path/to/Dockerfile>`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
+			}
 			annotations, err := o.AnnotationsMap()
 			if err != nil {
 				return err
@@ -103,6 +106,8 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 					LocalImage:                   o.LocalImage,
 					Offline:                      o.CommonVerifyOptions.Offline,
 					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+					RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+					TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				},

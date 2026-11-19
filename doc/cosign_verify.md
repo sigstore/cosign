@@ -75,7 +75,6 @@ cosign verify [flags]
       --check-claims[=true|false]                       whether to check the claims found (default true)
   -h, --help[=true|false]                               help for verify
       --insecure-ignore-sct[=true|false]                when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-ignore-tlog[=true|false]               ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --k8s-keychain[=true|false]                       whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --local-image[=true|false]                        whether the specified image is a path to an image saved locally via 'cosign save'
@@ -88,10 +87,11 @@ cosign verify [flags]
       --registry-server-name string                     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the registry
       --registry-token string                           registry bearer auth token
       --registry-username string                        registry basic auth username
+      --rekor-threshold int                             minimum number of verified transparency log entries. Set to 0 to skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default 1)
       --sk[=true|false]                                 whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-threshold int                         minimum number of verified RFC3161 signed timestamps. When not set explicitly, signed timestamps are required only for bundles with Rekor v2 entries and no Rekor v1 entries. Set to 0 to not require signed timestamps, except for certificate-signed bundles with only Rekor v2 entries, which always require one because they have no other trusted time (default 1)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
-      --use-signed-timestamps[=true|false]              verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands
