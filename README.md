@@ -142,17 +142,15 @@ The following checks were performed on these signatures:
 
 ### Verify a container in an air-gapped environment
 
-**Note:** This section is out of date.
-
 **Note:** Most verification workflows require periodically requesting service keys from a TUF repository.
 For airgapped verification of signatures using the public-good instance, you will need to retrieve the
 [trusted root](https://github.com/sigstore/root-signing/blob/main/targets/trusted_root.json) file from the production
 TUF repository. The contents of this file will change without notification. By not using TUF, you will need
 to build your own mechanism to keep your airgapped copy of this file up-to-date.
 
-Cosign can do completely offline verification by verifying a [bundle](./specs/SIGNATURE_SPEC.md#properties) which is typically distributed as an annotation on the image manifest.
-As long as this annotation is present, then offline verification can be done.
-This bundle annotation is always included by default for keyless signing, so the default `cosign sign` functionality will include all materials needed for offline verification.
+Cosign can do completely offline verification by verifying a [Sigstore bundle](./specs/BUNDLE_SPEC.md), which `cosign sign` attaches to the image in the registry.
+The bundle contains the verification materials produced during signing, such as the certificate, the transparency log entry with its inclusion proof, and any RFC 3161 timestamp.
+With these materials and a local copy of the trusted root, verification needs no network access.
 
 To verify an image in an air-gapped environment, the image and signatures must be available locally on the filesystem.
 
@@ -166,12 +164,11 @@ cosign save $IMAGE_NAME --dir ./path/to/dir
 Now, in an air-gapped environment, this local image can be verified:
 
 ```shell
+# --trusted-root points to the default location of the trusted root
 cosign verify \
   --certificate-identity $CERT_IDENTITY \
   --certificate-oidc-issuer $CERT_OIDC_ISSUER \
-  --offline=true \
-  --new-bundle-format=false \ # for artifacts signed without the new protobuf bundle format
-  --trusted-root ~/.sigstore/root/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json \ # default location of trusted root
+  --trusted-root ~/.sigstore/root/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json \
   --local-image ./path/to/dir
 ```
 
@@ -179,7 +176,7 @@ You'll need to pass in expected values for `$CERT_IDENTITY` and `$CERT_OIDC_ISSU
 If you signed with a keypair, the same command will work, assuming the public key material is present locally:
 
 ```
-cosign verify --key cosign.pub --offline --local-image ./path/to/dir
+cosign verify --key cosign.pub --trusted-root ~/.sigstore/root/tuf-repo-cdn.sigstore.dev/targets/trusted_root.json --local-image ./path/to/dir
 ```
 
 ### Identity-based blob signing and verification
