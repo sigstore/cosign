@@ -290,7 +290,7 @@ func TestTransformOutputSuccess(t *testing.T) {
 	  "subject": [
 		{ "name": "artifact", "digest": { "sha256": "deadbeef" }, "annotations": { "foo": "bar" } }
 	  ],
-	  "predicateType": "https://slsa.dev/provenance/v0.2"
+	  "predicateType": "https://sigstore.dev/cosign/sign/v1"
 	}`
 	// DSSE payloadType for in-toto
 	payloadType := "application/vnd.in-toto+json"
@@ -330,7 +330,7 @@ func TestTransformOutputSuccess(t *testing.T) {
 
 	assert.Equal(t, name, sci.Critical.Identity.DockerReference, "docker reference mismatch")
 	assert.Equal(t, "sha256:deadbeef", sci.Critical.Image.DockerManifestDigest, "digest mismatch")
-	assert.Equal(t, "https://slsa.dev/provenance/v0.2", sci.Critical.Type, "type mismatch")
+	assert.Equal(t, "https://sigstore.dev/cosign/sign/v1", sci.Critical.Type, "type mismatch")
 	assert.Equal(t, map[string]any{"foo": "bar"}, sci.Optional, "missing annotation")
 }
 
