@@ -35,6 +35,7 @@ type SignOptions struct {
 	IssueCertificate  bool
 	UseSigningConfig  bool
 	SigningConfigPath string
+	SkipIfSigned      bool
 	TrustedRootPath   string
 
 	Fulcio      FulcioOptions
@@ -102,6 +103,9 @@ func (o *SignOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
 		"issue a code signing certificate from Fulcio, even if a key is provided")
 	_ = cmd.Flags().MarkDeprecated("issue-certificate", "support for this flag will be removed in the future")
+
+	cmd.Flags().BoolVar(&o.SkipIfSigned, "skip-if-signed", false,
+		"do not sign a digest that already has a verified signature from the identity cosign would sign as")
 
 	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
 		"whether to use a TUF-provided signing config for the service URLs")

@@ -18,6 +18,7 @@ package attest
 import (
 	"context"
 	_ "crypto/sha256" // for `crypto.SHA256`
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -42,6 +43,7 @@ type AttestCommand struct {
 	PredicatePath string
 	PredicateType string
 	Timeout       time.Duration
+	SkipIfSigned  bool
 }
 
 // nolint
@@ -115,6 +117,7 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 		BundlePath:    c.BundlePath,
 		Upload:        !c.NoUpload,
 		OCIRemoteOpts: ociremoteOpts,
+		SkipIfSigned:  c.SkipIfSigned,
 	}
 
 	if c.SigningConfig == nil {
@@ -131,6 +134,10 @@ func (c *AttestCommand) Exec(ctx context.Context, imageRef string) error {
 	}
 
 	bundleBytes, _, _, err := signcommon.NewAttestationBundle(ctx, c.KeyOpts, c.CertPath, c.CertChainPath, bundleOpts, c.SigningConfig, c.TrustedMaterial)
+	if errors.Is(err, signcommon.ErrAlreadySigned) {
+		ui.Infof(ctx, "Skipping %s: it already has a %s attestation from this identity", digest, predicateURI)
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("creating bundle: %w", err)
 	}
