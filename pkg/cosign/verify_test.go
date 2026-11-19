@@ -2947,21 +2947,24 @@ func TestVerifyImageSignatureTimestampThreshold(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name      string
-		sig       oci.Signature
-		threshold int
-		wantErr   bool
+		name                string
+		sig                 oci.Signature
+		useSignedTimestamps bool
+		threshold           int
+		wantErr             bool
 	}{
-		{name: "no timestamp, optional", sig: sigWithoutTS, threshold: 0},
-		{name: "no timestamp, required", sig: sigWithoutTS, threshold: 1, wantErr: true},
-		{name: "timestamp, optional", sig: sigWithTS, threshold: 0},
-		{name: "timestamp, required", sig: sigWithTS, threshold: 1},
+		{name: "no timestamp, optional", sig: sigWithoutTS, useSignedTimestamps: true, threshold: 0},
+		{name: "no timestamp, required", sig: sigWithoutTS, useSignedTimestamps: true, threshold: 1, wantErr: true},
+		{name: "timestamp, optional", sig: sigWithTS, useSignedTimestamps: true, threshold: 0},
+		{name: "timestamp, required", sig: sigWithTS, useSignedTimestamps: true, threshold: 1},
+		{name: "no timestamp, threshold without UseSignedTimestamps", sig: sigWithoutTS, threshold: 1, wantErr: true},
+		{name: "timestamp, threshold without UseSignedTimestamps", sig: sigWithTS, threshold: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := VerifyImageSignature(context.TODO(), tc.sig, v1.Hash{}, &CheckOpts{
 				SigVerifier:                 verifier,
 				IgnoreTlog:                  true,
-				UseSignedTimestamps:         true,
+				UseSignedTimestamps:         tc.useSignedTimestamps,
 				TimestampThreshold:          tc.threshold,
 				TSACertificate:              leaves[0],
 				TSAIntermediateCertificates: intermediates,

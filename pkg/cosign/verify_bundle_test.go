@@ -505,6 +505,30 @@ func TestVerifyBundle(t *testing.T) {
 			wantErr:              true,
 		},
 		{
+			name: "timestamp threshold without UseSignedTimestamps, missing tsa",
+			checkOpts: &CheckOpts{
+				Identities:         standardIdentities,
+				IgnoreSCT:          true,
+				TimestampThreshold: 1,
+				TrustedMaterial:    virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTSA: true},
+			wantErr:              true,
+		},
+		{
+			name: "timestamp threshold without UseSignedTimestamps",
+			checkOpts: &CheckOpts{
+				Identities:         standardIdentities,
+				IgnoreSCT:          true,
+				TimestampThreshold: 1,
+				TrustedMaterial:    virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              false,
+		},
+		{
 			name: "timestamp threshold not met",
 			checkOpts: &CheckOpts{
 				Identities:          standardIdentities,
@@ -960,7 +984,7 @@ func TestCheckLegacyThresholds(t *testing.T) {
 		{name: "rekor threshold above one", co: CheckOpts{RekorThreshold: 2}, wantErr: true},
 		{name: "rekor threshold above one, tlog ignored", co: CheckOpts{RekorThreshold: 2, IgnoreTlog: true}},
 		{name: "timestamp threshold above one", co: CheckOpts{UseSignedTimestamps: true, TimestampThreshold: 2}, wantErr: true},
-		{name: "timestamp threshold above one, timestamps unused", co: CheckOpts{TimestampThreshold: 2}},
+		{name: "timestamp threshold above one without UseSignedTimestamps", co: CheckOpts{TimestampThreshold: 2}, wantErr: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.co.checkLegacyThresholds()
