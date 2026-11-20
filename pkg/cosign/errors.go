@@ -94,7 +94,7 @@ func (e *ErrNoCertificateFoundOnSignature) Unwrap() error {
 // NewVerificationError exists for backwards compatibility.
 //
 // Deprecated: see [VerificationFailure].
-func NewVerificationError(msg string, args ...interface{}) error {
+func NewVerificationError(msg string, args ...any) error {
 	return &VerificationError{
 		message: fmt.Sprintf(msg, args...),
 	}

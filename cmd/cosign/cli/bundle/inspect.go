@@ -546,16 +546,16 @@ func populateContentSummary(n *node, b *protobundle.Bundle) {
 		contentNode.addChild("Payload", fmt.Sprintf("Present (%d bytes)", len(content.DsseEnvelope.Payload)))
 
 		if content.DsseEnvelope.PayloadType == "application/vnd.in-toto+json" {
-			var statement map[string]interface{}
+			var statement map[string]any
 			if err := json.Unmarshal(content.DsseEnvelope.Payload, &statement); err == nil {
 				payloadNode := contentNode.addChild("Payload Content (in-toto)", "")
 				if predicateType, ok := statement["predicateType"].(string); ok {
 					payloadNode.addChild("Predicate Type", predicateType)
 				}
-				if subjects, ok := statement["subject"].([]interface{}); ok {
+				if subjects, ok := statement["subject"].([]any); ok {
 					subjectsNode := payloadNode.addChild("Subjects", fmt.Sprintf("%d", len(subjects)))
 					for _, s := range subjects {
-						if subMap, ok := s.(map[string]interface{}); ok {
+						if subMap, ok := s.(map[string]any); ok {
 							if name, ok := subMap["name"].(string); ok {
 								subjectsNode.addChild("Name", name)
 							}

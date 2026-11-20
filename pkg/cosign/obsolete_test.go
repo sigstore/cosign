@@ -45,7 +45,7 @@ func TestObsoletePayloadWithAnnotations(t *testing.T) {
 	// the payload generated when signing with annotations (cmd/cosign/cli/generate).
 	digestedImg, err := name.NewDigest("docker.io/namespace/image@sha256:4aa3054270f7a70b4528f2064ee90961788e1e1518703592ae4463de3b889dec")
 	require.NoError(t, err)
-	annotations := map[string]interface{}{"appname": "myapp"}
+	annotations := map[string]any{"appname": "myapp"}
 	var res []byte
 	stderr := ui.RunWithTestCtx(func(ctx context.Context, _ ui.WriteFunc) {
 		r, err := ObsoletePayload(ctx, digestedImg, annotations)

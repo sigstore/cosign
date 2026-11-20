@@ -164,8 +164,7 @@ func SignerVerifierFromKeyRef(ctx context.Context, keyRef string, pf cosign.Pass
 		if err == nil {
 			return sv, nil
 		}
-		var e *kms.ProviderNotFoundError
-		if !errors.As(err, &e) {
+		if _, ok := errors.AsType[*kms.ProviderNotFoundError](err); !ok {
 			return nil, fmt.Errorf("kms get: %w", err)
 		}
 		// ProviderNotFoundError is okay; loadKey handles other URL schemes

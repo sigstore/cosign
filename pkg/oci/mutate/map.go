@@ -88,13 +88,11 @@ func Map(ctx context.Context, parent oci.SignedEntity, fn Fn) (oci.SignedEntity,
 
 			changed = changed || (x != se)
 			adds = append(adds, IndexAddendum{
-				Add: se.(oci.SignedImageIndex), // Must be an image index.
-				Descriptor: v1.Descriptor{
-					URLs:        desc.URLs,
-					MediaType:   desc.MediaType,
-					Annotations: desc.Annotations,
-					Platform:    desc.Platform,
-				},
+				Add:         se.(oci.SignedImageIndex), // Must be an image index.
+				URLs:        desc.URLs,
+				MediaType:   desc.MediaType,
+				Annotations: desc.Annotations,
+				Platform:    desc.Platform,
 			})
 
 		case types.OCIManifestSchema1, types.DockerManifestSchema2:
@@ -114,13 +112,11 @@ func Map(ctx context.Context, parent oci.SignedEntity, fn Fn) (oci.SignedEntity,
 
 			changed = changed || (x != se)
 			adds = append(adds, IndexAddendum{
-				Add: se.(oci.SignedImage), // Must be an image
-				Descriptor: v1.Descriptor{
-					URLs:        desc.URLs,
-					MediaType:   desc.MediaType,
-					Annotations: desc.Annotations,
-					Platform:    desc.Platform,
-				},
+				Add:         se.(oci.SignedImage), // Must be an image
+				URLs:        desc.URLs,
+				MediaType:   desc.MediaType,
+				Annotations: desc.Annotations,
+				Platform:    desc.Platform,
 			})
 
 		default:

@@ -26,7 +26,7 @@ import (
 )
 
 // nolint
-func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, annotations map[string]interface{}, w io.Writer) error {
+func GenerateCmd(ctx context.Context, regOpts options.RegistryOptions, imageRef string, annotations map[string]any, w io.Writer) error {
 	ref, err := name.ParseReference(imageRef, regOpts.NameOptions()...)
 	if err != nil {
 		return err

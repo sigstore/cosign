@@ -169,7 +169,7 @@ func PrintVerification(ctx context.Context, verified []oci.Signature, output str
 			if cert, err := sig.Cert(); err == nil && cert != nil {
 				ce := cosign.CertExtensions{Cert: cert}
 				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
+					ss.Optional = make(map[string]any)
 				}
 				sub := ""
 				if sans := cryptoutils.GetSubjectAlternateNames(cert); len(sans) > 0 {
@@ -206,13 +206,13 @@ func PrintVerification(ctx context.Context, verified []oci.Signature, output str
 			}
 			if bundle, err := sig.Bundle(); err == nil && bundle != nil {
 				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
+					ss.Optional = make(map[string]any)
 				}
 				ss.Optional["Bundle"] = bundle
 			}
 			if rfc3161Timestamp, err := sig.RFC3161Timestamp(); err == nil && rfc3161Timestamp != nil {
 				if ss.Optional == nil {
-					ss.Optional = make(map[string]interface{})
+					ss.Optional = make(map[string]any)
 				}
 				ss.Optional["RFC3161Timestamp"] = rfc3161Timestamp
 			}

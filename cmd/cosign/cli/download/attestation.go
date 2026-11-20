@@ -79,9 +79,8 @@ func AttestationCmd(ctx context.Context, regOpts options.RegistryOptions, attOpt
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
-	var entityNotFoundError *ociremote.EntityNotFoundError
 	if err != nil {
-		if errors.As(err, &entityNotFoundError) {
+		if _, ok := errors.AsType[*ociremote.EntityNotFoundError](err); ok {
 			if digest, ok := ref.(name.Digest); ok {
 				// We don't need to access the original image to download the attached attestation
 				se = ociremote.SignedUnknown(digest)

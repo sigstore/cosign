@@ -64,8 +64,7 @@ func main() {
 	if err := cli.New().Execute(); err != nil {
 		// if the error is a `CosignError` then we want to use the exit code that
 		// is related to the type of error that has occurred.
-		var cosignError *cosignError.CosignError
-		if errors.As(err, &cosignError) {
+		if cosignError, ok := errors.AsType[*cosignError.CosignError](err); ok {
 			log.Printf("error during command execution: %v", err)
 			os.Exit(cosignError.ExitCode())
 		}

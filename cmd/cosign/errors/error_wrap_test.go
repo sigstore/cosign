@@ -26,8 +26,7 @@ func TestWrapWithGenericCosignError(t *testing.T) {
 	errorText := "i am a generic cosign error"
 	err := errors.WrapError(stderrors.New(errorText))
 
-	var cosignError *errors.CosignError
-	if stderrors.As(err, &cosignError) {
+	if cosignError, ok := stderrors.AsType[*errors.CosignError](err); ok {
 		if cosignError.ExitCode() == 1 && cosignError.Message == errorText {
 			t.Logf("generic cosign error successfully returned")
 			return

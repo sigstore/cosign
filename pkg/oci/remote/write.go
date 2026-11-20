@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -363,9 +364,7 @@ func WriteReferrer(d name.Digest, artifactType string, layers []v1.Layer, annota
 			Annotations() (map[string]string, error)
 		}); ok {
 			if ann, err := al.Annotations(); err == nil && len(ann) > 0 {
-				for k, v := range ann {
-					layerDescriptors[i].Annotations[k] = v
-				}
+				maps.Copy(layerDescriptors[i].Annotations, ann)
 			}
 		}
 	}

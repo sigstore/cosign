@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -46,9 +47,7 @@ var _ oci.Signature = (*sigWrapper)(nil)
 
 func copyAnnotations(ann map[string]string) map[string]string {
 	new := make(map[string]string, len(ann)) //nolint: revive
-	for k, v := range ann {
-		new[k] = v
-	}
+	maps.Copy(new, ann)
 	return new
 }
 

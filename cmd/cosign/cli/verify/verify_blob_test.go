@@ -129,9 +129,7 @@ func TestVerifyBlob(t *testing.T) {
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := VerifyBlobCmd{
-				KeyOpts: options.KeyOpts{
-					BundlePath: tt.bundlePath,
-				},
+				BundlePath: tt.bundlePath,
 				IgnoreSCT:  true,
 				IgnoreTlog: true,
 			}
@@ -157,12 +155,8 @@ func TestVerifyBlobCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyBlob := VerifyBlobCmd{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: "issuer",
-		},
-		KeyOpts: options.KeyOpts{
-			BundlePath: "bundle.json",
-		},
+		CertOidcIssuer: "issuer",
+		BundlePath:     "bundle.json",
 	}
 	err := verifyBlob.Exec(ctx, "blob")
 	if err == nil {
@@ -241,16 +235,11 @@ func TestVerifyBlobMutuallyExclusiveFlags(t *testing.T) {
 func TestVerifyBlobKeyAndCertIdentity(t *testing.T) {
 	ctx := context.Background()
 	verifyBlob := VerifyBlobCmd{
-		KeyOpts: options.KeyOpts{
-			KeyRef: "key.pub",
-		},
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentity: "hello@foo.com",
-		},
+		KeyRef:       "key.pub",
+		CertIdentity: "hello@foo.com",
 	}
-	var expectedErr *options.KeyAndIdentityParseError
 	err := verifyBlob.Exec(ctx, "blob")
-	if !errors.As(err, &expectedErr) {
+	if _, ok := errors.AsType[*options.KeyAndIdentityParseError](err); !ok {
 		t.Fatalf("expected KeyAndIdentityParseError, got: %T, %v", err, err)
 	}
 }
@@ -258,10 +247,8 @@ func TestVerifyBlobKeyAndCertIdentity(t *testing.T) {
 func TestVerifyBlobSkWithoutIdentities(t *testing.T) {
 	ctx := context.Background()
 	verifyBlob := VerifyBlobCmd{
-		KeyOpts: options.KeyOpts{
-			Sk:         true,
-			BundlePath: "bundle.sigstore.json",
-		},
+		Sk:         true,
+		BundlePath: "bundle.sigstore.json",
 	}
 
 	err := verifyBlob.Exec(ctx, "blob")
@@ -303,10 +290,8 @@ func TestVerifyBlobWithUnsetHashAlgorithmMatchesKeyDefault(t *testing.T) {
 	bundlePath := makeLocalNewBundleWithAlgorithm(t, sig, digest[:], protocommon.HashAlgorithm_SHA2_512)
 
 	cmd := VerifyBlobCmd{
-		KeyOpts: options.KeyOpts{
-			KeyRef:     keyPath,
-			BundlePath: bundlePath,
-		},
+		KeyRef:     keyPath,
+		BundlePath: bundlePath,
 		IgnoreTlog: true,
 	}
 	if err := cmd.Exec(ctx, blobPath); err != nil {
@@ -358,10 +343,8 @@ func TestVerifyBlobKeyRequiresTrustedRoot(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := VerifyBlobCmd{
-				KeyOpts: options.KeyOpts{
-					KeyRef:     keyPath,
-					BundlePath: bundlePath,
-				},
+				KeyRef:              keyPath,
+				BundlePath:          bundlePath,
 				IgnoreTlog:          tc.ignoreTlog,
 				UseSignedTimestamps: tc.useSignedTimestamps,
 			}

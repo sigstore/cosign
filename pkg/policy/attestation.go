@@ -64,7 +64,7 @@ func AttestationToPayloadJSON(_ context.Context, predicateType string, verifiedA
 		// Not a custom one, use it as is.
 		predicateURI = predicateType
 	}
-	var payloadData map[string]interface{}
+	var payloadData map[string]any
 
 	p, err := verifiedAttestation.Payload()
 	if err != nil {

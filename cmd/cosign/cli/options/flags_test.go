@@ -25,52 +25,52 @@ func TestOneOf(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		args []interface{}
+		args []any
 		want bool
 	}{
 		{
 			name: "3/3",
-			args: []interface{}{"one", 2, true},
+			args: []any{"one", 2, true},
 			want: false,
 		},
 		{
 			name: "2/3",
-			args: []interface{}{"one", 2, false},
+			args: []any{"one", 2, false},
 			want: false,
 		},
 		{
 			name: "1/3",
-			args: []interface{}{"", 2, false},
+			args: []any{"", 2, false},
 			want: true,
 		},
 		{
 			name: "0/1",
-			args: []interface{}{""},
+			args: []any{""},
 			want: false,
 		},
 		{
 			name: "1/1",
-			args: []interface{}{"hey"},
+			args: []any{"hey"},
 			want: true,
 		},
 		{
 			name: "structs",
-			args: []interface{}{"hey", dumbStruct{A: 2}},
+			args: []any{"hey", dumbStruct{A: 2}},
 			want: false,
 		},
 		{
 			name: "struct",
-			args: []interface{}{"", dumbStruct{A: 2}},
+			args: []any{"", dumbStruct{A: 2}},
 			want: true,
 		},
 		{
 			name: "pointers",
-			args: []interface{}{"hey", &struct{ a int }{a: 2}, false},
+			args: []any{"hey", &struct{ a int }{a: 2}, false},
 			want: false,
 		},
 		{
 			name: "pointer",
-			args: []interface{}{&struct{ a int }{a: 2}, false},
+			args: []any{&struct{ a int }{a: 2}, false},
 			want: true,
 		},
 	}
