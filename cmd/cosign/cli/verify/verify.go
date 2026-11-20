@@ -162,12 +162,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 		}
 
 		verifiedOutput, err := transformOutput(verified, displayName)
-		if err == nil {
-			verified = verifiedOutput
+		if err != nil {
+			return err
 		}
-		if verified != nil {
+		if len(verifiedOutput) > 0 {
 			PrintVerificationHeader(ctx, displayName, co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, verified, c.Output)
+			PrintVerification(ctx, verifiedOutput, c.Output)
+		} else {
+			return fmt.Errorf("no matching signatures exist in registry")
 		}
 	}
 
@@ -175,31 +177,30 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 }
 
 func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oci.Signature, err error) {
+	// We might not understand bundles not produced by Cosign, so skip them
 	for _, v := range verified {
 		dssePayload, err := v.Payload()
 		if err != nil {
-			return nil, err
+			continue
 		}
 		var dsseEnvelope dsse.Envelope
 		err = json.Unmarshal(dssePayload, &dsseEnvelope)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
-			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
+			continue
 		}
 		intotoStatement := &attestation.Statement{}
 		err = intotoStatement.UnmarshalJSON(dsseEnvelope.Payload)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
-			return nil, fmt.Errorf("no intoto subject or digest found")
+			continue
 		}
 		if intotoStatement.PredicateType != types.CosignSignPredicateType {
-			// Attestations with other predicate types are allowed, but do not
-			// count towards verified for `cosign verify`
-			return nil, nil
+			continue
 		}
 
 		var digest string
