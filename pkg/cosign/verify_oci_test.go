@@ -330,7 +330,7 @@ func TestVerifyImageAttestationsSigstoreBundle(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.ErrorAs(t, err, &errNoMatchingAttestations)
-	// TODO: This error message comes from sigstore-go. We may want to update the upstream with a sentinal error type.
+	// TODO: This error message comes from sigstore-go. We may want to update the upstream with a sentinel error type.
 	assert.ErrorContains(t, err, "provided artifact digest does not match any digest in statement")
 	assert.False(t, bundleVerified)
 	assert.Len(t, atts, 0)
