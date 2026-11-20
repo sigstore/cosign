@@ -45,8 +45,7 @@ func TestReadCappedRejectsOversizedPayload(t *testing.T) {
 	if err == nil {
 		t.Fatal("readCapped() accepted a payload one byte over the limit")
 	}
-	var sizeErr *payloadsize.MaxLayerSizeExceeded
-	if !errors.As(err, &sizeErr) {
+	if _, ok := errors.AsType[*payloadsize.MaxLayerSizeExceeded](err); !ok {
 		t.Errorf("readCapped() returned %T, wanted *payloadsize.MaxLayerSizeExceeded", err)
 	}
 }
@@ -84,8 +83,7 @@ func TestReadCappedRejectsDecompressionBomb(t *testing.T) {
 	if err == nil {
 		t.Fatalf("readCapped() consumed a stream inflating from %d bytes to %d", compressedSize, uncompressed)
 	}
-	var sizeErr *payloadsize.MaxLayerSizeExceeded
-	if !errors.As(err, &sizeErr) {
+	if _, ok := errors.AsType[*payloadsize.MaxLayerSizeExceeded](err); !ok {
 		t.Errorf("readCapped() returned %T, wanted *payloadsize.MaxLayerSizeExceeded", err)
 	}
 }

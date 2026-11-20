@@ -34,7 +34,7 @@ func TestErrors(t *testing.T) {
 			// Check that Is sees it as the same error through multiple
 			// levels of wrapping.
 			wrapped := want
-			for i := 0; i < 5; i++ {
+			for range 5 {
 				if !errors.Is(wrapped, want) {
 					t.Errorf("%v is not %v", wrapped, want)
 				}

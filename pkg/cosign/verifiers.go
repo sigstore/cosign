@@ -30,7 +30,7 @@ import (
 )
 
 // SimpleClaimVerifier verifies that sig.Payload() is a SimpleContainerImage payload which references the given image digest and contains the given annotations.
-func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error {
+func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]any) error {
 	p, err := sig.Payload()
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func SimpleClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map
 }
 
 // IntotoSubjectClaimVerifier verifies that sig.Payload() is an Intoto statement which references the given image digest.
-func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error {
+func IntotoSubjectClaimVerifier(sig oci.Signature, imageDigest v1.Hash, annotations map[string]any) error {
 	p, err := sig.Payload()
 	if err != nil {
 		return err

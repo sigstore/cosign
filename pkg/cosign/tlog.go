@@ -29,7 +29,6 @@ import (
 	"os"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag/conv"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/v3/pkg/cosign/env"
@@ -187,8 +186,8 @@ func rekorEntry(checksum NamedHash, signature, pubKey []byte) hashedrekord_v001.
 		HashedRekordObj: models.HashedrekordV001Schema{
 			Data: &models.HashedrekordV001SchemaData{
 				Hash: &models.HashedrekordV001SchemaDataHash{
-					Algorithm: conv.Pointer(rekorEntryHashAlgorithm(checksum)),
-					Value:     conv.Pointer(hex.EncodeToString(checksum.Sum(nil))),
+					Algorithm: new(rekorEntryHashAlgorithm(checksum)),
+					Value:     new(hex.EncodeToString(checksum.Sum(nil))),
 				},
 			},
 			Signature: &models.HashedrekordV001SchemaSignature{
@@ -273,7 +272,7 @@ func proposedEntries(b64Sig string, payload, pubKey []byte) ([]models.ProposedEn
 		}
 		re := rekorEntry(sha256CheckSum, signature, pubKey)
 		entry := &models.Hashedrekord{
-			APIVersion: conv.Pointer(re.APIVersion()),
+			APIVersion: new(re.APIVersion()),
 			Spec:       re.HashedRekordObj,
 		}
 		proposedEntry = []models.ProposedEntry{entry}

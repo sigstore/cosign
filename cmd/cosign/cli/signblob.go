@@ -17,6 +17,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
@@ -64,13 +65,7 @@ func SignBlob() *cobra.Command {
 
 			// Check if the algorithm is in the list of supported algorithms
 			supportedAlgorithms := cosign.GetSupportedAlgorithms()
-			isValid := false
-			for _, algo := range supportedAlgorithms {
-				if algo == o.SigningAlgorithm {
-					isValid = true
-					break
-				}
-			}
+			isValid := slices.Contains(supportedAlgorithms, o.SigningAlgorithm)
 			if !isValid {
 				return fmt.Errorf("invalid signing algorithm: %s. Supported algorithms are: %s",
 					o.SigningAlgorithm, strings.Join(supportedAlgorithms, ", "))

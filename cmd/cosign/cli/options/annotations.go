@@ -38,7 +38,7 @@ func (o *AnnotationOptions) AnnotationsMap() (sigs.AnnotationsMap, error) {
 			return ann, fmt.Errorf("unable to parse annotation: %s", a)
 		}
 		if ann.Annotations == nil {
-			ann.Annotations = map[string]interface{}{}
+			ann.Annotations = map[string]any{}
 		}
 		ann.Annotations[kv[0]] = kv[1]
 	}

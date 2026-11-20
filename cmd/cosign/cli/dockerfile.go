@@ -20,7 +20,6 @@ import (
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/dockerfile"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 )
 
@@ -84,28 +83,26 @@ Shell-like variables in the Dockerfile's FROM lines will be substituted with val
 				return err
 			}
 			v := &dockerfile.VerifyDockerfileCommand{
-				VerifyCommand: verify.VerifyCommand{
-					RegistryOptions:              o.Registry,
-					CertVerifyOptions:            o.CertVerify,
-					CommonVerifyOptions:          o.CommonVerifyOptions,
-					CheckClaims:                  o.CheckClaims,
-					KeyRef:                       o.Key,
-					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
-					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
-					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
-					CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
-					CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
-					IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-					Sk:                           o.SecurityKey.Use,
-					Slot:                         o.SecurityKey.Slot,
-					Output:                       o.Output,
-					Annotations:                  annotations,
-					LocalImage:                   o.LocalImage,
-					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
-					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				},
-				BaseOnly: o.BaseImageOnly,
+				RegistryOptions:              o.Registry,
+				CertVerifyOptions:            o.CertVerify,
+				CommonVerifyOptions:          o.CommonVerifyOptions,
+				CheckClaims:                  o.CheckClaims,
+				KeyRef:                       o.Key,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				Annotations:                  annotations,
+				LocalImage:                   o.LocalImage,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
+				BaseOnly:                     o.BaseImageOnly,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {

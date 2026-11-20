@@ -34,13 +34,11 @@ func TestTagMethods(t *testing.T) {
 	}()
 	remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 		return &remote.Descriptor{
-			Descriptor: v1.Descriptor{
-				Digest: v1.Hash{
-					Algorithm: "sha256",
-					// As of 2021-09-20:
-					// crane digest gcr.io/distroless/static:nonroot
-					Hex: "be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4",
-				},
+			Digest: v1.Hash{
+				Algorithm: "sha256",
+				// As of 2021-09-20:
+				// crane digest gcr.io/distroless/static:nonroot
+				Hex: "be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4",
 			},
 		}, nil
 	}
@@ -158,13 +156,11 @@ func TestDockercontentDigest(t *testing.T) {
 	}()
 	remoteGet = func(_ name.Reference, _ ...remote.Option) (*remote.Descriptor, error) {
 		return &remote.Descriptor{
-			Descriptor: v1.Descriptor{
-				Digest: v1.Hash{
-					Algorithm: "sha256",
-					// As of 2021-09-20:
-					// crane digest gcr.io/distroless/static:nonroot
-					Hex: "be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4",
-				},
+			Digest: v1.Hash{
+				Algorithm: "sha256",
+				// As of 2021-09-20:
+				// crane digest gcr.io/distroless/static:nonroot
+				Hex: "be5d77c62dbe7fedfb0a4e5ec2f91078080800ab1f18358e5f31fcc8faa023c4",
 			},
 		}, nil
 	}

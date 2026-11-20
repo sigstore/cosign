@@ -136,10 +136,8 @@ func UploadFiles(ref name.Reference, files []File, annotations map[string]string
 
 		if f.Platform() != nil {
 			idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
-				Add: img,
-				Descriptor: v1.Descriptor{
-					Platform: f.Platform(),
-				},
+				Add:      img,
+				Platform: f.Platform(),
 			})
 		}
 	}

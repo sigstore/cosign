@@ -127,7 +127,7 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 	}
 
 	for _, s := range sigs {
-		var signaturePayload map[string]interface{}
+		var signaturePayload map[string]any
 		p, err := s.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("could not get payload: %w", err)
@@ -150,7 +150,7 @@ func (r *ro) Replace(signatures oci.Signatures, o oci.Signature) (oci.Signatures
 			return nil, fmt.Errorf("could not decode 'payload': %w", err)
 		}
 
-		var payloadData map[string]interface{}
+		var payloadData map[string]any
 		if err := json.Unmarshal(decodedPayload, &payloadData); err != nil {
 			return nil, fmt.Errorf("unmarshal payloadData: %w", err)
 		}

@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -84,10 +85,10 @@ type CheckOpts struct {
 	RegistryClientOpts []ociremote.Option
 
 	// Annotations optionally specifies image signature annotations to verify.
-	Annotations map[string]interface{}
+	Annotations map[string]any
 
 	// ClaimVerifier, if provided, verifies claims present in the oci.Signature.
-	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]interface{}) error
+	ClaimVerifier func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]any) error
 
 	// TrustedMaterial contains trusted metadata for all Sigstore services. It is exclusive with RekorPubKeys, RootCerts, IntermediateCerts, CTLogPubKeys, and the TSA* cert fields.
 	TrustedMaterial root.TrustedMaterial
@@ -308,18 +309,12 @@ func CheckCertificatePolicy(cert *x509.Certificate, co *CheckOpts) error {
 				if err != nil {
 					return fmt.Errorf("malformed subject in identity: %s : %w", identity.SubjectRegExp, err)
 				}
-				for _, san := range sans {
-					if regex.MatchString(san) {
-						subjectMatches = true
-						break
-					}
+				if slices.ContainsFunc(sans, regex.MatchString) {
+					subjectMatches = true
 				}
 			case identity.Subject != "":
-				for _, san := range sans {
-					if san == identity.Subject {
-						subjectMatches = true
-						break
-					}
+				if slices.Contains(sans, identity.Subject) {
+					subjectMatches = true
 				}
 			default:
 				// No subject constraint on this identity, so checks out
@@ -758,7 +753,7 @@ func TrustedCert(cert *x509.Certificate, roots *x509.CertPool, intermediates *x5
 	return chains, nil
 }
 
-func correctAnnotations(wanted, have map[string]interface{}) bool {
+func correctAnnotations(wanted, have map[string]any) bool {
 	for k, v := range wanted {
 		if have[k] != v {
 			return false

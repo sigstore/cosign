@@ -57,7 +57,7 @@ func (m *mockEntriesClient) GetLogEntryByIndexContext(_ context.Context, params 
 func TestUpgradeBundle(t *testing.T) {
 	checkV03 := func(expectedCertB64 string) func(t *testing.T, output []byte) {
 		return func(t *testing.T, output []byte) {
-			var m map[string]interface{}
+			var m map[string]any
 			err := json.Unmarshal(output, &m)
 			if err != nil {
 				t.Fatalf("unmarshaling output: %v", err)
@@ -67,12 +67,12 @@ func TestUpgradeBundle(t *testing.T) {
 				t.Fatalf("expected mediaType to be 'application/vnd.dev.sigstore.bundle.v0.3+json', got %v", m["mediaType"])
 			}
 
-			vm, ok := m["verificationMaterial"].(map[string]interface{})
+			vm, ok := m["verificationMaterial"].(map[string]any)
 			if !ok {
 				t.Fatal("missing verificationMaterial")
 			}
 
-			cert, ok := vm["certificate"].(map[string]interface{})
+			cert, ok := vm["certificate"].(map[string]any)
 			if !ok {
 				t.Fatal("missing certificate field in verificationMaterial")
 			}
@@ -246,14 +246,14 @@ func TestUpgradeBundle(t *testing.T) {
 				},
 			},
 			checkOutput: func(t *testing.T, output []byte) {
-				var m map[string]interface{}
+				var m map[string]any
 				if err := json.Unmarshal(output, &m); err != nil {
 					t.Fatalf("unmarshaling output: %v", err)
 				}
-				vm := m["verificationMaterial"].(map[string]interface{})
-				tlogEntries := vm["tlogEntries"].([]interface{})
-				entry := tlogEntries[0].(map[string]interface{})
-				proof := entry["inclusionProof"].(map[string]interface{})
+				vm := m["verificationMaterial"].(map[string]any)
+				tlogEntries := vm["tlogEntries"].([]any)
+				entry := tlogEntries[0].(map[string]any)
+				proof := entry["inclusionProof"].(map[string]any)
 				if proof["logIndex"].(string) != "42" {
 					t.Fatalf("expected logIndex 42, got %v", proof["logIndex"])
 				}
@@ -318,7 +318,7 @@ func TestUpgradeCmd(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var m map[string]interface{}
+		var m map[string]any
 		if err := json.Unmarshal(data, &m); err != nil {
 			t.Fatal(err)
 		}
@@ -374,7 +374,7 @@ func TestUpgradeCmd(t *testing.T) {
 		}
 
 		output := buffer.Bytes()
-		var m map[string]interface{}
+		var m map[string]any
 		if err := json.Unmarshal(output, &m); err != nil {
 			t.Fatalf("unmarshaling stdout output: %v", err)
 		}

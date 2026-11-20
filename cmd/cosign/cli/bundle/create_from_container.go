@@ -212,8 +212,7 @@ func existingSignatures(ctx context.Context, digest name.Digest, ociremoteOpts [
 	existing := map[string]struct{}{}
 	bundles, _, err := cosign.GetBundles(ctx, digest, ociremoteOpts, nameOpts...)
 	if err != nil {
-		var noMatch *cosign.ErrNoMatchingAttestations
-		if errors.As(err, &noMatch) {
+		if _, ok := errors.AsType[*cosign.ErrNoMatchingAttestations](err); ok {
 			return existing, nil
 		}
 		return nil, fmt.Errorf("fetching existing bundles: %w", err)

@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"io"
+	"maps"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -127,9 +128,7 @@ var _ oci.Signature = (*staticLayer)(nil)
 // Annotations implements oci.Signature
 func (l *staticLayer) Annotations() (map[string]string, error) {
 	m := make(map[string]string, len(l.opts.Annotations)+1)
-	for k, v := range l.opts.Annotations {
-		m[k] = v
-	}
+	maps.Copy(m, l.opts.Annotations)
 	m[SignatureAnnotationKey] = l.b64sig
 	return m, nil
 }

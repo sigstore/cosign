@@ -20,8 +20,6 @@ import (
 
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestSecret(t *testing.T) {
@@ -32,16 +30,14 @@ func TestSecret(t *testing.T) {
 	name := "secret"
 	namespace := "default"
 	expect := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secret",
-			Namespace: "default",
-		},
+		Name:      "secret",
+		Namespace: "default",
 		Data: map[string][]byte{
 			"cosign.key":      []byte("private"),
 			"cosign.pub":      []byte("public"),
 			"cosign.password": nil,
 		},
-		Immutable: ptr.To[bool](true),
+		Immutable: new(true),
 	}
 	actual := secret(keys, namespace, name, nil, true)
 	if !reflect.DeepEqual(actual, expect) {
@@ -63,10 +59,8 @@ func TestSecretUpdate(t *testing.T) {
 
 	// Make sure old keys are preserved but the cosign ones are updated
 	expect := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secret",
-			Namespace: "default",
-		},
+		Name:      "secret",
+		Namespace: "default",
 		Data: map[string][]byte{
 			"foobar":          []byte("hi"),
 			"cosign.key":      []byte("private"),
