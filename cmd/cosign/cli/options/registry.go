@@ -143,7 +143,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 		opts = append(opts, remote.WithAuthFromKeychain(o.Keychain))
 	case o.KubernetesKeychain:
 		kc := authn.NewMultiKeychain(
-			authn.DefaultKeychain,
+			DefaultContainersKeychain,
 			google.Keychain,
 			authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard))),
 			authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper()),
@@ -156,7 +156,7 @@ func (o *RegistryOptions) GetRegistryClientOpts(ctx context.Context) []remote.Op
 	case o.AuthConfig.RegistryToken != "":
 		opts = append(opts, remote.WithAuth(&authn.Bearer{Token: o.AuthConfig.RegistryToken}))
 	default:
-		opts = append(opts, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		opts = append(opts, remote.WithAuthFromKeychain(DefaultContainersKeychain))
 	}
 
 	tlsConfig, err := o.getTLSConfig()
