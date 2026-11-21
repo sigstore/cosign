@@ -1724,6 +1724,18 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "no TSA root certificate(s) provided to verify timestamp") {
 		t.Fatalf("expected error verifying without a root certificate, got: %v", err)
 	}
+
+	// failure with empty TrustedRoot
+	emptyTrustedRoot, err := root.NewTrustedRoot(root.TrustedRootMediaType01, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating empty trusted root: %v", err)
+	}
+	_, err = VerifyRFC3161Timestamp(ociSig, &CheckOpts{
+		TrustedMaterial: emptyTrustedRoot,
+	})
+	if err == nil || !strings.Contains(err.Error(), "expected at least one verified timestamp") {
+		t.Fatalf("expected error verifying with empty trusted root, got: %v", err)
+	}
 }
 
 // Mock Rekor client
