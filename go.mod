@@ -33,7 +33,7 @@ require (
 	github.com/osscontainertools/docker-credential-acr v1.0.1
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1
 	github.com/sigstore/protobuf-specs v0.5.2
-	github.com/sigstore/rekor v1.5.5
+	github.com/sigstore/rekor v1.6.1
 	github.com/sigstore/rekor-tiles/v2 v2.4.2
 	github.com/sigstore/sigstore v1.11.3
 	github.com/sigstore/sigstore-go v1.4.0
@@ -68,8 +68,8 @@ require (
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.24.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.3.0 // indirect
-	cloud.google.com/go/iam v1.14.0 // indirect
-	cloud.google.com/go/kms v1.35.0 // indirect
+	cloud.google.com/go/iam v1.15.0 // indirect
+	cloud.google.com/go/kms v1.36.0 // indirect
 	cloud.google.com/go/longrunning v1.2.0 // indirect
 	connectrpc.com/connect v1.21.1 // indirect
 	cuelabs.dev/go/oci/ociregistry v0.0.0-20260601085548-328ff8e2c943 // indirect
@@ -93,7 +93,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.10.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/agnivade/levenshtein v1.2.2 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
 	github.com/alibabacloud-go/cr-20160607/v2 v2.0.0 // indirect
