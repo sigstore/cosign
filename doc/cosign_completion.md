@@ -37,15 +37,15 @@ cosign completion [bash|zsh|fish|powershell]
 ### Options
 
 ```
-  -h, --help   help for completion
+  -h, --help[=true|false]   help for completion
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

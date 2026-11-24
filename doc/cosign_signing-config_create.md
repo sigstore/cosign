@@ -29,7 +29,7 @@ cosign signing-config create \
 ```
       --fulcio stringArray          fulcio service specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
-  -h, --help                        help for create
+  -h, --help[=true|false]           help for create
       --oidc-provider stringArray   oidc provider specification, as a comma-separated key-value list.
                                     Required keys: url, api-version (integer), start-time, operator. Optional keys: end-time.
       --out string                  path to output signing config
@@ -44,9 +44,9 @@ cosign signing-config create \
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

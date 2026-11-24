@@ -30,7 +30,7 @@ cosign trusted-root create \
                              Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time.
       --fulcio stringArray   fulcio service specification, as a comma-separated key-value list.
                              Required keys: url, certificate-chain (path to PEM-encoded certificate chain). Optional keys: start-time, end-time.
-  -h, --help                 help for create
+  -h, --help[=true|false]    help for create
       --out string           path to output trusted root
       --rekor stringArray    rekor service specification, as a comma-separated key-value list.
                              Required keys: url, public-key (path to PEM-encoded public key), start-time. Optional keys: end-time, origin.
@@ -41,9 +41,9 @@ cosign trusted-root create \
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

@@ -43,7 +43,7 @@ cosign initialize --mirror <url> --root <url> --root-checksum <sha256>
 ### Options
 
 ```
-  -h, --help                   help for initialize
+  -h, --help[=true|false]      help for initialize
       --mirror string          GCS bucket to a SigStore TUF repository, or HTTP(S) base URL, or file:/// for local filestore remote (air-gap) (default "https://tuf-repo-cdn.sigstore.dev")
       --root string            path to trusted initial root. defaults to embedded root
       --root-checksum string   checksum of the initial root, required if root is downloaded via http(s). expects sha256 by default, can be changed to sha512 by providing sha512:<checksum>
@@ -52,9 +52,9 @@ cosign initialize --mirror <url> --root <url> --root-checksum <sha256>
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

@@ -72,8 +72,8 @@ cosign sign [flags]
 ### Options
 
 ```
-      --allow-http-registry                                                                      whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
-      --allow-insecure-registry                                                                  whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
+      --allow-http-registry[=true|false]                                                         whether to allow using HTTP protocol while connecting to registries. Don't use this for anything but testing
+      --allow-insecure-registry[=true|false]                                                     whether to allow insecure connections to registries (e.g., with expired or self-signed TLS certificates). Don't use this for anything but testing
   -a, --annotations strings                                                                      extra key=value pairs to sign
       --attachment string                                                                        DEPRECATED, related image attachment to sign (sbom), default none
       --attachment-tag-prefix [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]   optional custom prefix to use for attached image tags. Attachment images are tagged as: [AttachmentTagPrefix]sha256-[TargetImageDigest].[AttachmentName]
@@ -81,16 +81,16 @@ cosign sign [flags]
       --certificate-chain string                                                                 path to a list of CA X.509 certificates in PEM format which will be needed when building the certificate chain for the signing certificate. Must start with the parent intermediate CA certificate of the signing certificate and end with the root certificate. Included in the OCI Signature
       --fulcio-auth-flow string                                                                  fulcio interactive oauth2 flow to use for certificate from fulcio. Defaults to determining the flow based on the runtime environment. (options) normal|device|token|client_credentials
       --fulcio-url string                                                                        address of sigstore PKI server (default "https://fulcio.sigstore.dev")
-  -h, --help                                                                                     help for sign
+  -h, --help[=true|false]                                                                        help for sign
       --identity-token string                                                                    identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
-      --insecure-skip-verify                                                                     skip verifying fulcio published to the SCT (this should only be used for testing).
-      --issue-certificate                                                                        issue a code signing certificate from Fulcio, even if a key is provided
-      --k8s-keychain                                                                             whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
+      --insecure-skip-verify[=true|false]                                                        skip verifying fulcio published to the SCT (this should only be used for testing).
+      --issue-certificate[=true|false]                                                           issue a code signing certificate from Fulcio, even if a key is provided
+      --k8s-keychain[=true|false]                                                                whether to use the kubernetes keychain instead of the default keychain (supports workload identity).
       --key string                                                                               path to the private key file, KMS URI or Kubernetes Secret
-      --new-bundle-format                                                                        expect the signature/attestation to be packaged in a Sigstore bundle
+      --new-bundle-format[=true|false]                                                           expect the signature/attestation to be packaged in a Sigstore bundle
       --oidc-client-id string                                                                    OIDC client ID for application (default "sigstore")
       --oidc-client-secret-file string                                                           Path to file containing OIDC client secret for application
-      --oidc-disable-ambient-providers                                                           Disable ambient OIDC providers. When true, ambient credentials will not be read
+      --oidc-disable-ambient-providers[=true|false]                                              Disable ambient OIDC providers. When true, ambient credentials will not be read
       --oidc-issuer string                                                                       OIDC provider to be used to issue ID token (default "https://oauth2.sigstore.dev/auth")
       --oidc-provider string                                                                     Specify the provider to get the OIDC token from (Optional). If unset, all options will be tried. Options include: [spiffe, google, github-actions, filesystem, buildkite-agent]
       --oidc-redirect-url string                                                                 OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
@@ -98,8 +98,8 @@ cosign sign [flags]
       --output-payload string                                                                    write the signed payload to FILE
       --output-signature string                                                                  write the signature to FILE
       --payload string                                                                           path to a payload file to use rather than generating one
-      --record-creation-timestamp                                                                set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
-  -r, --recursive                                                                                if a multi-arch image is specified, additionally sign each discrete image
+      --record-creation-timestamp[=true|false]                                                   set the createdAt timestamp in the signature artifact to the time it was created; by default, cosign sets this to the zero value
+  -r, --recursive[=true|false]                                                                   if a multi-arch image is specified, additionally sign each discrete image
       --registry-cacert string                                                                   path to the X.509 CA certificate file in PEM format to be used for the connection to the registry
       --registry-client-cert string                                                              path to the X.509 certificate file in PEM format to be used for the connection to the registry
       --registry-client-key string                                                               path to the X.509 private key file in PEM format to be used, together with the 'registry-client-cert' value, for the connection to the registry
@@ -111,26 +111,26 @@ cosign sign [flags]
       --rekor-url string                                                                         address of rekor STL server (default "https://rekor.sigstore.dev")
       --sign-container-identity string                                                           manually set the .critical.docker-reference field for the signed identity, which is useful when image proxies are being used where the pull reference should match the signature
       --signing-config string                                                                    path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format
-      --sk                                                                                       whether to use a hardware security key
+      --sk[=true|false]                                                                          whether to use a hardware security key
       --slot string                                                                              security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
       --timestamp-client-cacert string                                                           path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server
       --timestamp-client-cert string                                                             path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server
       --timestamp-client-key string                                                              path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
       --timestamp-server-name string                                                             SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string                                                              url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
-      --tlog-upload                                                                              whether or not to upload to the tlog (default true)
+      --tlog-upload[=true|false]                                                                 whether or not to upload to the tlog (default true)
       --trusted-root string                                                                      optional path to a TrustedRoot JSON file to verify a signature after signing
-      --upload                                                                                   whether to upload the signature (default true)
-      --use-signing-config                                                                       whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format
-  -y, --yes                                                                                      skip confirmation prompts for non-destructive operations
+      --upload[=true|false]                                                                      whether to upload the signature (default true)
+      --use-signing-config[=true|false]                                                          whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format
+  -y, --yes[=true|false]                                                                         skip confirmation prompts for non-destructive operations
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

@@ -5,15 +5,15 @@ Provides utilities for downloading artifacts and attached artifacts in a registr
 ### Options
 
 ```
-  -h, --help   help for download
+  -h, --help[=true|false]   help for download
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

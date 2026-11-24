@@ -5,15 +5,15 @@ Provides utilities for uploading artifacts to a registry
 ### Options
 
 ```
-  -h, --help   help for upload
+  -h, --help[=true|false]   help for upload
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO

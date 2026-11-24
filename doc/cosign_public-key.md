@@ -43,19 +43,19 @@ cosign public-key [flags]
 ### Options
 
 ```
-  -h, --help             help for public-key
-      --key string       path to the private key file, KMS URI or Kubernetes Secret
-      --outfile string   path to a payload file to use rather than generating one
-      --sk               whether to use a hardware security key
-      --slot string      security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+  -h, --help[=true|false]   help for public-key
+      --key string          path to the private key file, KMS URI or Kubernetes Secret
+      --outfile string      path to a payload file to use rather than generating one
+      --sk[=true|false]     whether to use a hardware security key
+      --slot string         security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+      --output-file string     log output to a file
+  -t, --timeout duration       timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]   log debug output
 ```
 
 ### SEE ALSO
