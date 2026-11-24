@@ -23,10 +23,13 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,8 +62,63 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/dsse"
 	signatureoptions "github.com/sigstore/sigstore/pkg/signature/options"
+	tsx509 "github.com/sigstore/timestamp-authority/v2/pkg/x509"
 	"google.golang.org/protobuf/encoding/protojson"
 )
+
+// generateTSACertChain creates a TSA certificate chain for signer that is
+// valid starting at notBefore. The TSA library validates the chain at the
+// time in the timestamp, so backdated timestamps need a backdated chain.
+func generateTSACertChain(t *testing.T, signer crypto.Signer, notBefore time.Time) []*x509.Certificate {
+	t.Helper()
+	rootPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Test TSA Root"},
+		NotBefore:             notBefore.Add(-5 * time.Minute),
+		NotAfter:              notBefore.AddDate(10, 0, 0),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	rootDER, err := x509.CreateCertificate(rand.Reader, rootTemplate, rootTemplate, rootPriv.Public(), rootPriv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootCert, err := x509.ParseCertificate(rootDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	timestampExt, err := asn1.Marshal([]asn1.ObjectIdentifier{tsx509.EKUTimestampingOID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leafTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject:      pkix.Name{CommonName: "Test TSA Timestamping"},
+		NotBefore:    notBefore.Add(-3 * time.Minute),
+		NotAfter:     notBefore.AddDate(9, 0, 0),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtraExtensions: []pkix.Extension{{
+			Id:       tsx509.EKUOID,
+			Critical: true,
+			Value:    timestampExt,
+		}},
+	}
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, rootCert, signer.Public(), rootPriv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leafCert, err := x509.ParseCertificate(leafDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []*x509.Certificate{leafCert, rootCert}
+}
 
 func TestSignaturesRef(t *testing.T) {
 	sig := "a=="
@@ -212,6 +270,7 @@ func TestVerifyBlob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	tsaClient.CertChain = generateTSACertChain(t, tsaClient.Signer, expiredTSAOpts.Time)
 	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertChain)
 	if err != nil {
 		t.Fatalf("unexpected error marshalling cert chain: %v", err)

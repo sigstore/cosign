@@ -419,3 +419,6 @@ func (t *fakeTrustedMaterial) RekorLogs() map[string]*root.TransparencyLog { pan
 func (t *fakeTrustedMaterial) PublicKeyVerifier(string) (root.TimeConstrainedVerifier, error) {
 	panic("not implemented")
 }
+func (t *fakeTrustedMaterial) PublicKeyVerifiers() []root.TimeConstrainedVerifier {
+	panic("not implemented")
+}
