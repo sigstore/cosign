@@ -37,7 +37,7 @@ func percentEncode(input []byte) string {
 	}
 
 	var stringBuilder strings.Builder
-	for i := 0; i < len(input); i++ {
+	for i := range input {
 		stringBuilder.WriteByte('%')
 		fmt.Fprintf(&stringBuilder, "%.2x", input[i])
 	}

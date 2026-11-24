@@ -1,5 +1,4 @@
 //go:build !pkcs11key
-// +build !pkcs11key
 
 // Copyright 2021 The Sigstore Authors
 //

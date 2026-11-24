@@ -44,7 +44,7 @@ func ValidateJSON(jsonBody []byte, entrypoints []string) []error {
 		return []error{err}
 	}
 
-	var input interface{}
+	var input any
 	dec := json.NewDecoder(bytes.NewBuffer(jsonBody))
 	dec.UseNumber()
 	if err := dec.Decode(&input); err != nil {

@@ -44,9 +44,8 @@ func SBOMCmd(
 	}
 
 	se, err := ociremote.SignedEntity(ref, ociremoteOpts...)
-	var entityNotFoundError *ociremote.EntityNotFoundError
 	if err != nil {
-		if errors.As(err, &entityNotFoundError) {
+		if _, ok := errors.AsType[*ociremote.EntityNotFoundError](err); ok {
 			// We don't need to access the original image to download the attached sbom
 			if digest, ok := ref.(name.Digest); ok {
 				se = ociremote.SignedUnknown(digest)

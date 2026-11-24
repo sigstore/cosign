@@ -50,7 +50,7 @@ func TestWriteSignatures(t *testing.T) {
 	si := signed.Image(i)
 
 	want := 6 // Add 6 signatures
-	for i := 0; i < want; i++ {
+	for i := range want {
 		sig, err := cosignstatic.NewSignature(nil, fmt.Sprintf("%d", i))
 		if err != nil {
 			t.Fatalf("static.NewSignature() = %v", err)
@@ -92,7 +92,7 @@ func TestWriteAttestations(t *testing.T) {
 	si := signed.Image(i)
 
 	want := 6 // Add 6 attestations
-	for i := 0; i < want; i++ {
+	for i := range want {
 		sig, err := cosignstatic.NewAttestation([]byte(fmt.Sprintf("%d", i)))
 		if err != nil {
 			t.Fatalf("static.NewSignature() = %v", err)

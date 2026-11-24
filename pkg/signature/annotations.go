@@ -22,12 +22,12 @@ import (
 )
 
 type AnnotationsMap struct {
-	Annotations map[string]interface{}
+	Annotations map[string]any
 }
 
 func (a *AnnotationsMap) Set(s string) error {
 	if a.Annotations == nil {
-		a.Annotations = map[string]interface{}{}
+		a.Annotations = map[string]any{}
 	}
 	kvp := strings.SplitN(s, "=", 2)
 	if len(kvp) != 2 {

@@ -14,7 +14,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/go-openapi/runtime v0.33.5
 	github.com/go-openapi/strfmt v0.27.4
-	github.com/go-openapi/swag/conv v0.29.2
 	github.com/go-piv/piv-go/v2 v2.6.0
 	github.com/google/certificate-transparency-go v1.4.0
 	github.com/google/go-cmp v0.7.0
@@ -60,7 +59,6 @@ require (
 	k8s.io/api v0.37.2
 	k8s.io/apimachinery v0.37.2
 	k8s.io/client-go v0.37.2
-	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	sigs.k8s.io/release-utils v0.12.5
 )
 
@@ -164,6 +162,7 @@ require (
 	github.com/go-openapi/spec v1.0.1 // indirect
 	github.com/go-openapi/swag v0.29.2 // indirect
 	github.com/go-openapi/swag/cmdutils v0.29.2 // indirect
+	github.com/go-openapi/swag/conv v0.29.2 // indirect
 	github.com/go-openapi/swag/fileutils v0.29.2 // indirect
 	github.com/go-openapi/swag/jsonutils v0.29.2 // indirect
 	github.com/go-openapi/swag/loading v0.29.2 // indirect
@@ -291,6 +290,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect

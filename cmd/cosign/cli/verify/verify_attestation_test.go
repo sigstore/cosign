@@ -27,9 +27,7 @@ func TestVerifyAttestationMissingSubject(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: "issuer",
-		},
+		CertOidcIssuer: "issuer",
 	}
 
 	err := verifyAttestation.Exec(ctx, []string{"foo", "bar", "baz"})
@@ -42,9 +40,7 @@ func TestVerifyAttestationMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 
 	verifyAttestation := VerifyAttestationCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentity: "subject",
-		},
+		CertIdentity: "subject",
 	}
 
 	err := verifyAttestation.Exec(ctx, []string{"foo", "bar", "baz"})

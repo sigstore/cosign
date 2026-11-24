@@ -142,7 +142,7 @@ func TestVerifyBlobAttestation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			cmd := VerifyBlobAttestationCommand{
-				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+				KeyRef:        keyRef,
 				IgnoreTlog:    true,
 				CheckClaims:   true,
 				PredicateType: test.predicateType,
@@ -202,7 +202,7 @@ func TestVerifyBlobAttestationNoCheckClaims(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			cmd := VerifyBlobAttestationCommand{
-				KeyOpts:       options.KeyOpts{KeyRef: keyRef},
+				KeyRef:        keyRef,
 				IgnoreTlog:    true,
 				CheckClaims:   false,
 				PredicateType: "slsaprovenance",
@@ -238,10 +238,8 @@ func TestVerifyBlobAttestationKeyRequiresTrustedRoot(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := VerifyBlobAttestationCommand{
-				KeyOpts: options.KeyOpts{
-					KeyRef:     keyRef,
-					BundlePath: bundlePath,
-				},
+				KeyRef:              keyRef,
+				BundlePath:          bundlePath,
 				IgnoreTlog:          tc.ignoreTlog,
 				UseSignedTimestamps: tc.useSignedTimestamps,
 				CheckClaims:         true,
@@ -376,7 +374,7 @@ func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
 				if err != nil {
 					return "", err
 				}
-				var m map[string]interface{}
+				var m map[string]any
 				if err := json.Unmarshal(envJSONBytes, &m); err != nil {
 					return "", err
 				}
@@ -436,7 +434,7 @@ func TestVerifyBlobAttestation_MalformedPayloads(t *testing.T) {
 			bundlePath := makeLocalAttestNewBundle(t, envJSON.Payload, envJSON.PayloadType, envJSON.Signatures[0].Sig)
 
 			cmd := VerifyBlobAttestationCommand{
-				KeyOpts:         options.KeyOpts{KeyRef: keyRef, BundlePath: bundlePath},
+				KeyRef: keyRef, BundlePath: bundlePath,
 				IgnoreTlog:      true,
 				CheckClaims:     false,
 				PredicateType:   tc.predicateType,
@@ -504,10 +502,8 @@ func makeLocalAttestNewBundle(t *testing.T, payload, payloadType, sig string) st
 func TestVerifyBlobAttestationSkWithoutIdentities(t *testing.T) {
 	ctx := context.Background()
 	verifyBlobAttestation := VerifyBlobAttestationCommand{
-		KeyOpts: options.KeyOpts{
-			Sk:         true,
-			BundlePath: "bundle.sigstore.json",
-		},
+		Sk:         true,
+		BundlePath: "bundle.sigstore.json",
 	}
 
 	err := verifyBlobAttestation.Exec(ctx, "blob")

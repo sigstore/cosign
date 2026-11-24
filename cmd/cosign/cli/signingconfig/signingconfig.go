@@ -228,8 +228,8 @@ func parseService(spec string) (root.Service, error) {
 
 func parseKVs(spec string) (map[string]string, error) {
 	kvs := make(map[string]string)
-	pairs := strings.Split(spec, ",")
-	for _, pair := range pairs {
+	pairs := strings.SplitSeq(spec, ",")
+	for pair := range pairs {
 		parts := strings.SplitN(pair, "=", 2)
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid key-value pair: %s", pair)

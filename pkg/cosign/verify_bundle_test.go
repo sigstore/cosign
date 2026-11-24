@@ -832,7 +832,7 @@ func TestVerifyNewBundleConcurrentNoDataRace(t *testing.T) {
 	start := make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		go func() {
 			defer wg.Done()
 			<-start // release all goroutines together to widen the race window

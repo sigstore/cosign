@@ -99,7 +99,7 @@ func (s *Statement) UnmarshalJSON(stBytes []byte) error {
 
 // CosignPredicate specifies the format of the Custom Predicate.
 type CosignPredicate struct {
-	Data      interface{}
+	Data      any
 	Timestamp string
 }
 
@@ -122,10 +122,10 @@ type CosignVulnStatement struct {
 }
 
 type Invocation struct {
-	Parameters interface{} `json:"parameters"`
-	URI        string      `json:"uri"`
-	EventID    string      `json:"event_id"`
-	BuilderID  string      `json:"builder.id"`
+	Parameters any    `json:"parameters"`
+	URI        string `json:"uri"`
+	EventID    string `json:"event_id"`
+	BuilderID  string `json:"builder.id"`
 }
 
 type DB struct {
@@ -134,10 +134,10 @@ type DB struct {
 }
 
 type Scanner struct {
-	URI     string      `json:"uri"`
-	Version string      `json:"version"`
-	DB      DB          `json:"db"`
-	Result  interface{} `json:"result"`
+	URI     string `json:"uri"`
+	Version string `json:"version"`
+	DB      DB     `json:"db"`
+	Result  any    `json:"result"`
 }
 
 type Metadata struct {
@@ -480,14 +480,14 @@ func checkRequiredJSONFields(rawPayload []byte, typ reflect.Type) error {
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	var tmp map[string]interface{}
+	var tmp map[string]any
 	if err := json.Unmarshal(rawPayload, &tmp); err != nil {
 		return err
 	}
 	// Create list of json tags, e.g. `json:"_type"`
 	attributeCount := typ.NumField()
 	allFields := make([]string, 0)
-	for i := 0; i < attributeCount; i++ {
+	for i := range attributeCount {
 		jsonTagFields := strings.SplitN(typ.Field(i).Tag.Get("json"), ",", 2)
 		if len(jsonTagFields) < 2 && jsonTagFields[0] != "" && jsonTagFields[0] != "-" {
 			allFields = append(allFields, jsonTagFields[0])

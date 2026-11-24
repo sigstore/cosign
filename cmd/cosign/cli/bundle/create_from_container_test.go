@@ -39,7 +39,6 @@ import (
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -123,7 +122,7 @@ func (f *legacyFixture) attachAttestation(t *testing.T, predicateType string) {
 }
 
 func (f *legacyFixture) createFromContainerCmd() *CreateFromContainerCmd {
-	return &CreateFromContainerCmd{CommonBundleCreateOptions: options.CommonBundleCreateOptions{IgnoreTlog: true, KeyRef: f.keyPath}}
+	return &CreateFromContainerCmd{IgnoreTlog: true, KeyRef: f.keyPath}
 }
 
 func TestCreateFromContainerCmd(t *testing.T) {

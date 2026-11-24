@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
@@ -76,11 +77,8 @@ func newFinderCache() *finderCache {
 }
 
 func (fc *finderCache) isStage(input string) (found bool) {
-	for _, s := range fc.Stages {
-		if s == input {
-			found = true
-			break
-		}
+	if slices.Contains(fc.Stages, input) {
+		found = true
 	}
 	return found
 }
@@ -165,8 +163,8 @@ func (fc *finderCache) getImageFromCopyLine(line string) string {
 		return ""
 	})
 	var image string
-	fields := strings.Fields(line)
-	for _, f := range fields {
+	fields := strings.FieldsSeq(line)
+	for f := range fields {
 		if !strings.Contains(f, "--from=") {
 			continue
 		}
@@ -197,8 +195,8 @@ func (fc *finderCache) getEnvAndArgs(line string) {
 		}
 		return ""
 	})
-	fields := strings.Fields(line)
-	for _, f := range fields {
+	fields := strings.FieldsSeq(line)
+	for f := range fields {
 		keyvalue := strings.Split(f, "=")
 		if len(keyvalue) < 2 {
 			continue

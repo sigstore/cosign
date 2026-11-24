@@ -20,12 +20,12 @@ import (
 )
 
 // OneOf ensures that only one of the supplied interfaces is set to a non-zero value.
-func OneOf(args ...interface{}) bool {
+func OneOf(args ...any) bool {
 	return NOf(args...) == 1
 }
 
 // NOf returns how many of the fields are non-zero
-func NOf(args ...interface{}) int {
+func NOf(args ...any) int {
 	n := 0
 	for _, arg := range args {
 		if !reflect.ValueOf(arg).IsZero() {

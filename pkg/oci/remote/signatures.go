@@ -41,8 +41,7 @@ const maxLayers = 1000
 func Signatures(ref name.Reference, opts ...Option) (oci.Signatures, error) {
 	o := makeOptions(ref.Context(), opts...)
 	img, err := remoteImage(ref, o.ROpt...)
-	var te *transport.Error
-	if errors.As(err, &te) {
+	if te, ok := errors.AsType[*transport.Error](err); ok {
 		if te.StatusCode != http.StatusNotFound {
 			return nil, te
 		}

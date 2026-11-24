@@ -101,7 +101,6 @@ func FetchSignatures(se oci.SignedEntity) ([]SignedPayload, error) {
 	var g errgroup.Group
 	g.SetLimit(runtime.NumCPU())
 	for i, sig := range l {
-		i, sig := i, sig
 		g.Go(func() error {
 			var err error
 			signatures[i].Payload, err = sig.Payload()
@@ -169,7 +168,6 @@ func FetchAttestations(se oci.SignedEntity, predicateType string) ([]Attestation
 	g.SetLimit(runtime.NumCPU())
 
 	for _, att := range l {
-		att := att
 		g.Go(func() error {
 			rawPayload, err := att.Payload()
 			if err != nil {

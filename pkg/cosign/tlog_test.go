@@ -29,7 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-openapi/swag/conv"
 	ttestdata "github.com/google/certificate-transparency-go/trillian/testdata"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	rtypes "github.com/sigstore/rekor/pkg/types"
@@ -136,9 +135,9 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 	lea := &models.LogEntryAnon{
 		Body:           base64.StdEncoding.EncodeToString(canonicalEntry),
-		LogIndex:       conv.Pointer(int64(0)),
-		LogID:          conv.Pointer(logID),
-		IntegratedTime: conv.Pointer(time.Now().Unix()),
+		LogIndex:       new(int64(0)),
+		LogID:          new(logID),
+		IntegratedTime: new(time.Now().Unix()),
 	}
 	entryUUID, err := ComputeLeafHash(lea)
 	if err != nil {
@@ -146,9 +145,9 @@ func TestVerifyTLogEntryOfflineFailsWithInvalidPublicKey(t *testing.T) {
 	}
 	lea.Verification = &models.LogEntryAnonVerification{
 		InclusionProof: &models.InclusionProof{
-			LogIndex: conv.Pointer(int64(0)),
-			TreeSize: conv.Pointer(int64(1)),
-			RootHash: conv.Pointer(hex.EncodeToString(entryUUID)),
+			LogIndex: new(int64(0)),
+			TreeSize: new(int64(1)),
+			RootHash: new(hex.EncodeToString(entryUUID)),
 			Hashes:   []string{},
 		},
 	}
@@ -168,7 +167,7 @@ func TestComputeLeafHash(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		body          interface{}
+		body          any
 		wantHash      []byte
 		wantErrSubstr string
 	}{
@@ -194,7 +193,7 @@ func TestComputeLeafHash(t *testing.T) {
 		},
 		{
 			name:          "object body",
-			body:          map[string]interface{}{"k": "v"},
+			body:          map[string]any{"k": "v"},
 			wantErrSubstr: "invalid body type",
 		},
 	}
@@ -236,13 +235,13 @@ func TestVerifyTLogEntryOfflineRejectsMalformedEntryWithoutPanic(t *testing.T) {
 			name: "nil root hash",
 			lea: &models.LogEntryAnon{
 				Body:           "",
-				LogIndex:       conv.Pointer(int64(0)),
-				LogID:          conv.Pointer(""),
-				IntegratedTime: conv.Pointer(time.Now().Unix()),
+				LogIndex:       new(int64(0)),
+				LogID:          new(""),
+				IntegratedTime: new(time.Now().Unix()),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						LogIndex: conv.Pointer(int64(0)),
-						TreeSize: conv.Pointer(int64(1)),
+						LogIndex: new(int64(0)),
+						TreeSize: new(int64(1)),
 						RootHash: nil,
 					},
 				},
@@ -252,14 +251,14 @@ func TestVerifyTLogEntryOfflineRejectsMalformedEntryWithoutPanic(t *testing.T) {
 			name: "nil log index",
 			lea: &models.LogEntryAnon{
 				Body:           "",
-				LogIndex:       conv.Pointer(int64(0)),
-				LogID:          conv.Pointer(""),
-				IntegratedTime: conv.Pointer(time.Now().Unix()),
+				LogIndex:       new(int64(0)),
+				LogID:          new(""),
+				IntegratedTime: new(time.Now().Unix()),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
 						LogIndex: nil,
-						TreeSize: conv.Pointer(int64(1)),
-						RootHash: conv.Pointer(""),
+						TreeSize: new(int64(1)),
+						RootHash: new(""),
 					},
 				},
 			},
@@ -268,14 +267,14 @@ func TestVerifyTLogEntryOfflineRejectsMalformedEntryWithoutPanic(t *testing.T) {
 			name: "nil tree size",
 			lea: &models.LogEntryAnon{
 				Body:           "",
-				LogIndex:       conv.Pointer(int64(0)),
-				LogID:          conv.Pointer(""),
-				IntegratedTime: conv.Pointer(time.Now().Unix()),
+				LogIndex:       new(int64(0)),
+				LogID:          new(""),
+				IntegratedTime: new(time.Now().Unix()),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						LogIndex: conv.Pointer(int64(0)),
+						LogIndex: new(int64(0)),
 						TreeSize: nil,
-						RootHash: conv.Pointer(""),
+						RootHash: new(""),
 					},
 				},
 			},
@@ -284,14 +283,14 @@ func TestVerifyTLogEntryOfflineRejectsMalformedEntryWithoutPanic(t *testing.T) {
 			name: "non-string body",
 			lea: &models.LogEntryAnon{
 				Body:           []byte("not a string"),
-				LogIndex:       conv.Pointer(int64(0)),
-				LogID:          conv.Pointer(""),
-				IntegratedTime: conv.Pointer(time.Now().Unix()),
+				LogIndex:       new(int64(0)),
+				LogID:          new(""),
+				IntegratedTime: new(time.Now().Unix()),
 				Verification: &models.LogEntryAnonVerification{
 					InclusionProof: &models.InclusionProof{
-						LogIndex: conv.Pointer(int64(0)),
-						TreeSize: conv.Pointer(int64(1)),
-						RootHash: conv.Pointer(""),
+						LogIndex: new(int64(0)),
+						TreeSize: new(int64(1)),
+						RootHash: new(""),
 					},
 				},
 			},

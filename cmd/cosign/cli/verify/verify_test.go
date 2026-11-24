@@ -136,7 +136,7 @@ func TestPrintVerification(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating test dig3.")
 	}
-	pp, err := (&payload.Cosign{Image: dig3, Annotations: map[string]interface{}{}}).MarshalJSON()
+	pp, err := (&payload.Cosign{Image: dig3, Annotations: map[string]any{}}).MarshalJSON()
 	if err != nil {
 		t.Fatalf("Error creating cosign payload")
 	}
@@ -201,9 +201,7 @@ func TestPrintVerification(t *testing.T) {
 func TestVerifyCertMissingSubject(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertOidcIssuer: "issuer",
-		},
+		CertOidcIssuer: "issuer",
 	}
 
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})
@@ -215,9 +213,7 @@ func TestVerifyCertMissingSubject(t *testing.T) {
 func TestVerifyCertMissingIssuer(t *testing.T) {
 	ctx := context.Background()
 	verifyCommand := VerifyCommand{
-		CertVerifyOptions: options.CertVerifyOptions{
-			CertIdentity: "identity",
-		},
+		CertIdentity: "identity",
 	}
 
 	err := verifyCommand.Exec(ctx, []string{"foo", "bar", "baz"})

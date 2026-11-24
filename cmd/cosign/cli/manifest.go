@@ -20,7 +20,6 @@ import (
 
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/manifest"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 )
 
@@ -79,27 +78,25 @@ against the transparency log.`,
 				return err
 			}
 			v := &manifest.VerifyManifestCommand{
-				VerifyCommand: verify.VerifyCommand{
-					RegistryOptions:              o.Registry,
-					CertVerifyOptions:            o.CertVerify,
-					CommonVerifyOptions:          o.CommonVerifyOptions,
-					CheckClaims:                  o.CheckClaims,
-					KeyRef:                       o.Key,
-					CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
-					CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
-					CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
-					CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
-					CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
-					IgnoreSCT:                    o.CertVerify.IgnoreSCT,
-					Sk:                           o.SecurityKey.Use,
-					Slot:                         o.SecurityKey.Slot,
-					Output:                       o.Output,
-					Annotations:                  annotations,
-					LocalImage:                   o.LocalImage,
-					IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
-					MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
-					UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
-				},
+				RegistryOptions:              o.Registry,
+				CertVerifyOptions:            o.CertVerify,
+				CommonVerifyOptions:          o.CommonVerifyOptions,
+				CheckClaims:                  o.CheckClaims,
+				KeyRef:                       o.Key,
+				CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+				CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+				CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+				CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
+				Sk:                           o.SecurityKey.Use,
+				Slot:                         o.SecurityKey.Slot,
+				Output:                       o.Output,
+				Annotations:                  annotations,
+				LocalImage:                   o.LocalImage,
+				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
 
 			if o.CommonVerifyOptions.MaxWorkers == 0 {
