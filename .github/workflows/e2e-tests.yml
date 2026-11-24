@@ -96,7 +96,8 @@ jobs:
       VAULT_TOKEN: "root"
       VAULT_ADDR: "http://localhost:8200"
       COSIGN_YES: "true"
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.42"
+      # These tests use the legacy Rekor v1 API and signature format.
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.33"
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -120,6 +121,7 @@ jobs:
       - name: Install cluster + sigstore
         uses: sigstore/scaffolding/actions/setup@main
         with:
+          k8s-version: v1.34.x
           version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
       - name: enable vault transit
@@ -132,7 +134,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SCAFFOLDING_RELEASE_VERSION: "v0.7.42"
+      # These tests use the legacy Rekor v1 API and signature format.
+      SCAFFOLDING_RELEASE_VERSION: "v0.7.33"
 
     steps:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -156,6 +159,7 @@ jobs:
     - name: Install cluster + sigstore
       uses: sigstore/scaffolding/actions/setup@main
       with:
+        k8s-version: v1.34.x
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
 
     - name: Setup local insecure registry

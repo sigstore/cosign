@@ -38,6 +38,11 @@ const (
 func TestSecretsKMS(t *testing.T) {
 	ctx := context.Background()
 
+	rekorURL := os.Getenv(rekorURLVar)
+	if rekorURL == "" {
+		t.Fatal("REKOR_URL must be set to a Rekor v1 server")
+	}
+
 	repo, stop := reg(t)
 	defer stop()
 	td := t.TempDir()
@@ -58,12 +63,10 @@ func TestSecretsKMS(t *testing.T) {
 	pubKey := prefix + ".pub"
 	privKey := kms
 
-	// Verify should fail at first
-	mustErr(verify(pubKey, imgName, true, nil, "", false), t)
-
-	rekorURL := os.Getenv(rekorURLVar)
-
 	must(downloadAndSetEnv(t, rekorURL+"/api/v1/log/publicKey", env.VariableSigstoreRekorPublicKey.String(), td), t)
+
+	// Verify should fail at first
+	mustErr(verifyWithRekor(pubKey, imgName, rekorURL, true, nil, "", false), t)
 
 	// Now sign and verify with the KMS key
 	ko := options.KeyOpts{
@@ -76,10 +79,10 @@ func TestSecretsKMS(t *testing.T) {
 		TlogUpload: true,
 	}
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verifyWithRekor(pubKey, imgName, rekorURL, true, nil, "", false), t)
 
 	// Sign and verify with annotations
-	mustErr(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	mustErr(verifyWithRekor(pubKey, imgName, rekorURL, true, map[string]any{"foo": "bar"}, "", false), t)
 	soAnno := options.SignOptions{
 		Upload:     true,
 		TlogUpload: true,
@@ -88,11 +91,11 @@ func TestSecretsKMS(t *testing.T) {
 		},
 	}
 	must(sign.SignCmd(ro, ko, soAnno, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, map[string]any{"foo": "bar"}, "", false), t)
+	must(verifyWithRekor(pubKey, imgName, rekorURL, true, map[string]any{"foo": "bar"}, "", false), t)
 
 	// Store signatures in a different repo
 	t.Setenv("COSIGN_REPOSITORY", path.Join(repo, "subbedrepo"))
 	must(sign.SignCmd(ro, ko, so, []string{imgName}), t)
-	must(verify(pubKey, imgName, true, nil, "", false), t)
+	must(verifyWithRekor(pubKey, imgName, rekorURL, true, nil, "", false), t)
 	os.Unsetenv("COSIGN_REPOSITORY")
 }

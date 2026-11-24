@@ -75,9 +75,13 @@ var passFunc = func(_ bool) ([]byte, error) {
 }
 
 var verify = func(keyRef, imageRef string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
+	return verifyWithRekor(keyRef, imageRef, rekorURL, checkClaims, annotations, attachment, skipTlogVerify)
+}
+
+func verifyWithRekor(keyRef, imageRef, rekorServer string, checkClaims bool, annotations map[string]interface{}, attachment string, skipTlogVerify bool) error {
 	cmd := cliverify.VerifyCommand{
 		KeyRef:        keyRef,
-		RekorURL:      rekorURL,
+		RekorURL:      rekorServer,
 		CheckClaims:   checkClaims,
 		Annotations:   sigs.AnnotationsMap{Annotations: annotations},
 		Attachment:    attachment,
@@ -555,6 +559,9 @@ func downloadFile(url string, fp *os.File) error {
 		return fmt.Errorf("error downloading file: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error downloading file: %s returned %s", url, resp.Status)
+	}
 	_, err = io.Copy(fp, resp.Body)
 	if err != nil {
 		return fmt.Errorf("error writing to file: %w", err)
@@ -568,6 +575,7 @@ func downloadAndSetEnv(t *testing.T, url, envVar, dir string) error {
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %w", err)
 	}
+	defer f.Close()
 	err = downloadFile(url, f)
 	if err != nil {
 		return fmt.Errorf("error downloading file: %w", err)

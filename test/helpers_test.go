@@ -21,9 +21,55 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 )
+
+func TestDownloadFile(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		status  int
+		wantErr bool
+	}{
+		{name: "success", status: http.StatusOK},
+		{name: "not found", status: http.StatusNotFound, wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte("response"))
+			}))
+			defer server.Close()
+
+			f, err := os.CreateTemp(t.TempDir(), "download")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+
+			err = downloadFile(server.URL, f)
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "404") {
+					t.Fatalf("expected HTTP 404 error, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(f.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != "response" {
+				t.Fatalf("unexpected downloaded content: %q", data)
+			}
+		})
+	}
+}
 
 func TestGenerateCertificateBundleFiles(t *testing.T) {
 	for _, tt := range []struct {
