@@ -33,10 +33,9 @@ jobs:
     strategy:
       matrix:
         k8s-version:
-        - v1.30.x
-        - v1.31.x
-        - v1.32.x
-        - v1.33.x
+        - v1.35.x
+        - v1.36.x
+        - v1.37.x
         tuf-root:
         - remote
         - air-gap
