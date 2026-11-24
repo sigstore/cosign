@@ -477,6 +477,70 @@ func TestVerifyBundle(t *testing.T) {
 			entity:               &bundleMutator{SignedEntity: blobSig, tlogOverride: otherTlogEntries},
 			wantErr:              true,
 		},
+		{
+			name: "rekor and timestamp thresholds met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				RekorThreshold:      1,
+				TimestampThreshold:  1,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              false,
+		},
+		{
+			name: "rekor threshold not met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				RekorThreshold:      2,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              true,
+		},
+		{
+			name: "timestamp threshold without UseSignedTimestamps, missing tsa",
+			checkOpts: &CheckOpts{
+				Identities:         standardIdentities,
+				IgnoreSCT:          true,
+				TimestampThreshold: 1,
+				TrustedMaterial:    virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               &bundleMutator{SignedEntity: attestation, eraseTSA: true},
+			wantErr:              true,
+		},
+		{
+			name: "timestamp threshold without UseSignedTimestamps",
+			checkOpts: &CheckOpts{
+				Identities:         standardIdentities,
+				IgnoreSCT:          true,
+				TimestampThreshold: 1,
+				TrustedMaterial:    virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              false,
+		},
+		{
+			name: "timestamp threshold not met",
+			checkOpts: &CheckOpts{
+				Identities:          standardIdentities,
+				IgnoreSCT:           true,
+				UseSignedTimestamps: true,
+				TimestampThreshold:  2,
+				TrustedMaterial:     virtualSigstore,
+			},
+			artifactPolicyOption: verify.WithArtifact(bytes.NewReader(artifact)),
+			entity:               attestation,
+			wantErr:              true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err = VerifyNewBundle(context.Background(), tc.checkOpts, tc.artifactPolicyOption, tc.entity)

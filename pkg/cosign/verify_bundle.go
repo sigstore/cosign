@@ -45,7 +45,7 @@ func VerifyNewBundle(_ context.Context, co *CheckOpts, artifactPolicyOption veri
 // rekorV2Bundle checks if a bundle contains only Rekor v2 entries, and if so, mandates that
 // a signed timestamp is provided when verifying a certificate. Unlike Rekor v1, Rekor v2 does
 // not provide timestamps, and so when verifying a short-lived certificates, users either explicitly
-// need to specify --use-signed-timestamps, or we'll opportunistically set it here.
+// need to specify --timestamp-threshold, or we'll opportunistically set it here.
 // This check does nothing if users skip transparency log verification or provide a key, since
 // a trusted timestamp is unneeded.
 // If a bundle were to contain both a Rekor v1 and Rekor v2 entry, but with trust material that
