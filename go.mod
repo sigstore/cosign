@@ -31,11 +31,11 @@ require (
 	github.com/open-policy-agent/opa v1.22.4
 	github.com/osscontainertools/docker-credential-acr v1.0.1
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1
-	github.com/sigstore/protobuf-specs v0.5.2
+	github.com/sigstore/protobuf-specs v0.5.3-0.20261112181914-a84bc5ff572a
 	github.com/sigstore/rekor v1.6.2
 	github.com/sigstore/rekor-tiles/v2 v2.4.2
 	github.com/sigstore/sigstore v1.11.4
-	github.com/sigstore/sigstore-go v1.4.0
+	github.com/sigstore/sigstore-go v1.4.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.2
