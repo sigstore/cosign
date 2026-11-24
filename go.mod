@@ -12,7 +12,7 @@ require (
 	github.com/dustin/go-humanize v1.1.0
 	github.com/eclipse-keypont/crypto11 v1.6.8
 	github.com/go-jose/go-jose/v4 v4.1.9
-	github.com/go-openapi/runtime v0.33.4
+	github.com/go-openapi/runtime v0.33.5
 	github.com/go-openapi/strfmt v0.27.4
 	github.com/go-openapi/swag/conv v0.29.2
 	github.com/go-piv/piv-go/v2 v2.6.0
@@ -41,7 +41,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.2
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.11.3
-	github.com/sigstore/timestamp-authority/v2 v2.2.0
+	github.com/sigstore/timestamp-authority/v2 v2.2.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/spf13/viper v1.21.0
@@ -160,7 +160,7 @@ require (
 	github.com/go-openapi/jsonpointer v1.0.2 // indirect
 	github.com/go-openapi/jsonreference v1.0.3 // indirect
 	github.com/go-openapi/loads v0.25.3 // indirect
-	github.com/go-openapi/runtime/server-middleware v0.33.4 // indirect
+	github.com/go-openapi/runtime/server-middleware v0.33.5 // indirect
 	github.com/go-openapi/spec v1.0.1 // indirect
 	github.com/go-openapi/swag v0.29.2 // indirect
 	github.com/go-openapi/swag/cmdutils v0.29.2 // indirect
