@@ -13,7 +13,7 @@ require (
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eclipse-keypont/crypto11 v1.6.8
-	github.com/go-jose/go-jose/v4 v4.1.6
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/go-openapi/runtime v0.33.3
 	github.com/go-openapi/strfmt v0.27.3
 	github.com/go-openapi/swag/conv v0.29.2
@@ -36,7 +36,7 @@ require (
 	github.com/sigstore/protobuf-specs v0.5.2
 	github.com/sigstore/rekor v1.5.4
 	github.com/sigstore/rekor-tiles/v2 v2.3.0
-	github.com/sigstore/sigstore v1.11.1
+	github.com/sigstore/sigstore v1.11.4
 	github.com/sigstore/sigstore-go v1.3.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.11.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.11.1
@@ -52,10 +52,10 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	gitlab.com/gitlab-org/api/client-go/v3 v3.13.0
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	golang.org/x/oauth2 v0.37.0
-	golang.org/x/sync v0.24.0
-	golang.org/x/term v0.47.0
+	golang.org/x/sync v0.25.0
+	golang.org/x/term v0.48.0
 	google.golang.org/api v0.301.0
 	google.golang.org/protobuf v1.36.12
 	k8s.io/api v0.36.2
@@ -75,6 +75,7 @@ require (
 	cloud.google.com/go/longrunning v1.2.0 // indirect
 	connectrpc.com/connect v1.20.0 // indirect
 	cuelabs.dev/go/oci/ociregistry v0.0.0-20260601085548-328ff8e2c943 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/provider v0.18.1 // indirect
 	github.com/AliyunContainerService/ack-ram-tool/pkg/ecsmetadata v0.0.9 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
@@ -254,7 +255,7 @@ require (
 	github.com/tink-crypto/tink-go-awskms/v3 v3.0.0 // indirect
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.4.0 // indirect
 	github.com/tink-crypto/tink-go-hcvault/v2 v2.5.0 // indirect
-	github.com/tink-crypto/tink-go/v2 v2.8.0 // indirect
+	github.com/tink-crypto/tink-go/v2 v2.9.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/transparency-dev/formats v0.1.1 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
@@ -276,12 +277,12 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/net v0.61.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
