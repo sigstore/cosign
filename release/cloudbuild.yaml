@@ -32,7 +32,7 @@ steps:
         echo "Checking out ${_GIT_TAG}"
         git checkout ${_GIT_TAG}
 
-  - name: 'ghcr.io/sigstore/cosign/cosign:v3.1.4-dev@sha256:8af1a2cf9fba903fdfc6bdafdc25f7b13ef34ad722095543ea787fb96f7240c1'
+  - name: 'ghcr.io/sigstore/cosign/cosign:v3.1.5-dev@sha256:d35084676a35418684f41790a4929fd1834405a09f59743d9295bd1244f1ee04'
     dir: "go/src/sigstore/cosign"
     env:
       - TUF_ROOT=/tmp
