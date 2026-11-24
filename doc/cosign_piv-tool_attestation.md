@@ -19,18 +19,18 @@ cosign piv-tool attestation [flags]
 ### Options
 
 ```
-  -h, --help            help for attestation
-  -o, --output string   format to output attestation information in. (text|json) (default "text")
-      --slot string     Slot to use for generated key (authentication|signature|card-authentication|key-management)
+  -h, --help[=true|false]   help for attestation
+  -o, --output string       format to output attestation information in. (text|json) (default "text")
+      --slot string         Slot to use for generated key (authentication|signature|card-authentication|key-management)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -f, --no-input             skip warnings and confirmations
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+  -f, --no-input[=true|false]   skip warnings and confirmations
+      --output-file string      log output to a file
+  -t, --timeout duration        timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]    log debug output
 ```
 
 ### SEE ALSO
