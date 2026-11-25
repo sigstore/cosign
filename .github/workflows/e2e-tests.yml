@@ -162,6 +162,10 @@ jobs:
 
     - name: Setup local insecure registry
       run: |
+        # zot panics on startup if it cannot create an inotify instance for
+        # its config watcher, and the kind cluster uses most of root's quota.
+        sysctl fs.inotify.max_user_instances
+        sudo sysctl -w fs.inotify.max_user_instances=1024
         # Create a self-signed SSL cert
         mkdir -p insecure-certs
         openssl req \
