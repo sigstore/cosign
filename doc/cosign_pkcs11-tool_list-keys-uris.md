@@ -16,7 +16,7 @@ cosign pkcs11-tool list-keys-uris [flags]
 ### Options
 
 ```
-  -h, --help                 help for list-keys-uris
+  -h, --help[=true|false]    help for list-keys-uris
       --module-path string   absolute path to the PKCS11 module
       --pin string           pin of the PKCS11 slot, uses environment variable COSIGN_PKCS11_PIN if empty
       --slot-id uint         id of the PKCS11 slot, uses 0 if empty
@@ -25,10 +25,10 @@ cosign pkcs11-tool list-keys-uris [flags]
 ### Options inherited from parent commands
 
 ```
-  -f, --no-input             skip warnings and confirmations
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+  -f, --no-input[=true|false]   skip warnings and confirmations
+      --output-file string      log output to a file
+  -t, --timeout duration        timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]    log debug output
 ```
 
 ### SEE ALSO

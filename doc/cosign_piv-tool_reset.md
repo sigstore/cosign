@@ -15,16 +15,16 @@ cosign piv-tool reset [flags]
 ### Options
 
 ```
-  -h, --help   help for reset
+  -h, --help[=true|false]   help for reset
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -f, --no-input             skip warnings and confirmations
-      --output-file string   log output to a file
-  -t, --timeout duration     timeout for commands (default 3m0s)
-  -d, --verbose              log debug output
+  -f, --no-input[=true|false]   skip warnings and confirmations
+      --output-file string      log output to a file
+  -t, --timeout duration        timeout for commands (default 3m0s)
+  -d, --verbose[=true|false]    log debug output
 ```
 
 ### SEE ALSO
