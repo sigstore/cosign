@@ -848,11 +848,32 @@ func GetLocalBundles(path string, bundleOpts ...sgbundle.Option) ([]*sgbundle.Bu
 		return nil, nil, err
 	}
 
+	if hash != nil && len(descriptors) > 0 {
+		targetBlobPath := filepath.Clean(filepath.Join(path, "blobs", hash.Algorithm, hash.Hex))
+		targetBytes, err := os.ReadFile(targetBlobPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading target manifest blob %s: %w", hash.Hex, err)
+		}
+		actualTargetHash, _, err := v1.SHA256(bytes.NewReader(targetBytes))
+		if err != nil {
+			return nil, nil, fmt.Errorf("hashing target manifest blob %s: %w", hash.Hex, err)
+		}
+		if actualTargetHash != *hash {
+			return nil, nil, fmt.Errorf("target manifest digest mismatch: index.json declares %s, but blob hashes to %s", *hash, actualTargetHash)
+		}
+	}
+
 	bundles := make([]*sgbundle.Bundle, 0, len(descriptors))
 	for _, descriptor := range descriptors {
 		bundleBytes, err := os.ReadFile(filepath.Join(path, descriptor.blobPath))
 		if err != nil {
 			ui.Warnf(context.Background(), "Failed to read bundle blob %s: %v", descriptor.digest.Hex, err)
+			continue
+		}
+
+		actualBundleHash, _, err := v1.SHA256(bytes.NewReader(bundleBytes))
+		if err != nil || actualBundleHash != descriptor.digest {
+			ui.Warnf(context.Background(), "Bundle blob %s digest mismatch: got %s", descriptor.digest.Hex, actualBundleHash.Hex)
 			continue
 		}
 

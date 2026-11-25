@@ -855,3 +855,32 @@ func TestHashFields(t *testing.T) {
 		})
 	}
 }
+
+func TestGetLocalBundles_TamperedTargetManifestBlob(t *testing.T) {
+	tmp := createV3BundleLayout(t)
+
+	p, err := ggcrlayout.FromPath(tmp)
+	require.NoError(t, err)
+	ii, err := p.ImageIndex()
+	require.NoError(t, err)
+	idxManifest, err := ii.IndexManifest()
+	require.NoError(t, err)
+
+	var targetDigest v1.Hash
+	for _, m := range idxManifest.Manifests {
+		if m.Annotations["kind"] == "dev.cosignproject.cosign/image" {
+			targetDigest = m.Digest
+			break
+		}
+	}
+	require.NotEmpty(t, targetDigest.Hex)
+
+	// Tamper with the target image manifest blob on disk without updating index.json
+	targetBlobPath := filepath.Join(tmp, "blobs", "sha256", targetDigest.Hex)
+	err = os.WriteFile(targetBlobPath, []byte(`{"schemaVersion":2,"mediaType":"application/vnd.oci.image.manifest.v1+json","Tampered":true}`), 0644)
+	require.NoError(t, err)
+
+	_, _, err = GetLocalBundles(tmp)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "target manifest digest mismatch")
+}
