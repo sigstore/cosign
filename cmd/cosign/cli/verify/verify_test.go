@@ -19,12 +19,14 @@ import (
 	"context"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -42,17 +44,29 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	v1static "github.com/google/go-containerregistry/pkg/v1/static"
+	ssldsse "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/internal/test"
 	"github.com/sigstore/cosign/v3/internal/ui"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/oci"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
+	"github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type certData struct {
@@ -286,7 +300,7 @@ func TestTransformOutputSuccess(t *testing.T) {
 	  "subject": [
 		{ "name": "artifact", "digest": { "sha256": "deadbeef" }, "annotations": { "foo": "bar" } }
 	  ],
-	  "predicateType": "https://slsa.dev/provenance/v0.2"
+	  "predicateType": "https://sigstore.dev/cosign/sign/v1"
 	}`
 	// DSSE payloadType for in-toto
 	payloadType := "application/vnd.in-toto+json"
@@ -326,8 +340,94 @@ func TestTransformOutputSuccess(t *testing.T) {
 
 	assert.Equal(t, name, sci.Critical.Identity.DockerReference, "docker reference mismatch")
 	assert.Equal(t, "sha256:deadbeef", sci.Critical.Image.DockerManifestDigest, "digest mismatch")
-	assert.Equal(t, "https://slsa.dev/provenance/v0.2", sci.Critical.Type, "type mismatch")
+	assert.Equal(t, "https://sigstore.dev/cosign/sign/v1", sci.Critical.Type, "type mismatch")
 	assert.Equal(t, map[string]any{"foo": "bar"}, sci.Optional, "missing annotation")
+}
+
+func TestVerifyRejectsOtherAttestations(t *testing.T) {
+	s := httptest.NewServer(registry.New(registry.WithReferrersSupport(true)))
+	defer s.Close()
+
+	ref, err := name.ParseReference(strings.TrimPrefix(s.URL, "http://") + "/message-signature:latest")
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(ref, empty.Image))
+	hash, err := empty.Image.Digest()
+	require.NoError(t, err)
+	digestBytes, err := hex.DecodeString(hash.Hex)
+	require.NoError(t, err)
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	publicKey, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+	keyPath := filepath.Join(t.TempDir(), "cosign.pub")
+	require.NoError(t, os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKey}), 0o600))
+
+	verifier, closeVerifier, err := LoadVerifierFromKey(t.Context(), keyPath, "", false)
+	require.NoError(t, err)
+	defer closeVerifier()
+
+	statement := fmt.Appendf(nil, `{"_type":"https://in-toto.io/Statement/v1","subject":[{"name":"artifact","digest":{"sha256":%q},"annotations":{}}],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{}}`, hash.Hex)
+	paeDigest := sha256.Sum256(ssldsse.PAE(types.IntotoPayloadType, statement))
+	sig, err := ecdsa.SignASN1(rand.Reader, key, paeDigest[:])
+	require.NoError(t, err)
+
+	pb := &protobundle.Bundle{
+		MediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_PublicKey{PublicKey: &protocommon.PublicKeyIdentifier{Hint: "key"}},
+		},
+		Content: &protobundle.Bundle_DsseEnvelope{
+			DsseEnvelope: &protodsse.Envelope{
+				PayloadType: types.IntotoPayloadType,
+				Payload:     statement,
+				Signatures:  []*protodsse.Signature{{Sig: sig}},
+			},
+		},
+	}
+	bundle, err := sgbundle.NewBundle(pb)
+	require.NoError(t, err)
+	_, err = cosign.VerifyNewBundle(t.Context(), &cosign.CheckOpts{SigVerifier: verifier, IgnoreTlog: true},
+		sgverify.WithArtifactDigest(hash.Algorithm, digestBytes), bundle)
+	require.NoError(t, err, "DSSE signature must be valid for the image")
+
+	bundleBytes, err := protojson.Marshal(pb)
+	require.NoError(t, err)
+	layer := v1static.NewLayer(bundleBytes, "application/vnd.dev.sigstore.bundle.v0.3+json")
+	require.NoError(t, ociremote.WriteReferrer(ref.Context().Digest(hash.String()), pb.MediaType, []v1.Layer{layer}, nil))
+
+	cmd := VerifyCommand{KeyRef: keyPath, IgnoreTlog: true, CheckClaims: true}
+	err = cmd.Exec(t.Context(), []string{ref.String()})
+	require.ErrorContains(t, err, "no matching signatures exist")
+}
+
+func TestVerifySignedAndUnsignedImagesReturnsError(t *testing.T) {
+	s := httptest.NewServer(registry.New(registry.WithReferrersSupport(true)))
+	defer s.Close()
+
+	host := strings.TrimPrefix(s.URL, "http://")
+	signed := host + "/signed:latest"
+	unsigned := host + "/unsigned:latest"
+	for _, image := range []string{signed, unsigned} {
+		ref, err := name.ParseReference(image)
+		require.NoError(t, err)
+		require.NoError(t, remote.Write(ref, empty.Image))
+	}
+
+	keys, err := cosign.GenerateKeyPair(func(bool) ([]byte, error) { return nil, nil })
+	require.NoError(t, err)
+	dir := t.TempDir()
+	privateKey := filepath.Join(dir, "cosign.key")
+	publicKey := filepath.Join(dir, "cosign.pub")
+	require.NoError(t, os.WriteFile(privateKey, keys.PrivateBytes, 0o600))
+	require.NoError(t, os.WriteFile(publicKey, keys.PublicBytes, 0o600))
+	ko := options.KeyOpts{KeyRef: privateKey, PassFunc: func(bool) ([]byte, error) { return nil, nil }, SkipConfirmation: true}
+	require.NoError(t, sign.SignCmd(t.Context(), &options.RootOptions{Timeout: options.DefaultTimeout}, ko, options.SignOptions{Upload: true}, []string{signed}))
+
+	cmd := VerifyCommand{KeyRef: publicKey, IgnoreTlog: true, CheckClaims: true}
+	require.NoError(t, cmd.Exec(t.Context(), []string{signed}))
+	err = cmd.Exec(t.Context(), []string{signed, unsigned})
+	require.ErrorContains(t, err, "no valid bundles exist in registry")
 }
 
 func TestVerifySkWithoutIdentities(t *testing.T) {

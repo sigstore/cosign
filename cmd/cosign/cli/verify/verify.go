@@ -30,6 +30,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -135,14 +136,14 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 	for _, img := range images {
 		var verified []oci.Signature
 		var bundleVerified bool
+		var displayName string
 
 		if c.LocalImage {
 			verified, bundleVerified, err = cosign.VerifyLocalImageAttestations(ctx, img, co)
 			if err != nil {
 				return err
 			}
-			PrintVerificationHeader(ctx, img, co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, verified, c.Output)
+			displayName = img
 		} else {
 			ref, err := name.ParseReference(img, c.NameOptions...)
 			if err != nil {
@@ -154,14 +155,18 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			if err != nil {
 				return err
 			}
+			displayName = ref.Name()
+		}
 
-			verifiedOutput, err := transformOutput(verified, ref.Name())
-			if err == nil {
-				verified = verifiedOutput
-			}
-
-			PrintVerificationHeader(ctx, ref.Name(), co, bundleVerified, fulcioVerified)
-			PrintVerification(ctx, verified, c.Output)
+		verifiedOutput, err := transformOutput(verified, displayName)
+		if err != nil {
+			return err
+		}
+		if len(verifiedOutput) > 0 {
+			PrintVerificationHeader(ctx, displayName, co, bundleVerified, fulcioVerified)
+			PrintVerification(ctx, verifiedOutput, c.Output)
+		} else {
+			return fmt.Errorf("no matching signatures exist")
 		}
 	}
 
@@ -169,26 +174,30 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 }
 
 func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oci.Signature, err error) {
+	// We might not understand bundles not produced by Cosign, so skip them
 	for _, v := range verified {
 		dssePayload, err := v.Payload()
 		if err != nil {
-			return nil, err
+			continue
 		}
 		var dsseEnvelope dsse.Envelope
 		err = json.Unmarshal(dssePayload, &dsseEnvelope)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
-			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
+			continue
 		}
 		intotoStatement := &attestation.Statement{}
 		err = intotoStatement.UnmarshalJSON(dsseEnvelope.Payload)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
-			return nil, fmt.Errorf("no intoto subject or digest found")
+			continue
+		}
+		if intotoStatement.PredicateType != types.CosignSignPredicateType {
+			continue
 		}
 
 		var digest string
