@@ -226,6 +226,15 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				if err != nil {
 					return err
 				}
+
+				verifiedOutput, err := transformOutput(verified, img)
+				if err != nil {
+					return err
+				}
+				if len(verifiedOutput) == 0 {
+					return fmt.Errorf("no matching signatures exist")
+				}
+				verified = verifiedOutput
 			} else {
 				verified, bundleVerified, err = cosign.VerifyLocalImageSignatures(ctx, img, co)
 				if err != nil {

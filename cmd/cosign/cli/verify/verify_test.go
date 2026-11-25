@@ -532,9 +532,9 @@ func TestVerifyRejectsOtherAttestations(t *testing.T) {
 	layer := v1static.NewLayer(bundleBytes, "application/vnd.dev.sigstore.bundle.v0.3+json")
 	require.NoError(t, ociremote.WriteReferrer(ref.Context().Digest(hash.String()), pb.MediaType, []v1.Layer{layer}, nil))
 
-	cmd := VerifyCommand{KeyRef: keyPath, IgnoreTlog: true, CheckClaims: true}
+	cmd := VerifyCommand{KeyRef: keyPath, IgnoreTlog: true, CheckClaims: true, NewBundleFormat: true}
 	err = cmd.Exec(t.Context(), []string{ref.String()})
-	require.ErrorContains(t, err, "no signatures found")
+	require.ErrorContains(t, err, "no matching signatures exist")
 }
 
 func TestVerifySignedAndUnsignedImagesReturnsError(t *testing.T) {
@@ -560,7 +560,7 @@ func TestVerifySignedAndUnsignedImagesReturnsError(t *testing.T) {
 	ko := options.KeyOpts{KeyRef: privateKey, PassFunc: func(bool) ([]byte, error) { return nil, nil }, SkipConfirmation: true}
 	require.NoError(t, sign.SignCmd(t.Context(), &options.RootOptions{Timeout: options.DefaultTimeout}, ko, options.SignOptions{Upload: true}, []string{signed}))
 
-	cmd := VerifyCommand{KeyRef: publicKey, IgnoreTlog: true, CheckClaims: true}
+	cmd := VerifyCommand{KeyRef: publicKey, IgnoreTlog: true, CheckClaims: true, NewBundleFormat: true}
 	require.NoError(t, cmd.Exec(t.Context(), []string{signed}))
 	err = cmd.Exec(t.Context(), []string{signed, unsigned})
 	require.ErrorContains(t, err, "no signatures found")
