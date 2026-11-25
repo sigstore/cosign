@@ -121,6 +121,7 @@ jobs:
         uses: sigstore/scaffolding/actions/setup@main
         with:
           version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+          k8s-version: v1.33.x
 
       - name: enable vault transit
         run: vault secrets enable transit
@@ -157,6 +158,7 @@ jobs:
       uses: sigstore/scaffolding/actions/setup@main
       with:
         version: ${{ env.SCAFFOLDING_RELEASE_VERSION }}
+        k8s-version: v1.33.x
 
     - name: Setup local insecure registry
       run: |
