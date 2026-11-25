@@ -1876,6 +1876,114 @@ func TestVerifyRFC3161Timestamp(t *testing.T) {
 	}
 }
 
+// The signature of an attestation is part of its DSSE envelope, so nothing
+// authenticates the signature annotation of an attestation layer. That
+// annotation must not decide which bytes an RFC3161 timestamp is verified
+// against, because the timestamp is what lets an expired certificate be
+// accepted.
+func TestVerifyImageAttestationTimestampCoversEnvelope(t *testing.T) {
+	now := time.Now()
+	// The certificate expired a minute ago. signedAt is inside its validity
+	// period and inside that of the mock TSA's certificate chain.
+	signedAt := now.Add(-2 * time.Minute)
+	rootCert, rootKey, err := test.GenerateRootCa()
+	require.NoError(t, err)
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	leafCert, err := test.GenerateLeafCertWithExpiration("subject@example.com", "oidc-issuer",
+		now.Add(-11*time.Minute), leafKey, rootCert, rootKey)
+	require.NoError(t, err)
+	require.True(t, leafCert.NotAfter.Before(now), "certificate must be expired")
+	pemRoot := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rootCert.Raw})
+	pemLeaf := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafCert.Raw})
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	h := v1.Hash{Algorithm: "sha256", Hex: strings.Repeat("a", 64)}
+	envelope := func(predicate string) []byte {
+		statement := []byte(fmt.Sprintf(`{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://example.com/test","subject":[{"name":"image","digest":{"sha256":%q}}],"predicate":%s}`, h.Hex, predicate))
+		digest := sha256.Sum256(dsse.PAE(types.IntotoPayloadType, statement))
+		sig, err := ecdsa.SignASN1(rand.Reader, leafKey, digest[:])
+		require.NoError(t, err)
+		env, err := json.Marshal(dsse.Envelope{
+			PayloadType: types.IntotoPayloadType,
+			Payload:     base64.StdEncoding.EncodeToString(statement),
+			Signatures:  []dsse.Signature{{Sig: base64.StdEncoding.EncodeToString(sig)}},
+		})
+		require.NoError(t, err)
+		return env
+	}
+	// timestamped is an attestation whose envelope was timestamped while the
+	// certificate was valid. later is signed with the same key but has no
+	// timestamp of its own.
+	timestamped := envelope(`{"build":"original"}`)
+	later := envelope(`{"build":"other"}`)
+
+	tsaClient, err := tsaMock.NewTSAClient(tsaMock.TSAClientOptions{Time: signedAt})
+	require.NoError(t, err)
+	tsBytes, err := getTimestampedSignature(timestamped, tsaClient)
+	require.NoError(t, err)
+	rfc3161TS := &bundle.RFC3161Timestamp{SignedRFC3161Timestamp: tsBytes}
+	certChainPEM, err := cryptoutils.MarshalCertificatesToPEM(tsaClient.CertChain)
+	require.NoError(t, err)
+	tsaLeaves, tsaIntermediates, tsaRoots, err := splitPEMCertificateChain(certChainPEM)
+	require.NoError(t, err)
+
+	co := &CheckOpts{
+		RootCerts:                   rootPool,
+		IgnoreSCT:                   true,
+		IgnoreTlog:                  true,
+		UseSignedTimestamps:         true,
+		TSACertificate:              tsaLeaves[0],
+		TSAIntermediateCertificates: tsaIntermediates,
+		TSARootCertificates:         tsaRoots,
+		Identities:                  []Identity{{Issuer: "oidc-issuer", Subject: "subject@example.com"}},
+	}
+
+	for _, tc := range []struct {
+		name    string
+		payload []byte
+		b64sig  string
+		wantErr string
+	}{
+		{
+			name:    "timestamp over the verified envelope",
+			payload: timestamped,
+		},
+		{
+			name:    "timestamp over another envelope",
+			payload: later,
+			wantErr: "hashed messages don't match",
+		},
+		{
+			name:    "signature annotation names the timestamped bytes",
+			payload: later,
+			b64sig:  base64.StdEncoding.EncodeToString(timestamped),
+			wantErr: "hashed messages don't match",
+		},
+		{
+			name:    "signature annotation is ignored when the timestamp covers the envelope",
+			payload: timestamped,
+			b64sig:  base64.StdEncoding.EncodeToString(later),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			att, err := static.NewSignature(tc.payload, tc.b64sig,
+				static.WithCertChain(pemLeaf, pemRoot), static.WithRFC3161Timestamp(rfc3161TS))
+			require.NoError(t, err)
+			verified, _, err := VerifyImageAttestation(context.Background(),
+				&fakeOCISignatures{signatures: []oci.Signature{att}}, h, co)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				assert.Len(t, verified, 1)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+			assert.Empty(t, verified)
+		})
+	}
+}
+
 // This test verifies that artifact verification rejects signatures
 // where a CA certificate in the issuing chain is expired. This is a contrived
 // example because CAs shouldn't issue certificates where the leaf's validity
