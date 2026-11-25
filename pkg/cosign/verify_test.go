@@ -142,6 +142,16 @@ func Test_verifyOCIAttestation(t *testing.T) {
 		t.Errorf("verifyOCIAttestation() error = %v", err)
 	}
 
+	// Ensure case sensitivity
+	bad := map[string]interface{}{
+		"PayloadType": types.IntotoPayloadType,
+		"payload":     stmt,
+		"signatures":  []dsse.Signature{{Sig: base64.StdEncoding.EncodeToString([]byte("foobar"))}},
+	}
+	if err := verifyOCIAttestation(context.TODO(), &mockVerifier{}, &mockAttestation{payload: bad}); err == nil {
+		t.Error("verifyOCIAttestation() expected invalid payload type error, got nil")
+	}
+
 	invalid := map[string]interface{}{
 		"payloadType": "not valid type",
 		"payload":     stmt,
