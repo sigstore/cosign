@@ -80,8 +80,8 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
 			}
 
 			annotations, err := o.AnnotationsMap()
@@ -107,6 +107,8 @@ against the transparency log.`,
 				Annotations:                  annotations,
 				LocalImage:                   o.LocalImage,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+				TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
@@ -183,8 +185,8 @@ against the transparency log.`,
 		Args:             cobra.MinimumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
 			}
 
 			v := &verify.VerifyAttestationCommand{
@@ -207,6 +209,8 @@ against the transparency log.`,
 				LocalImage:                   o.LocalImage,
 				NameOptions:                  o.Registry.NameOptions(),
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+				TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 				MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 			}
@@ -276,8 +280,8 @@ The blob may be specified as a path to a file or - for stdin.`,
 		Args:             cobra.ExactArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
 			}
 
 			ko := options.KeyOpts{
@@ -296,6 +300,8 @@ The blob may be specified as a path to a file or - for stdin.`,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+				TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 				AllowCertificateChain:        o.CommonVerifyOptions.AllowCertificateChain,
@@ -354,8 +360,8 @@ The blob may be specified as a path to a file.`,
 		Args:             cobra.MaximumNArgs(1),
 		PersistentPreRun: options.BindViper,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.CommonVerifyOptions.PrivateInfrastructure {
-				o.CommonVerifyOptions.IgnoreTlog = true
+			if err := o.CommonVerifyOptions.ResolveThresholds(cmd.Flags()); err != nil {
+				return err
 			}
 
 			ko := options.KeyOpts{
@@ -376,6 +382,8 @@ The blob may be specified as a path to a file.`,
 				CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
 				IgnoreSCT:                    o.CertVerify.IgnoreSCT,
 				IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+				RekorThreshold:               o.CommonVerifyOptions.RekorThreshold,
+				TimestampThreshold:           o.CommonVerifyOptions.TimestampThreshold,
 				UseSignedTimestamps:          o.CommonVerifyOptions.UseSignedTimestamps,
 				TrustedRootPath:              o.CommonVerifyOptions.TrustedRootPath,
 				Digest:                       o.Digest,

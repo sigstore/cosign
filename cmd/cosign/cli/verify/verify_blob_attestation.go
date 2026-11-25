@@ -46,8 +46,10 @@ type VerifyBlobAttestationCommand struct {
 	CertGithubWorkflowRepository string
 	CertGithubWorkflowRef        string
 
-	IgnoreSCT  bool
-	IgnoreTlog bool
+	IgnoreSCT          bool
+	IgnoreTlog         bool
+	RekorThreshold     int
+	TimestampThreshold int
 
 	CheckClaims   bool
 	PredicateType string
@@ -90,6 +92,8 @@ func (c *VerifyBlobAttestationCommand) Exec(ctx context.Context, artifactPath st
 		CertGithubWorkflowRef:        c.CertGithubWorkflowRef,
 		IgnoreSCT:                    c.IgnoreSCT,
 		IgnoreTlog:                   c.IgnoreTlog,
+		RekorThreshold:               c.RekorThreshold,
+		TimestampThreshold:           c.TimestampThreshold,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}

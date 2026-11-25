@@ -145,9 +145,17 @@ type CheckOpts struct {
 	TSAIntermediateCertificates []*x509.Certificate
 	// UseSignedTimestamps enables timestamp verification using a TSA
 	UseSignedTimestamps bool
+	// TimestampThreshold is the minimum number of verified signed timestamps.
+	// A value above 0 enables signed timestamp verification even if
+	// UseSignedTimestamps is not set. If 0 and UseSignedTimestamps is set,
+	// 1 signed timestamp is required.
+	TimestampThreshold int
 
 	// IgnoreTlog skip tlog verification
 	IgnoreTlog bool
+	// RekorThreshold is the minimum number of verified transparency log
+	// entries required when IgnoreTlog is not set. Defaults to 1 if unset.
+	RekorThreshold int
 
 	// The amount of maximum workers for parallel executions.
 	// Defaults to 10.
@@ -180,6 +188,26 @@ func (v *verifyTrustedMaterial) PublicKeyVerifier(hint string) (root.TimeConstra
 		return nil, fmt.Errorf("no public key material available")
 	}
 	return v.keyTrustedMaterial.PublicKeyVerifier(hint)
+}
+
+func (co *CheckOpts) rekorThreshold() int {
+	if co.RekorThreshold > 0 {
+		return co.RekorThreshold
+	}
+	return 1
+}
+
+// useSignedTimestamps reports whether signed timestamps are verified, either
+// because UseSignedTimestamps is set or a positive TimestampThreshold is set.
+func (co *CheckOpts) useSignedTimestamps() bool {
+	return co.UseSignedTimestamps || co.TimestampThreshold > 0
+}
+
+func (co *CheckOpts) timestampThreshold() int {
+	if co.TimestampThreshold > 0 {
+		return co.TimestampThreshold
+	}
+	return 1
 }
 
 // verificationOptions returns the verification options for verifying with sigstore-go.
@@ -241,11 +269,11 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 	}
 
 	if !co.IgnoreTlog {
-		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(1))
+		verifierOptions = append(verifierOptions, verify.WithTransparencyLog(co.rekorThreshold()))
 		// If you aren't using a signed timestamp, use the time from the transparency log
 		// to verify Fulcio certificates, or require no timestamp to verify a key.
 		// For Rekor v2, a signed timestamp must be provided.
-		if !co.UseSignedTimestamps {
+		if !co.useSignedTimestamps() {
 			if co.SigVerifier == nil {
 				verifierOptions = append(verifierOptions, verify.WithIntegratedTimestamps(1))
 			} else {
@@ -253,12 +281,12 @@ func (co *CheckOpts) verificationOptions() (trustedMaterial root.TrustedMaterial
 			}
 		}
 	}
-	if co.UseSignedTimestamps {
-		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(1))
+	if co.useSignedTimestamps() {
+		verifierOptions = append(verifierOptions, verify.WithSignedTimestamps(co.timestampThreshold()))
 	}
 	// A time verification policy must be provided. Without a signed timestamp or integrated timestamp,
 	// verify a certificate with the current time, or require no timestamp to verify a key.
-	if co.IgnoreTlog && !co.UseSignedTimestamps {
+	if co.IgnoreTlog && !co.useSignedTimestamps() {
 		if co.SigVerifier == nil {
 			verifierOptions = append(verifierOptions, verify.WithCurrentTime())
 		} else {

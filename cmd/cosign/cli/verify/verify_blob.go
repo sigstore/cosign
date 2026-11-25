@@ -45,6 +45,8 @@ type VerifyBlobCmd struct {
 	IgnoreSCT                    bool
 	UseSignedTimestamps          bool
 	IgnoreTlog                   bool
+	RekorThreshold               int
+	TimestampThreshold           int
 	AllowCertificateChain        bool
 }
 
@@ -78,6 +80,8 @@ func (c *VerifyBlobCmd) Exec(ctx context.Context, blobRef string) error {
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
 		IgnoreTlog:                   c.IgnoreTlog,
+		RekorThreshold:               c.RekorThreshold,
+		TimestampThreshold:           c.TimestampThreshold,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
 	}

@@ -111,7 +111,7 @@ func main() {
 				log.Fatal(err)
 			}
 			if len(ts) > 0 {
-				args = append(args, "--use-signed-timestamps")
+				args = append(args, "--timestamp-threshold=1")
 			}
 		}
 

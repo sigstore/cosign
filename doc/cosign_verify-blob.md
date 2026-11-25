@@ -66,13 +66,13 @@ cosign verify-blob [flags]
       --certificate-oidc-issuer-regexp string           A regular expression alternative to --certificate-oidc-issuer. Accepts the Go regular expression syntax described at https://golang.org/s/re2syntax. Either --certificate-oidc-issuer or --certificate-oidc-issuer-regexp must be set for keyless flows.
   -h, --help[=true|false]                               help for verify-blob
       --insecure-ignore-sct[=true|false]                when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log
-      --insecure-ignore-tlog[=true|false]               ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log
       --key string                                      path to the public key file, KMS URI or Kubernetes Secret
       --max-workers int                                 the amount of maximum workers for parallel executions (default 10)
+      --rekor-threshold int                             minimum number of verified transparency log entries. Set to 0 to skip transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default 1)
       --sk[=true|false]                                 whether to use a hardware security key
       --slot string                                     security key slot to use for generated key (default: signature) (authentication|signature|card-authentication|key-management)
+      --timestamp-threshold int                         minimum number of verified RFC3161 signed timestamps. When not set explicitly, signed timestamps are required only for bundles with Rekor v2 entries and no Rekor v1 entries. Set to 0 to not require signed timestamps, except for certificate-signed bundles with only Rekor v2 entries, which always require one because they have no other trusted time (default 1)
       --trusted-root string                             Path to a Sigstore TrustedRoot JSON file
-      --use-signed-timestamps[=true|false]              verify rfc3161 timestamps
 ```
 
 ### Options inherited from parent commands

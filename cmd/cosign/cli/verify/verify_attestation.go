@@ -57,6 +57,8 @@ type VerifyAttestationCommand struct {
 	LocalImage                   bool
 	NameOptions                  []name.Option
 	IgnoreTlog                   bool
+	RekorThreshold               int
+	TimestampThreshold           int
 	MaxWorkers                   int
 	UseSignedTimestamps          bool
 }
@@ -106,6 +108,8 @@ func (c *VerifyAttestationCommand) Exec(ctx context.Context, images []string) (e
 		IgnoreSCT:                    c.IgnoreSCT,
 		Identities:                   identities,
 		IgnoreTlog:                   c.IgnoreTlog,
+		RekorThreshold:               c.RekorThreshold,
+		TimestampThreshold:           c.TimestampThreshold,
 		MaxWorkers:                   c.MaxWorkers,
 		UseSignedTimestamps:          c.UseSignedTimestamps,
 		AllowCertificateChain:        c.AllowCertificateChain,
