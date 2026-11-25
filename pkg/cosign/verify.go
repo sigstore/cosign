@@ -794,13 +794,13 @@ func verifySignatures(ctx context.Context, sigs oci.Signatures, h v1.Hash, co *C
 //     we are in experimental mode).
 //  3. If a certificate is provided, check its expiration using the transparency log timestamp.
 func verifyInternal(ctx context.Context, sig oci.Signature, h v1.Hash,
-	verifyFn signatureVerificationFn, co *CheckOpts) (
+	verifyFn signatureVerificationFn, attestation bool, co *CheckOpts) (
 	bundleVerified bool, err error) {
 	var acceptableRFC3161Time, acceptableRekorBundleTime *time.Time // Timestamps for the signature we accept, or nil if not applicable.
 
 	var acceptableRFC3161Timestamp *timestamp.Timestamp
 	if co.UseSignedTimestamps {
-		acceptableRFC3161Timestamp, err = VerifyRFC3161Timestamp(sig, co)
+		acceptableRFC3161Timestamp, err = verifyRFC3161Timestamp(sig, co, attestation)
 		if err != nil {
 			return false, fmt.Errorf("unable to verify RFC3161 timestamp bundle: %w", err)
 		}
@@ -967,12 +967,12 @@ func keyBytes(sig oci.Signature, co *CheckOpts) ([]byte, error) {
 // VerifyBlobSignature verifies a blob signature.
 func VerifyBlobSignature(ctx context.Context, sig oci.Signature, co *CheckOpts) (bundleVerified bool, err error) {
 	// The hash of the artifact is unused.
-	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, co)
+	return verifyInternal(ctx, sig, v1.Hash{}, verifyOCISignature, false, co)
 }
 
 // VerifyImageSignature verifies a signature
 func VerifyImageSignature(ctx context.Context, sig oci.Signature, h v1.Hash, co *CheckOpts) (bundleVerified bool, err error) {
-	return verifyInternal(ctx, sig, h, verifyOCISignature, co)
+	return verifyInternal(ctx, sig, h, verifyOCISignature, false, co)
 }
 
 func loadSignatureFromFile(ctx context.Context, sigRef string, signedImgRef name.Reference, co *CheckOpts) (oci.Signatures, error) {
@@ -1101,7 +1101,7 @@ func VerifyLocalImageAttestations(ctx context.Context, path string, co *CheckOpt
 
 func VerifyBlobAttestation(ctx context.Context, att oci.Signature, h v1.Hash, co *CheckOpts) (
 	bool, error) {
-	return verifyInternal(ctx, att, h, verifyOCIAttestation, co)
+	return verifyInternal(ctx, att, h, verifyOCIAttestation, true, co)
 }
 
 func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash, co *CheckOpts) (checkedAttestations []oci.Signature, bundleVerified bool, err error) {
@@ -1126,7 +1126,7 @@ func VerifyImageAttestation(ctx context.Context, atts oci.Signatures, h v1.Hash,
 				return
 			}
 			if err := func(att oci.Signature) error {
-				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, co)
+				verified, err := verifyInternal(ctx, att, h, verifyOCIAttestation, true, co)
 				bundlesVerified[index] = verified
 				return err
 			}(att); err != nil {
@@ -1320,6 +1320,14 @@ func (s *sigContent) MessageSignatureContent() verify.MessageSignatureContent {
 // It returns (nil, nil) if there is no timestamp, or (nil, err) if there is an invalid timestamp or if
 // no root is provided with a timestamp.
 func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timestamp, error) {
+	return verifyRFC3161Timestamp(sig, co, false)
+}
+
+// verifyRFC3161Timestamp is VerifyRFC3161Timestamp for callers that know whether sig is
+// an attestation. The signature of an attestation is inside the DSSE envelope in its
+// payload and nothing authenticates its signature annotation, so the timestamp must
+// cover the payload whatever that annotation holds.
+func verifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts, attestation bool) (*timestamp.Timestamp, error) {
 	ts, err := sig.RFC3161Timestamp()
 	switch {
 	case err != nil:
@@ -1336,8 +1344,9 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 	}
 
 	var tsBytes []byte
-	if len(b64Sig) == 0 {
-		// For attestations, the Base64Signature is not set, therefore we rely on the signed payload
+	if attestation || len(b64Sig) == 0 {
+		// For attestations, the timestamp covers the signed payload. Cosign does not set
+		// the Base64Signature for them, so an unset value also selects the payload.
 		signedPayload, err := sig.Payload()
 		if err != nil {
 			return nil, fmt.Errorf("reading the payload: %w", err)
@@ -1363,6 +1372,9 @@ func VerifyRFC3161Timestamp(sig oci.Signature, co *CheckOpts) (*timestamp.Timest
 		}
 		if len(verifyErrs) > 0 {
 			log.Printf("Warning: subset of signed timestamps failed to verify: %v", verifyErrs)
+		}
+		if len(verifiedTimestamps) == 0 {
+			return nil, fmt.Errorf("expected at least one verified timestamp")
 		}
 		return &timestamp.Timestamp{Time: verifiedTimestamps[0].Time}, nil
 	}
