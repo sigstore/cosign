@@ -35,6 +35,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	sigs "github.com/sigstore/cosign/v3/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/types"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore/pkg/signature/payload"
@@ -247,9 +248,13 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 				}
 
 				verifiedOutput, err := transformOutput(verified, ref.Name())
-				if err == nil {
-					verified = verifiedOutput
+				if err != nil {
+					return err
 				}
+				if len(verifiedOutput) == 0 {
+					return fmt.Errorf("no matching signatures exist")
+				}
+				verified = verifiedOutput
 			} else {
 				ref, err = sign.GetAttachedImageRef(ref, c.Attachment, ociremoteOpts...)
 				if err != nil {
@@ -274,23 +279,26 @@ func transformOutput(verified []oci.Signature, name string) (verifiedOutput []oc
 	for _, v := range verified {
 		dssePayload, err := v.Payload()
 		if err != nil {
-			return nil, err
+			continue
 		}
 		var dsseEnvelope dsse.Envelope
 		err = json.Unmarshal(dssePayload, &dsseEnvelope)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if dsseEnvelope.PayloadType != in_toto.PayloadType {
-			return nil, fmt.Errorf("unable to understand payload type %s", dsseEnvelope.PayloadType)
+			continue
 		}
 		intotoStatement := &attestation.Statement{}
 		err = intotoStatement.UnmarshalJSON(dsseEnvelope.Payload)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if len(intotoStatement.Subject) < 1 || len(intotoStatement.Subject[0].Digest) < 1 {
-			return nil, fmt.Errorf("no intoto subject or digest found")
+			continue
+		}
+		if intotoStatement.PredicateType != types.CosignSignPredicateType {
+			continue
 		}
 
 		var digest string
