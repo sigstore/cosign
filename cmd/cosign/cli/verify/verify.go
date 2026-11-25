@@ -169,7 +169,7 @@ func (c *VerifyCommand) Exec(ctx context.Context, images []string) (err error) {
 			PrintVerificationHeader(ctx, displayName, co, bundleVerified, fulcioVerified)
 			PrintVerification(ctx, verifiedOutput, c.Output)
 		} else {
-			return fmt.Errorf("no matching signatures exist in registry")
+			return fmt.Errorf("no matching signatures exist")
 		}
 	}
 
