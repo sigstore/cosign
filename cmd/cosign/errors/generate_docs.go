@@ -29,7 +29,7 @@ import (
 
 // GenerateExitCodeDocs will generate documentation for the exit codes
 // that the cosign application will throw. Inspired by elemental-cli who
-// convieniently solved this problem prior: https://github.com/rancher/elemental-cli/blob/main/docs/generate_docs.go
+// conveniently solved this problem prior: https://github.com/rancher/elemental-cli/blob/main/docs/generate_docs.go
 // there was no need to change (apart from some file paths) due to it
 // giving us exactly what we want without error.
 func GenerateExitCodeDocs(dir string) error {

@@ -83,7 +83,7 @@ func ReadIDToken(ctx context.Context, tokOrPath string, disableProviders bool, o
 		return "", fmt.Errorf("getting id token: %w", err)
 	}
 	var provider providers.Interface
-	// If token is not set in the options, get one from the provders
+	// If token is not set in the options, get one from the providers
 	if idToken == "" && providers.Enabled(ctx) && !disableProviders {
 		if oidcProvider != "" {
 			provider, err = providers.ProvideFrom(ctx, oidcProvider)
