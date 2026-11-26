@@ -21,6 +21,8 @@ builds:
   main: ./cmd/cosign
   env:
   - CGO_ENABLED=0
+  # encoding/json/v2 is behind this experiment flag in the Go version used to build
+  - GOEXPERIMENT=jsonv2
   flags:
   - -trimpath
   - -tags

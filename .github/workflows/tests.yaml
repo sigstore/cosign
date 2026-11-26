@@ -28,6 +28,10 @@ on:
     branches: ['main', 'release-*']
   pull_request:
 
+env:
+  # encoding/json/v2 is behind an experiment flag in the Go version this branch uses
+  GOEXPERIMENT: jsonv2
+
 jobs:
   unit-tests:
     name: Run unit tests
