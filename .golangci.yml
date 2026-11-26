@@ -83,6 +83,29 @@ linters:
         path: pkg/cosign/verify_bundle_test.go
         # NewEntry used for Rekor v1, will update to NewTlogEntry for Rekor v2 support
         text: SA1019
+      # The rules below exclude findings from checks that were added to
+      # golangci-lint after v2.4, in code that predates them. They let this
+      # maintenance branch use a linter that supports Go 1.27 without
+      # changing unrelated code.
+      - linters:
+          - prealloc
+        text: Consider preallocating
+      - linters:
+          - gocritic
+        text: "deprecatedComment:"
+      - linters:
+          - gosec
+        path: cmd/conformance/main\.go|cmd/cosign/cli/bundle/bundle\.go|cmd/cosign/cli/sign/sign\.go
+        # Taint-analysis rules (command injection, path traversal, log injection)
+        text: "G70[236]:"
+      - linters:
+          - staticcheck
+        path: internal/pkg/cosign/tsa/client/client\.go
+        text: 'SA1019: \(net\.Dialer\)\.DualStack'
+      - linters:
+          - staticcheck
+        path: pkg/cosign/pkcs11key/util\.go
+        text: "QF1012:"
     paths:
       - third_party$
       - builtin$
