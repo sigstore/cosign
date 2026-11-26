@@ -21,6 +21,10 @@ endif
 # allow overwriting the default `go` value with the custom path to the go executable
 GOEXE ?= go
 
+# The verification code uses encoding/json/v2, which the Go version this branch
+# builds with only provides behind this experiment flag.
+export GOEXPERIMENT=jsonv2
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GOEXE) env GOBIN))
 GOBIN=$(shell $(GOEXE) env GOPATH)/bin

@@ -6,6 +6,8 @@ env:
   - CGO_ENABLED=1
   - DOCKER_CLI_EXPERIMENTAL=enabled
   - COSIGN_YES=true
+  # encoding/json/v2 is behind this experiment flag in the Go version used to build
+  - GOEXPERIMENT=jsonv2
 
 # Prevents parallel builds from stepping on each others toes downloading modules
 before:

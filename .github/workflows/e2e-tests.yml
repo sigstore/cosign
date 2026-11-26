@@ -31,6 +31,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  # encoding/json/v2 is behind an experiment flag in the Go version this branch uses
+  GOEXPERIMENT: jsonv2
+
 jobs:
   e2e-cross:
     strategy:
