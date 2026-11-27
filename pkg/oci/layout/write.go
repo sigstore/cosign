@@ -62,7 +62,11 @@ func writeSignedEntity(path layout.Path, se oci.SignedEntity) error {
 	if err != nil {
 		return fmt.Errorf("getting signatures: %w", err)
 	}
-	if !isEmpty(sigs) {
+	emptySigs, err := isEmpty(sigs)
+	if err != nil {
+		return fmt.Errorf("reading signatures: %w", err)
+	}
+	if !emptySigs {
 		if err := appendImage(path, sigs, sigsAnnotation); err != nil {
 			return fmt.Errorf("appending signatures: %w", err)
 		}
@@ -71,9 +75,13 @@ func writeSignedEntity(path layout.Path, se oci.SignedEntity) error {
 	// write attestations
 	atts, err := se.Attestations()
 	if err != nil {
-		return fmt.Errorf("getting atts")
+		return fmt.Errorf("getting atts: %w", err)
 	}
-	if !isEmpty(atts) {
+	emptyAtts, err := isEmpty(atts)
+	if err != nil {
+		return fmt.Errorf("reading atts: %w", err)
+	}
+	if !emptyAtts {
 		if err := appendImage(path, atts, attsAnnotation); err != nil {
 			return fmt.Errorf("appending atts: %w", err)
 		}
@@ -83,9 +91,12 @@ func writeSignedEntity(path layout.Path, se oci.SignedEntity) error {
 }
 
 // isEmpty returns true if the signatures or attestations are empty
-func isEmpty(s oci.Signatures) bool {
-	ss, _ := s.Get()
-	return ss == nil
+func isEmpty(s oci.Signatures) (bool, error) {
+	ss, err := s.Get()
+	if err != nil {
+		return false, err
+	}
+	return ss == nil, nil
 }
 
 func appendImage(path layout.Path, img v1.Image, annotation string) error {
