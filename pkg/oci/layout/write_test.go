@@ -17,6 +17,7 @@ package layout
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"runtime"
 	"testing"
@@ -195,5 +196,60 @@ func TestAppendImagePreservesArtifactType(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("artifactType %q not found in index.json manifests: %+v", wantArtifactType, idx.Manifests)
+	}
+}
+
+var errGet = errors.New("get failed")
+
+type failingSignatures struct{ oci.Signatures }
+
+func (failingSignatures) Get() ([]oci.Signature, error) { return nil, errGet }
+
+// failingEntity fails to look up attestations, or returns signatures or
+// attestations whose Get fails.
+type failingEntity struct {
+	oci.SignedImage
+	failSignatures, failAttestations, failLookup bool
+}
+
+func (e failingEntity) Signatures() (oci.Signatures, error) {
+	if e.failSignatures {
+		return failingSignatures{}, nil
+	}
+	return e.SignedImage.Signatures()
+}
+
+func (e failingEntity) Attestations() (oci.Signatures, error) {
+	if e.failLookup {
+		return nil, errGet
+	}
+	if e.failAttestations {
+		return failingSignatures{}, nil
+	}
+	return e.SignedImage.Attestations()
+}
+
+func TestWriteSignedImageReturnsGetError(t *testing.T) {
+	base, err := random.Image(64, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	si := signed.Image(base)
+
+	for name, entity := range map[string]oci.SignedImage{
+		"signatures":          failingEntity{SignedImage: si, failSignatures: true},
+		"attestations":        failingEntity{SignedImage: si, failAttestations: true},
+		"attestations lookup": failingEntity{SignedImage: si, failLookup: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := WriteSignedImage(t.TempDir(), entity); !errors.Is(err, errGet) {
+				t.Errorf("WriteSignedImage() error = %v, want %v", err, errGet)
+			}
+		})
+	}
+
+	// An image with nothing attached must still be written.
+	if err := WriteSignedImage(t.TempDir(), si); err != nil {
+		t.Errorf("WriteSignedImage() unsigned image: %v", err)
 	}
 }
