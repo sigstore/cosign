@@ -181,6 +181,27 @@ builds:
       - pivkey
       - pkcs11key
 
+  - id: windows-arm64
+    binary: cosign-windows-arm64
+    no_unique_dist_dir: true
+    env:
+      - CC=zig cc -target aarch64-windows-gnu
+      - CXX=zig c++ -target aarch64-windows-gnu
+    main: ./cmd/cosign
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    goos:
+      - windows
+    goarch:
+      - arm64
+    ldflags:
+      - -buildmode=exe
+      - "{{ .Env.LDFLAGS }}"
+    tags:
+      - pivkey
+      - pkcs11key
+
 signs:
   - id: cosign
     cmd: ./dist/cosign-linux-amd64
